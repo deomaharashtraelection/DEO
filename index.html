@@ -10,9 +10,6 @@ body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px}
 input,button{padding:12px;margin:6px 0;width:100%;box-sizing:border-box}
 button{cursor:pointer}
 .hidden{display:none}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.grid>div{border:1px solid #eee;border-radius:10px;padding:14px}
-.grid>div div{padding:7px 0;border-bottom:1px solid #eee}
-#summary{font-weight:600}
 </style>
 </head>
 <body>
@@ -54,59 +51,60 @@ async function loadDashboard(){
   if(ue){document.getElementById('msg').textContent=ue.message;return;}
   if(!user)return;
 
-  const {data:p,error:pe}=await supabase
-    .from('profiles')
-    .select('role,district_id')
-    .eq('user_id',user.id)
-    .single();
+  const {data:p,error:pe}=await supabase.from('profiles')
+    .select('role,district_id').eq('user_id',user.id).single();
 
-  if(pe || !p || !p.district_id){
-    document.getElementById('msg').textContent=pe?.message || 'या Login साठी जिल्हा mapping उपलब्ध नाही.';
+  if(pe || !p){
+    document.getElementById('msg').textContent=pe?.message || 'या Login साठी profile उपलब्ध नाही.';
     return;
   }
 
-  const {data:d,error:de}=await supabase
-    .from('districts')
-    .select('id,name,login_code')
-    .eq('id',p.district_id)
-    .single();
+  if(p.role === 'admin'){
+    const {data:districts,error:de}=await supabase.from('districts')
+      .select('id,name,login_code').order('id');
+    if(de){document.getElementById('msg').textContent=de.message;return;}
 
-  if(de || !d){
-    document.getElementById('msg').textContent=de?.message || 'जिल्ह्याची माहिती मिळाली नाही.';
+    document.getElementById('login').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    document.getElementById('title').textContent='महाराष्ट्र — Master Admin';
+    document.getElementById('summary').textContent=`एकूण जिल्हे: ${(districts||[]).length}`;
+    document.getElementById('acs').innerHTML=(districts||[])
+      .map(d=>`<div><button style="width:100%" onclick="openDistrict(${d.id})">${d.id} - ${d.name} (${d.login_code})</button></div>`).join('');
+    document.getElementById('talukas').innerHTML='<div>डावीकडील जिल्ह्यावर क्लिक करा. त्या जिल्ह्याचे विधानसभा मतदारसंघ आणि तालुके येथे दिसतील.</div>';
     return;
   }
 
-  const {data:acs,error:ae}=await supabase
-    .from('constituencies')
-    .select('constituency_no,name')
-    .eq('district_id',d.id)
-    .order('constituency_no');
-
-  const {data:ts,error:te}=await supabase
-    .from('talukas')
-    .select('name')
-    .eq('district_id',d.id)
-    .order('name');
-
-  if(ae || te){
-    document.getElementById('msg').textContent=ae?.message || te?.message || 'जिल्ह्याचा डेटा मिळवताना त्रुटी आली.';
+  if(!p.district_id){
+    document.getElementById('msg').textContent='या Login साठी जिल्हा mapping उपलब्ध नाही.';
     return;
   }
+  await showDistrict(p.district_id);
+}
+
+async function showDistrict(districtId){
+  const {data:d,error:de}=await supabase.from('districts')
+    .select('id,name,login_code').eq('id',districtId).single();
+  if(de || !d){document.getElementById('msg').textContent=de?.message || 'जिल्ह्याची माहिती मिळाली नाही.';return;}
+
+  const {data:acs,error:ae}=await supabase.from('constituencies')
+    .select('constituency_no,name').eq('district_id',d.id).order('constituency_no');
+  const {data:ts,error:te}=await supabase.from('talukas')
+    .select('name').eq('district_id',d.id).order('name');
+
+  if(ae || te){document.getElementById('msg').textContent=ae?.message || te?.message || 'जिल्ह्याचा डेटा मिळवताना त्रुटी आली.';return;}
 
   document.getElementById('login').classList.add('hidden');
   document.getElementById('dashboard').classList.remove('hidden');
   document.getElementById('title').textContent=`${d.name} जिल्हा — ${d.login_code}`;
-  document.getElementById('summary').textContent=
-    `एकूण विधानसभा मतदारसंघ: ${(acs||[]).length}  |  एकूण तालुके: ${(ts||[]).length}`;
-
-  document.getElementById('acs').innerHTML=(acs||[])
-    .map(x=>`<div>${x.constituency_no ?? ''} - ${x.name}</div>`).join('');
-
-  document.getElementById('talukas').innerHTML=(ts||[])
-    .map(x=>`<div>${x.name}</div>`).join('');
+  document.getElementById('summary').textContent=`एकूण विधानसभा मतदारसंघ: ${(acs||[]).length} | एकूण तालुके: ${(ts||[]).length}`;
+  document.getElementById('acs').innerHTML=(acs||[]).map(x=>`<div>${x.constituency_no ?? ''} - ${x.name}</div>`).join('');
+  document.getElementById('talukas').innerHTML=(ts||[]).map(x=>`<div>${x.name}</div>`).join('');
 }
+
+async function openDistrict(districtId){ await showDistrict(districtId); }
+
 async function logout(){await supabase.auth.signOut();location.reload();}
-window.login=login;window.logout=logout;
+window.login=login;window.logout=logout;window.openDistrict=openDistrict;
 loadDashboard();
 </script>
 </body>
