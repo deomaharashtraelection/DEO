@@ -136,8 +136,7 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 <p id="dashboardWelcome" style="font-weight:700;margin-top:6px;"></p>
 
 <div id="districtDashboardTabs" class="login-tabs" style="margin-top:18px;">
-  <button type="button" class="tab active" id="homeTab" onclick="showHomeTab()">🏠 मुख्यपृष्ठ</button>
-  <button type="button" class="tab" id="dataEntryTab" onclick="showDataEntryTab()">📝 Data Entry</button>
+  <button type="button" class="tab active" id="dataEntryTab" onclick="showDataEntryTab()">📝 Data Entry</button>
   <button type="button" class="tab" id="myFormsTab" onclick="showMyFormsTab()">📋 माझे Forms</button>
 </div>
 
@@ -226,8 +225,8 @@ function showHomeTab(){
   document.getElementById('homePanel').classList.remove('hidden');
   document.getElementById('dataEntryPanel').classList.add('hidden');
   document.getElementById('myFormsPanel').classList.add('hidden');
-  document.getElementById('homeTab').classList.add('active');
-  document.getElementById('dataEntryTab').classList.remove('active');
+  document.getElementById('dataEntryTab').classList.add('active');
+  document.getElementById('myFormsTab').classList.remove('active');
 }
 
 function showDataEntryTab(){
@@ -242,7 +241,6 @@ function showMyFormsTab(){
   document.getElementById('homePanel').classList.add('hidden');
   document.getElementById('dataEntryPanel').classList.add('hidden');
   document.getElementById('myFormsPanel').classList.remove('hidden');
-  document.getElementById('homeTab').classList.remove('active');
   document.getElementById('dataEntryTab').classList.remove('active');
   document.getElementById('myFormsTab').classList.add('active');
   loadMyForms();
@@ -792,6 +790,7 @@ async function showDistrict(districtId){
     document.getElementById('districtDashboardTabs').classList.remove('hidden');
     document.getElementById('dataEntryTab').classList.remove('hidden');
     document.getElementById('myFormsTab').classList.remove('hidden');
+    showDataEntryTab();
     await loadDistrictDashboardStats(districtUser.id,d.id,(acs||[]).length,(ts||[]).length);
   } else {
     document.getElementById('districtDashboardTabs').classList.add('hidden');
