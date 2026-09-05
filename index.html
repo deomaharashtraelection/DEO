@@ -124,6 +124,7 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 <div class="login-tabs" style="margin-top:18px;">
   <button type="button" class="tab active" id="homeTab" onclick="showHomeTab()">मुख्यपृष्ठ</button>
   <button type="button" class="tab" id="dataEntryTab" onclick="showDataEntryTab()">Data Entry</button>
+  <button type="button" class="tab" id="myFormsTab" onclick="showMyFormsTab()">माझे Forms</button>
 </div>
 
 <div id="homePanel">
@@ -190,15 +191,53 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 function showHomeTab(){
   document.getElementById('homePanel').classList.remove('hidden');
   document.getElementById('dataEntryPanel').classList.add('hidden');
+  document.getElementById('myFormsPanel').classList.add('hidden');
   document.getElementById('homeTab').classList.add('active');
   document.getElementById('dataEntryTab').classList.remove('active');
 }
 
 function showDataEntryTab(){
   document.getElementById('homePanel').classList.add('hidden');
+  document.getElementById('myFormsPanel').classList.add('hidden');
   document.getElementById('dataEntryPanel').classList.remove('hidden');
   document.getElementById('homeTab').classList.remove('active');
   document.getElementById('dataEntryTab').classList.add('active');
+}
+
+function showMyFormsTab(){
+  document.getElementById('homePanel').classList.add('hidden');
+  document.getElementById('dataEntryPanel').classList.add('hidden');
+  document.getElementById('myFormsPanel').classList.remove('hidden');
+  document.getElementById('homeTab').classList.remove('active');
+  document.getElementById('dataEntryTab').classList.remove('active');
+  document.getElementById('myFormsTab').classList.add('active');
+  loadMyForms();
+}
+
+async function loadMyForms(){
+  const list=document.getElementById('myFormsList');
+  if(!list) return;
+  list.innerHTML='<p>Forms loading...</p>';
+
+  const {data:{user},error:ue}=await supabase.auth.getUser();
+  if(ue || !user){ list.innerHTML='<p>कृपया पुन्हा Login करा.</p>'; return; }
+
+  const {data:forms,error}=await supabase.from('operator_forms')
+    .select('reference_number,operator_name,constituency,taluka,status,rejection_reason,created_at')
+    .eq('user_id',user.id).order('created_at',{ascending:false});
+
+  if(error){ list.innerHTML='<p>'+escapeHtml(error.message)+'</p>'; return; }
+  if(!forms?.length){ list.innerHTML='<p>अद्याप कोणताही Form Submit केलेला नाही.</p>'; return; }
+
+  list.innerHTML=forms.map(f=>`
+    <div class="card" style="margin-top:12px;">
+      <p><strong>Reference Number:</strong> ${escapeHtml(f.reference_number)}</p>
+      <p><strong>नाव:</strong> ${escapeHtml(f.operator_name)}</p>
+      <p><strong>विधानसभा:</strong> ${escapeHtml(f.constituency)}</p>
+      <p><strong>तालुका:</strong> ${escapeHtml(f.taluka)}</p>
+      <p><strong>Status:</strong> ${f.status==='approved'?'🟢 Approved':f.status==='rejected'?'🔴 Rejected':'🟡 Pending Approval'}</p>
+      ${f.rejection_reason?`<p><strong>Reject कारण:</strong> ${escapeHtml(f.rejection_reason)}</p>`:''}
+    </div>`).join('');
 }
 
 function saveDataEntry(){
@@ -373,35 +412,71 @@ async function loadPendingOperatorForms(){
     document.getElementById('dashboard').appendChild(panel);
   }
 
-  panel.innerHTML='<h3>📋 Operator Forms — Admin Approval</h3><p>Pending forms loading...</p>';
+  panel.innerHTML='<h3>📊 Admin Dashboard</h3><p>Dashboard loading...</p>';
 
   const {data:forms,error}=await supabase.from('operator_forms')
-    .select('*').eq('status','pending').order('created_at',{ascending:false});
+    .select('*').order('created_at',{ascending:false});
 
   if(error){
-    panel.innerHTML='<h3>📋 Operator Forms — Admin Approval</h3><p>'+error.message+'</p>';
+    panel.innerHTML='<h3>📊 Admin Dashboard</h3><p>'+escapeHtml(error.message)+'</p>';
     return;
   }
 
-  if(!forms || !forms.length){
-    panel.innerHTML='<h3>📋 Operator Forms — Admin Approval</h3><p>सध्या कोणताही Pending Form नाही.</p>';
+  const all=forms||[];
+  const pending=all.filter(f=>f.status==='pending');
+  const approved=all.filter(f=>f.status==='approved');
+  const rejected=all.filter(f=>f.status==='rejected');
+
+  const statStyle='flex:1;min-width:150px;padding:18px;border:1px solid #ddd;border-radius:10px;text-align:center;';
+  panel.innerHTML=`
+    <h3>📊 Operator Approval Dashboard</h3>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin:15px 0;">
+      <div style="${statStyle}"><strong style="font-size:28px;">${all.length}</strong><br>एकूण Forms</div>
+      <div style="${statStyle}"><strong style="font-size:28px;">${pending.length}</strong><br>🟡 Pending</div>
+      <div style="${statStyle}"><strong style="font-size:28px;">${approved.length}</strong><br>🟢 Approved</div>
+      <div style="${statStyle}"><strong style="font-size:28px;">${rejected.length}</strong><br>🔴 Rejected</div>
+    </div>
+    <h3>🟡 Pending Approval</h3>
+    <div id="pendingFormsList"></div>
+  `;
+
+  const list=document.getElementById('pendingFormsList');
+  if(!pending.length){
+    list.innerHTML='<p>सध्या कोणताही Pending Form नाही.</p>';
     return;
   }
 
-  panel.innerHTML='<h3>📋 Operator Forms — Admin Approval</h3>' +
-    forms.map(f=>`
+  const cards=[];
+  for(const f of pending){
+    let photoHtml='';
+    if(f.photo_url){
+      const {data:signed}=await supabase.storage
+        .from('operator-photos').createSignedUrl(f.photo_url, 300);
+      if(signed?.signedUrl){
+        photoHtml=`<p><img src="${signed.signedUrl}" alt="Passport Photo" style="width:100px;height:120px;object-fit:cover;border-radius:6px;border:1px solid #ddd;"></p>`;
+      }
+    }
+
+    cards.push(`
       <div class="card" style="margin-top:12px;">
-        <p><strong>Reference Number:</strong> ${escapeHtml(f.reference_number||'')}</p>
-        <p><strong>नाव:</strong> ${escapeHtml(f.operator_name||'')}</p>
-        <p><strong>विधानसभा:</strong> ${escapeHtml(f.constituency||'')}</p>
-        <p><strong>तालुका:</strong> ${escapeHtml(f.taluka||'')}</p>
-        <p><strong>मोबाईल:</strong> ${escapeHtml(f.mobile_number||'')}</p>
-        <p><strong>ईमेल:</strong> ${escapeHtml(f.personal_email||'')}</p>
-        ${f.photo_url ? `<p><a href="${f.photo_url}" target="_blank">📷 फोटो पाहा</a></p>` : ''}
+        ${photoHtml}
+        <p><strong>Reference Number:</strong> ${escapeHtml(f.reference_number)}</p>
+        <p><strong>नाव:</strong> ${escapeHtml(f.operator_name)}</p>
+        <p><strong>जन्मतारीख:</strong> ${escapeHtml(f.date_of_birth)}</p>
+        <p><strong>विधानसभा:</strong> ${escapeHtml(f.constituency)}</p>
+        <p><strong>तालुका:</strong> ${escapeHtml(f.taluka)}</p>
+        <p><strong>पत्ता:</strong> ${escapeHtml(f.home_address)}</p>
+        <p><strong>पिन:</strong> ${escapeHtml(f.pin_code)}</p>
+        <p><strong>मोबाईल:</strong> ${escapeHtml(f.mobile_number)}</p>
+        <p><strong>WhatsApp:</strong> ${escapeHtml(f.whatsapp_number)}</p>
+        <p><strong>ईमेल:</strong> ${escapeHtml(f.personal_email)}</p>
         <button type="button" onclick="approveOperatorForm('${f.id}')">🟢 Approve</button>
         <button type="button" onclick="rejectOperatorForm('${f.id}')">🔴 Reject</button>
-      </div>`).join('');
+      </div>`);
+  }
+  list.innerHTML=cards.join('');
 }
+
 
 function escapeHtml(value){
   return String(value ?? '').replace(/[&<>"']/g, m => ({
@@ -485,9 +560,6 @@ async function submitOperatorForm(event){
     return;
   }
 
-  const {data:publicUrlData}=supabase.storage
-    .from('operator-photos').getPublicUrl(photoData.path);
-
   const {error}=await supabase.from('operator_forms').insert({
     reference_number:reference,
     district_id:p.district_id,
@@ -501,7 +573,7 @@ async function submitOperatorForm(event){
     mobile_number:document.getElementById('mobileNumber').value.trim(),
     whatsapp_number:document.getElementById('whatsappNumber').value.trim(),
     personal_email:document.getElementById('personalEmail').value.trim(),
-    photo_url:publicUrlData.publicUrl,
+    photo_url:photoData.path,
     status:'pending'
   });
 
