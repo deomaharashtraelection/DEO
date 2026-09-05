@@ -135,7 +135,7 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 <p id="summary"></p>
 <p id="dashboardWelcome" style="font-weight:700;margin-top:6px;"></p>
 
-<div id="districtDashboardTabs" class="login-tabs" style="margin-top:18px;">
+<div id="districtDashboardTabs" class="login-tabs hidden" style="margin-top:18px;">
   <button type="button" class="tab active" id="homeTab" onclick="showHomeTab()">🏠 मुख्यपृष्ठ</button>
   <button type="button" class="tab" id="dataEntryTab" onclick="showDataEntryTab()">📝 Data Entry</button>
   <button type="button" class="tab" id="myFormsTab" onclick="showMyFormsTab()">📋 माझे Forms</button>
@@ -170,7 +170,7 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 
 <div id="dataEntryPanel" class="hidden">
 <h3>📝 ऑपरेटर Data Entry Form</h3>
-<p>खालील सर्व माहिती काळजीपूर्वक भरावी. Submit केल्यानंतर हा फॉर्म Admin कडे Approval साठी जाईल.</p>
+<p>ही Data Entry सुविधा फक्त District Login साठी आहे. खालील सर्व माहिती काळजीपूर्वक भरावी. Submit केल्यानंतर हा फॉर्म Admin कडे Approval साठी जाईल.</p>
 
 <form id="operatorForm" onsubmit="submitOperatorForm(event)">
   <label>विधानसभा मतदारसंघ</label>
@@ -644,8 +644,8 @@ async function submitOperatorForm(event){
   const {data:p,error:pe}=await supabase.from('profiles')
     .select('role,district_id').eq('user_id',user.id).single();
 
-  if(pe || !p || p.role==='admin' || !p.district_id){
-    msg.textContent='या Login साठी Data Entry उपलब्ध नाही.';
+  if(pe || !p || p.role !== 'district' || !p.district_id){
+    msg.textContent='Data Entry फक्त District Login साठी उपलब्ध आहे.';
     btn.disabled=false;
     return;
   }
@@ -779,9 +779,21 @@ async function showDistrict(districtId){
   document.getElementById('title').textContent=`${d.name} जिल्हा Dashboard — ${d.login_code}`;
   document.getElementById('dashboardWelcome').textContent=`${d.name} जिल्ह्यासाठी आपले District Dashboard`;
   document.getElementById('summary').textContent=`एकूण विधानसभा मतदारसंघ: ${(acs||[]).length} | एकूण तालुके: ${(ts||[]).length}`;
-  document.getElementById('districtDashboardTabs').classList.remove('hidden');
   const {data:{user:districtUser}}=await supabase.auth.getUser();
-  if(districtUser) await loadDistrictDashboardStats(districtUser.id,d.id,(acs||[]).length,(ts||[]).length);
+  let currentRole = null;
+  if(districtUser){
+    const {data:currentProfile}=await supabase.from('profiles')
+      .select('role').eq('user_id',districtUser.id).single();
+    currentRole=currentProfile?.role || null;
+  }
+
+  // Data Entry आणि माझे Forms हे फक्त District Login साठी.
+  if(currentRole === 'district'){
+    document.getElementById('districtDashboardTabs').classList.remove('hidden');
+    await loadDistrictDashboardStats(districtUser.id,d.id,(acs||[]).length,(ts||[]).length);
+  } else {
+    document.getElementById('districtDashboardTabs').classList.add('hidden');
+  }
   document.getElementById('acs').innerHTML=(acs||[]).map(x=>`<div>${x.constituency_no ?? ''} - ${x.name}</div>`).join('');
   document.getElementById('talukas').innerHTML=(ts||[]).map(x=>`<div>${x.name}</div>`).join('');
   const csel=document.getElementById('formConstituency');
