@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>निवडणूक विभाग - डाटा एन्ट्री ऑपरेटर संघटना</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans Devanagari","Mangal",Arial,sans-serif;background:#f5f7fa;color:#172033}
+.site-header{background:linear-gradient(135deg,#17365d,#245b8f);color:#fff;padding:18px 20px;box-shadow:0 3px 10px rgba(0,0,0,.15)}
+.header-container{max-width:1200px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.brand{display:flex;align-items:center;gap:16px}
+.logo{width:72px;height:72px;border-radius:50%;background:#fff;color:#17365d;display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;border:3px solid rgba(255,255,255,.75)}
+.main-title{margin:0;font-size:31px;font-weight:800}
+.sub-title{margin:4px 0 0;font-size:21px;font-weight:500}
+.english{margin-top:8px;font-size:13px;opacity:.9}
+.badge{background:#ffffff22;border:1px solid #ffffff4d;padding:10px 15px;border-radius:8px;text-align:center;white-space:nowrap}
+.navbar{background:#fff;border-bottom:1px solid #e5e7eb}
+.nav{max-width:1200px;margin:auto;display:flex;justify-content:center;flex-wrap:wrap}
+.nav a{color:#17365d;text-decoration:none;padding:14px 18px;font-size:15px;font-weight:700}
+.nav a:hover{background:#eef4f9}
+.container{max-width:1000px;margin:28px auto;padding:0 16px}
+.card{background:#fff;border-radius:14px;padding:24px;box-shadow:0 4px 18px rgba(0,0,0,.08);margin-bottom:22px}
+h2{margin-top:0;color:#17365d}
+.login-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+label{display:block;font-weight:700;margin:12px 0 6px}
+input,select{width:100%;padding:12px;border:1px solid #ccd4df;border-radius:8px;font-size:16px}
+button{border:0;border-radius:8px;padding:12px 18px;background:#1769aa;color:#fff;font-weight:700;cursor:pointer;margin-top:15px}
+button.secondary{background:#5b677a}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.tab{padding:10px 16px;border:1px solid #d5dbe3;border-radius:8px;background:#fff;cursor:pointer;font-weight:700}
+.tab.active{background:#17365d;color:#fff}
+.hidden{display:none}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stat{background:#f0f5fa;padding:18px;border-radius:10px;text-align:center}
+.stat b{display:block;font-size:25px;color:#17365d;margin-bottom:5px}
+.notice{padding:12px 15px;border-radius:8px;background:#fff7df;margin-top:15px;font-size:14px}
+.success{color:#147a3e;font-weight:700}
+.error{color:#b42318;font-weight:700}
+footer{text-align:center;padding:24px;color:#667085;font-size:13px}
+@media(max-width:700px){
+.header-container{flex-direction:column;text-align:center}
+.brand{flex-direction:column}
+.main-title{font-size:23px}
+.sub-title{font-size:18px}
+.badge{width:100%;white-space:normal}
+.nav{flex-direction:column}
+.nav a{width:100%;text-align:center;border-bottom:1px solid #eee}
+.login-grid{grid-template-columns:1fr}
+.stats{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-container">
+    <div class="brand">
+      <div class="logo">🗳️</div>
+      <div>
+        <h1 class="main-title">निवडणूक विभाग</h1>
+        <div class="sub-title">डाटा एन्ट्री ऑपरेटर संघटना</div>
+        <div class="english">Election Department Data Entry Operators Association</div>
+      </div>
+    </div>
+    <div class="badge">महाराष्ट्र राज्य<br><strong>ऑनलाईन माहिती प्रणाली</strong></div>
+  </div>
+</header>
+
+<nav class="navbar">
+  <div class="nav">
+    <a href="#">मुख्यपृष्ठ</a>
+    <a href="#application">अर्ज</a>
+    <a href="#update">माहिती अपडेट</a>
+    <a href="#status">अर्जाची स्थिती</a>
+    <a href="#login">Login</a>
+    <a href="#admin">Admin</a>
+  </div>
+</nav>
+
+<main class="container">
+  <section class="card" id="login">
+    <h2>🔐 Login</h2>
+    <div class="tabs">
+      <button class="tab active" id="districtTab" onclick="showDistrictLogin()">36 जिल्हा Login</button>
+      <button class="tab" id="commonTab" onclick="showCommonLogin()">Common Admin Login</button>
+    </div>
+
+    <div id="districtLogin">
+      <div class="login-grid">
+        <div>
+          <label>जिल्हा निवडा</label>
+          <select id="district">
+        <option value="अहिल्यानगर">अहिल्यानगर</option>
+        <option value="अकोला">अकोला</option>
+        <option value="अमरावती">अमरावती</option>
+        <option value="बीड">बीड</option>
+        <option value="भंडारा">भंडारा</option>
+        <option value="बुलढाणा">बुलढाणा</option>
+        <option value="चंद्रपूर">चंद्रपूर</option>
+        <option value="धुळे">धुळे</option>
+        <option value="गडचिरोली">गडचिरोली</option>
+        <option value="गोंदिया">गोंदिया</option>
+        <option value="हिंगोली">हिंगोली</option>
+        <option value="जळगाव">जळगाव</option>
+        <option value="जालना">जालना</option>
+        <option value="कोल्हापूर">कोल्हापूर</option>
+        <option value="लातूर">लातूर</option>
+        <option value="मुंबई शहर">मुंबई शहर</option>
+        <option value="मुंबई उपनगर">मुंबई उपनगर</option>
+        <option value="नागपूर">नागपूर</option>
+        <option value="नांदेड">नांदेड</option>
+        <option value="नंदुरबार">नंदुरबार</option>
+        <option value="नाशिक">नाशिक</option>
+        <option value="धाराशिव">धाराशिव</option>
+        <option value="पालघर">पालघर</option>
+        <option value="परभणी">परभणी</option>
+        <option value="पुणे">पुणे</option>
+        <option value="रायगड">रायगड</option>
+        <option value="रत्नागिरी">रत्नागिरी</option>
+        <option value="सांगली">सांगली</option>
+        <option value="सातारा">सातारा</option>
+        <option value="सिंधुदुर्ग">सिंधुदुर्ग</option>
+        <option value="सोलापूर">सोलापूर</option>
+        <option value="ठाणे">ठाणे</option>
+        <option value="वर्धा">वर्धा</option>
+        <option value="वाशिम">वाशिम</option>
+        <option value="यवतमाळ">यवतमाळ</option>
+        <option value="छत्रपती संभाजीनगर">छत्रपती संभाजीनगर</option>
+          </select>
+        </div>
+        <div>
+          <label>Login ID</label>
+          <input id="districtId" placeholder="उदा. NAS-DEO-01">
+        </div>
+      </div>
+      <label>Password / PIN</label>
+      <input id="districtPin" type="password" placeholder="Password / PIN">
+      <button onclick="districtLogin()">District Login</button>
+      <p id="districtMsg"></p>
+      <div class="notice">⚠️ हा सध्या UI/Prototype Login आहे. प्रत्यक्ष सुरक्षा, OTP आणि 36 स्वतंत्र खात्यांसाठी Supabase Authentication + Row Level Security जोडणे आवश्यक आहे.</div>
+    </div>
+
+    <div id="commonLogin" class="hidden">
+      <label>Common Admin ID</label>
+      <input id="adminId" placeholder="Common Admin ID">
+      <label>Password / PIN</label>
+      <input id="adminPin" type="password" placeholder="Password / PIN">
+      <button onclick="commonLogin()">Common Admin Login</button>
+      <p id="adminMsg"></p>
+    </div>
+  </section>
+
+  <section class="card hidden" id="dashboard">
+    <h2 id="dashboardTitle">Dashboard</h2>
+    <div class="stats">
+      <div class="stat"><b>0</b>एकूण अर्ज</div>
+      <div class="stat"><b>0</b>Draft</div>
+      <div class="stat"><b>0</b>Submitted</div>
+      <div class="stat"><b>0</b>Pending</div>
+    </div>
+    <button class="secondary" onclick="logout()">Logout</button>
+  </section>
+
+  <section class="card" id="application">
+    <h2>📝 अर्ज</h2>
+    <p>पुढील टप्प्यात येथे संपूर्ण अर्ज Form, Photo Upload आणि Application ID जोडण्यात येईल.</p>
+  </section>
+
+  <section class="card" id="update">
+    <h2>✏️ माहिती अपडेट</h2>
+    <p>Login केल्यानंतर वापरकर्त्याला त्याच्या परवानगीतील माहितीच अपडेट करता येईल.</p>
+  </section>
+
+  <section class="card" id="status">
+    <h2>📊 अर्जाची स्थिती</h2>
+    <p>Application ID टाकून अर्जाची स्थिती तपासण्याची सुविधा पुढील टप्प्यात जोडण्यात येईल.</p>
+  </section>
+
+  <section class="card" id="admin">
+    <h2>👑 Common Admin</h2>
+    <p>Common Admin ला सर्व 36 जिल्ह्यांचे Dashboard, Search, Verification आणि Reports दिसतील.</p>
+  </section>
+</main>
+
+<footer>
+  निवडणूक विभाग डाटा एन्ट्री ऑपरेटर संघटना • Prototype
+</footer>
+
+<script>
+const districts = ['अहिल्यानगर','अकोला','अमरावती','बीड','भंडारा','बुलढाणा','चंद्रपूर','धुळे','गडचिरोली','गोंदिया','हिंगोली','जळगाव','जालना','कोल्हापूर','लातूर','मुंबई शहर','मुंबई उपनगर','नागपूर','नांदेड','नंदुरबार','नाशिक','धाराशिव','पालघर','परभणी','पुणे','रायगड','रत्नागिरी','सांगली','सातारा','सिंधुदुर्ग','सोलापूर','ठाणे','वर्धा','वाशिम','यवतमाळ','छत्रपती संभाजीनगर'];
+
+function showDistrictLogin(){
+  document.getElementById('districtLogin').classList.remove('hidden');
+  document.getElementById('commonLogin').classList.add('hidden');
+  document.getElementById('districtTab').classList.add('active');
+  document.getElementById('commonTab').classList.remove('active');
+}
+
+function showCommonLogin(){
+  document.getElementById('districtLogin').classList.add('hidden');
+  document.getElementById('commonLogin').classList.remove('hidden');
+  document.getElementById('districtTab').classList.remove('active');
+  document.getElementById('commonTab').classList.add('active');
+}
+
+function districtLogin(){
+  const district=document.getElementById('district').value;
+  const id=document.getElementById('districtId').value.trim();
+  const pin=document.getElementById('districtPin').value.trim();
+  const msg=document.getElementById('districtMsg');
+  if(!id || !pin){ msg.className='error'; msg.textContent='Login ID आणि Password/PIN भरा.'; return; }
+  msg.className='success';
+  msg.textContent=district+' जिल्हा Login Prototype यशस्वी.';
+  document.getElementById('dashboard').classList.remove('hidden');
+  document.getElementById('dashboardTitle').textContent=district+' जिल्हा Dashboard';
+}
+
+function commonLogin(){
+  const id=document.getElementById('adminId').value.trim();
+  const pin=document.getElementById('adminPin').value.trim();
+  const msg=document.getElementById('adminMsg');
+  if(!id || !pin){ msg.className='error'; msg.textContent='Admin ID आणि Password/PIN भरा.'; return; }
+  msg.className='success';
+  msg.textContent='Common Admin Login Prototype यशस्वी.';
+  document.getElementById('dashboard').classList.remove('hidden');
+  document.getElementById('dashboardTitle').textContent='Maharashtra — Common Admin Dashboard';
+}
+
+function logout(){
+  document.getElementById('dashboard').classList.add('hidden');
+  document.getElementById('districtMsg').textContent='';
+  document.getElementById('adminMsg').textContent='';
+}
+</script>
+</body>
+</html>
