@@ -27,6 +27,7 @@ button{cursor:pointer}
 .hidden{display:none}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.login-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px}.tab{background:#eef4f9;color:#17365d;border:1px solid #cbd5e1;font-weight:700}.tab.active{background:#17365d;color:#fff}
 footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 @media(max-width:700px){
+#districtStats{grid-template-columns:1fr 1fr !important;}
 .site-header{padding:16px 12px}.header-container{flex-direction:column;text-align:center}
 .brand{flex-direction:column;gap:10px}.logo{width:68px;height:68px}
 .main-title{font-size:24px}.sub-title{font-size:18px}.english{font-size:12px}
@@ -132,14 +133,34 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 <div class="card hidden" id="dashboard" aria-label="District Home Page">
 <h2 id="title"></h2>
 <p id="summary"></p>
+<p id="dashboardWelcome" style="font-weight:700;margin-top:6px;"></p>
 
-<div class="login-tabs" style="margin-top:18px;">
-  <button type="button" class="tab active" id="homeTab" onclick="showHomeTab()">मुख्यपृष्ठ</button>
-  <button type="button" class="tab" id="dataEntryTab" onclick="showDataEntryTab()">Data Entry</button>
-  <button type="button" class="tab" id="myFormsTab" onclick="showMyFormsTab()">माझे Forms</button>
+<div id="districtDashboardTabs" class="login-tabs" style="margin-top:18px;">
+  <button type="button" class="tab active" id="homeTab" onclick="showHomeTab()">🏠 मुख्यपृष्ठ</button>
+  <button type="button" class="tab" id="dataEntryTab" onclick="showDataEntryTab()">📝 Data Entry</button>
+  <button type="button" class="tab" id="myFormsTab" onclick="showMyFormsTab()">📋 माझे Forms</button>
 </div>
 
 <div id="homePanel">
+<div id="districtStats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0;">
+  <div class="card" style="margin:0;text-align:center;padding:16px;">
+    <div style="font-size:28px;font-weight:800;" id="statConstituencies">0</div>
+    <div>विधानसभा मतदारसंघ</div>
+  </div>
+  <div class="card" style="margin:0;text-align:center;padding:16px;">
+    <div style="font-size:28px;font-weight:800;" id="statTalukas">0</div>
+    <div>तालुके</div>
+  </div>
+  <div class="card" style="margin:0;text-align:center;padding:16px;">
+    <div style="font-size:28px;font-weight:800;" id="statMyForms">0</div>
+    <div>माझे Forms</div>
+  </div>
+  <div class="card" style="margin:0;text-align:center;padding:16px;">
+    <div style="font-size:28px;font-weight:800;" id="statPending">0</div>
+    <div>Pending Approval</div>
+  </div>
+</div>
+
 <div class="grid">
 <div><h3>विधानसभा मतदारसंघ</h3><div id="acs"></div></div>
 <div><h3>तालुके</h3><div id="talukas"></div></div>
@@ -699,7 +720,9 @@ async function loadDashboard(){
     document.getElementById('login').classList.add('hidden');
     document.getElementById('dashboard').classList.remove('hidden');
     disableAuthMenu();
+    document.getElementById('districtDashboardTabs').classList.add('hidden');
     document.getElementById('title').textContent='महाराष्ट्र — Master Admin';
+    document.getElementById('dashboardWelcome').textContent='सर्व जिल्ह्यांचे Master Admin Dashboard';
     document.getElementById('summary').textContent=`एकूण जिल्हे: ${(districts||[]).length}`;
     document.getElementById('acs').innerHTML=(districts||[])
       .map(d=>`<div><button style="width:100%" onclick="openDistrict(${d.id})">${d.id} - ${d.name} (${d.login_code})</button></div>`).join('');
@@ -713,6 +736,28 @@ async function loadDashboard(){
     return;
   }
   await showDistrict(p.district_id);
+}
+
+
+async function loadDistrictDashboardStats(userId, districtId, acCount, talukaCount){
+  const c=document.getElementById('statConstituencies');
+  const t=document.getElementById('statTalukas');
+  const m=document.getElementById('statMyForms');
+  const p=document.getElementById('statPending');
+
+  if(c) c.textContent=acCount ?? 0;
+  if(t) t.textContent=talukaCount ?? 0;
+
+  const {data:forms,error}=await supabase.from('operator_forms')
+    .select('status').eq('user_id',userId);
+
+  if(!error && forms){
+    if(m) m.textContent=forms.length;
+    if(p) p.textContent=forms.filter(x=>x.status==='pending').length;
+  } else {
+    if(m) m.textContent='0';
+    if(p) p.textContent='0';
+  }
 }
 
 async function showDistrict(districtId){
@@ -730,8 +775,12 @@ async function showDistrict(districtId){
   document.getElementById('login').classList.add('hidden');
   document.getElementById('dashboard').classList.remove('hidden');
   disableAuthMenu();
-  document.getElementById('title').textContent=`${d.name} जिल्हा — ${d.login_code}`;
+  document.getElementById('title').textContent=`${d.name} जिल्हा Dashboard — ${d.login_code}`;
+  document.getElementById('dashboardWelcome').textContent=`${d.name} जिल्ह्यासाठी आपले District Dashboard`;
   document.getElementById('summary').textContent=`एकूण विधानसभा मतदारसंघ: ${(acs||[]).length} | एकूण तालुके: ${(ts||[]).length}`;
+  document.getElementById('districtDashboardTabs').classList.remove('hidden');
+  const {data:{user:districtUser}}=await supabase.auth.getUser();
+  if(districtUser) await loadDistrictDashboardStats(districtUser.id,d.id,(acs||[]).length,(ts||[]).length);
   document.getElementById('acs').innerHTML=(acs||[]).map(x=>`<div>${x.constituency_no ?? ''} - ${x.name}</div>`).join('');
   document.getElementById('talukas').innerHTML=(ts||[]).map(x=>`<div>${x.name}</div>`).join('');
   const csel=document.getElementById('formConstituency');
