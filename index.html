@@ -58,7 +58,7 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 <div class="card hidden" id="login">
 <h2 id="loginHeading">🔐 Login</h2>
 
-<div class="login-tabs">
+<div class="login-tabs" id="loginTabs">
   <button type="button" id="districtTab" class="tab active" onclick="showDistrictLogin()">जिल्हा Login</button>
   <button type="button" id="adminTab" class="tab" onclick="showAdminLogin()">Admin Login</button>
 </div>
@@ -85,6 +85,7 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 
 <button onclick="login()">Login</button>
 <p id="msg"></p>
+<button type="button" class="secondary" onclick="closeLogin()">Close</button>
 </div>
 
 
@@ -99,6 +100,9 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 </div>
 
 <script>
+function closeLogin(){
+  document.getElementById('login').classList.add('hidden');
+}
 function openDistrictLogin(event){
   if(event) event.preventDefault();
   const login=document.getElementById('login');
@@ -118,17 +122,22 @@ function openAdminLogin(event){
 function showDistrictLogin(){
   document.getElementById('districtLoginPanel').classList.remove('hidden');
   document.getElementById('districtTab').classList.add('active');
-  document.getElementById('adminTab').classList.remove('active');
+  document.getElementById('adminTab').classList.add('hidden');
   document.getElementById('loginHeading').textContent='🔐 जिल्हा Login';
   document.getElementById('msg').textContent='';
+  document.getElementById('email').placeholder='District Login Email';
+  document.getElementById('password').placeholder='District Password';
 }
 
 function showAdminLogin(){
   document.getElementById('districtLoginPanel').classList.add('hidden');
-  document.getElementById('districtTab').classList.remove('active');
+  document.getElementById('districtTab').classList.add('hidden');
+  document.getElementById('adminTab').classList.remove('hidden');
   document.getElementById('adminTab').classList.add('active');
   document.getElementById('loginHeading').textContent='👑 Admin Login';
   document.getElementById('msg').textContent='';
+  document.getElementById('email').placeholder='Admin Login Email';
+  document.getElementById('password').placeholder='Admin Password';
 }
 </script>
 <script type="module">
