@@ -52,7 +52,7 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 </header>
 <nav class="navbar"><div class="nav">
 <a href="#">मुख्यपृष्ठ</a><a href="#login">अर्ज</a><a href="#dashboard">माहिती अपडेट</a>
-<a href="#dashboard">अर्जाची स्थिती</a><a href="#login" onclick="openDistrictLogin(event)">Login</a><a href="#login" onclick="openAdminLogin(event)">Admin</a><a href="#" id="logoutNav" class="hidden" onclick="logout();return false;">Logout</a>
+<a href="#dashboard">अर्जाची स्थिती</a><a href="#login" onclick="openDistrictLogin(event)">Login</a><a href="#login" onclick="openAdminLogin(event)">Admin</a>
 </div></nav>
 <main class="container">
 
@@ -117,17 +117,95 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 </div>
 
 
-<div class="card hidden" id="dashboard">
+<div class="card hidden" id="dashboard" aria-label="District Home Page">
 <h2 id="title"></h2>
 <p id="summary"></p>
-<button onclick="logout()">Logout</button>
+
+<div class="login-tabs" style="margin-top:18px;">
+  <button type="button" class="tab active" id="homeTab" onclick="showHomeTab()">मुख्यपृष्ठ</button>
+  <button type="button" class="tab" id="dataEntryTab" onclick="showDataEntryTab()">Data Entry</button>
+</div>
+
+<div id="homePanel">
 <div class="grid">
 <div><h3>विधानसभा मतदारसंघ</h3><div id="acs"></div></div>
 <div><h3>तालुके</h3><div id="talukas"></div></div>
 </div>
 </div>
 
+<div id="dataEntryPanel" class="hidden">
+<h3>📝 ऑपरेटर Data Entry Form</h3>
+<p>खालील सर्व माहिती काळजीपूर्वक भरावी. Submit केल्यानंतर हा फॉर्म Admin कडे Approval साठी जाईल.</p>
+
+<form id="operatorForm" onsubmit="submitOperatorForm(event)">
+  <label>विधानसभा मतदारसंघ</label>
+  <select id="formConstituency" required style="padding:12px;margin:6px 0;width:100%;box-sizing:border-box;">
+    <option value="">विधानसभा मतदारसंघ निवडा</option>
+  </select>
+
+  <label>तालुका</label>
+  <select id="formTaluka" required style="padding:12px;margin:6px 0;width:100%;box-sizing:border-box;">
+    <option value="">तालुका निवडा</option>
+  </select>
+
+  <label>ऑपरेटरचे पूर्ण नाव (मराठीत)</label>
+  <input id="operatorName" type="text" required placeholder="पूर्ण नाव मराठीत">
+
+  <label>जन्मतारीख</label>
+  <input id="dateOfBirth" type="date" required>
+
+  <label>घरचा पत्ता (मराठीत)</label>
+  <textarea id="homeAddress" rows="4" required placeholder="पूर्ण घरचा पत्ता मराठीत" style="width:100%;padding:12px;margin:6px 0;box-sizing:border-box;"></textarea>
+
+  <label>पिन कोड</label>
+  <input id="pinCode" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required placeholder="६ अंकी पिन कोड">
+
+  <label>मोबाईल नंबर</label>
+  <input id="mobileNumber" type="tel" inputmode="numeric" maxlength="10" pattern="[6-9][0-9]{9}" required placeholder="१० अंकी मोबाईल नंबर">
+
+  <label>WhatsApp Number</label>
+  <input id="whatsappNumber" type="tel" inputmode="numeric" maxlength="10" pattern="[6-9][0-9]{9}" required placeholder="१० अंकी WhatsApp नंबर">
+
+  <label>स्वतःचा ईमेल आयडी</label>
+  <input id="personalEmail" type="email" required placeholder="आपला ईमेल आयडी">
+
+  <label>स्वतःचा पासपोर्ट साईज फोटो</label>
+  <input id="passportPhoto" type="file" accept="image/jpeg,image/png,image/webp" required>
+
+  <button type="submit" id="submitOperatorBtn">सबमिट</button>
+</form>
+
+<div id="submitSuccess" class="hidden" style="margin-top:18px;padding:18px;border:1px solid #b7dfc5;border-radius:8px;background:#f0fff4;">
+  <h3>✅ Submitted Successfully</h3>
+  <p>आपला फॉर्म Admin कडे Approval साठी पाठविण्यात आला आहे.</p>
+  <p><strong>Reference Number:</strong> <span id="referenceNumber"></span></p>
+  <p><strong>Status:</strong> Pending Admin Approval</p>
+</div>
+
+<p id="dataEntryMsg"></p>
+</div></div>
+</div>
+
 <script>
+function showHomeTab(){
+  document.getElementById('homePanel').classList.remove('hidden');
+  document.getElementById('dataEntryPanel').classList.add('hidden');
+  document.getElementById('homeTab').classList.add('active');
+  document.getElementById('dataEntryTab').classList.remove('active');
+}
+
+function showDataEntryTab(){
+  document.getElementById('homePanel').classList.add('hidden');
+  document.getElementById('dataEntryPanel').classList.remove('hidden');
+  document.getElementById('homeTab').classList.remove('active');
+  document.getElementById('dataEntryTab').classList.add('active');
+}
+
+function saveDataEntry(){
+  document.getElementById('dataEntryMsg').textContent =
+    'Data Entry form तयार आहे. प्रत्यक्ष database मध्ये Save करण्यासाठी Supabase table जोडणे आवश्यक आहे.';
+}
+
 function closeLogin(){
   document.getElementById('login').classList.add('hidden');
 }
@@ -275,10 +353,169 @@ function disableAuthMenu(){
       a.onclick=(e)=>{e.preventDefault();return false;};
     }
   });
+}
 
-  // Login झाल्यानंतर Logout फक्त वरच्या मेनूमध्ये दाखवा.
-  const logoutNav=document.getElementById('logoutNav');
-  if(logoutNav) logoutNav.classList.remove('hidden');
+
+async function loadPendingOperatorForms(){
+  const {data:{user}} = await supabase.auth.getUser();
+  if(!user) return;
+
+  const {data:p} = await supabase.from('profiles')
+    .select('role').eq('user_id',user.id).single();
+
+  if(!p || p.role !== 'admin') return;
+
+  let panel=document.getElementById('adminApprovalPanel');
+  if(!panel){
+    panel=document.createElement('div');
+    panel.id='adminApprovalPanel';
+    panel.className='card';
+    document.getElementById('dashboard').appendChild(panel);
+  }
+
+  panel.innerHTML='<h3>📋 Operator Forms — Admin Approval</h3><p>Pending forms loading...</p>';
+
+  const {data:forms,error}=await supabase.from('operator_forms')
+    .select('*').eq('status','pending').order('created_at',{ascending:false});
+
+  if(error){
+    panel.innerHTML='<h3>📋 Operator Forms — Admin Approval</h3><p>'+error.message+'</p>';
+    return;
+  }
+
+  if(!forms || !forms.length){
+    panel.innerHTML='<h3>📋 Operator Forms — Admin Approval</h3><p>सध्या कोणताही Pending Form नाही.</p>';
+    return;
+  }
+
+  panel.innerHTML='<h3>📋 Operator Forms — Admin Approval</h3>' +
+    forms.map(f=>`
+      <div class="card" style="margin-top:12px;">
+        <p><strong>Reference Number:</strong> ${escapeHtml(f.reference_number||'')}</p>
+        <p><strong>नाव:</strong> ${escapeHtml(f.operator_name||'')}</p>
+        <p><strong>विधानसभा:</strong> ${escapeHtml(f.constituency||'')}</p>
+        <p><strong>तालुका:</strong> ${escapeHtml(f.taluka||'')}</p>
+        <p><strong>मोबाईल:</strong> ${escapeHtml(f.mobile_number||'')}</p>
+        <p><strong>ईमेल:</strong> ${escapeHtml(f.personal_email||'')}</p>
+        ${f.photo_url ? `<p><a href="${f.photo_url}" target="_blank">📷 फोटो पाहा</a></p>` : ''}
+        <button type="button" onclick="approveOperatorForm('${f.id}')">🟢 Approve</button>
+        <button type="button" onclick="rejectOperatorForm('${f.id}')">🔴 Reject</button>
+      </div>`).join('');
+}
+
+function escapeHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g, m => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+  }[m]));
+}
+
+async function approveOperatorForm(id){
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user) return;
+
+  const {error}=await supabase.from('operator_forms').update({
+    status:'approved',
+    approved_by:user.id,
+    approved_at:new Date().toISOString()
+  }).eq('id',id);
+
+  if(error){ alert(error.message); return; }
+  await loadPendingOperatorForms();
+}
+
+async function rejectOperatorForm(id){
+  const reason=prompt('Reject करण्याचे कारण लिहा:');
+  if(reason===null) return;
+
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user) return;
+
+  const {error}=await supabase.from('operator_forms').update({
+    status:'rejected',
+    rejection_reason:reason,
+    approved_by:user.id,
+    approved_at:new Date().toISOString()
+  }).eq('id',id);
+
+  if(error){ alert(error.message); return; }
+  await loadPendingOperatorForms();
+}
+
+async function submitOperatorForm(event){
+  event.preventDefault();
+
+  const btn=document.getElementById('submitOperatorBtn');
+  const msg=document.getElementById('dataEntryMsg');
+  btn.disabled=true;
+  msg.textContent='फॉर्म Submit होत आहे...';
+
+  const {data:{user},error:ue}=await supabase.auth.getUser();
+  if(ue || !user){
+    msg.textContent='कृपया पुन्हा Login करा.';
+    btn.disabled=false;
+    return;
+  }
+
+  const {data:p,error:pe}=await supabase.from('profiles')
+    .select('role,district_id').eq('user_id',user.id).single();
+
+  if(pe || !p || p.role==='admin' || !p.district_id){
+    msg.textContent='या Login साठी Data Entry उपलब्ध नाही.';
+    btn.disabled=false;
+    return;
+  }
+
+  const photo=document.getElementById('passportPhoto').files[0];
+  if(!photo){
+    msg.textContent='पासपोर्ट साईज फोटो निवडा.';
+    btn.disabled=false;
+    return;
+  }
+
+  const reference='OP-' + new Date().getFullYear() + '-' +
+    Math.random().toString(36).substring(2,8).toUpperCase();
+
+  const {data:photoData,error:photoError}=await supabase.storage
+    .from('operator-photos')
+    .upload(`${p.district_id}/${reference}-${photo.name}`,photo,{upsert:false});
+
+  if(photoError){
+    msg.textContent='फोटो Upload झाला नाही: '+photoError.message;
+    btn.disabled=false;
+    return;
+  }
+
+  const {data:publicUrlData}=supabase.storage
+    .from('operator-photos').getPublicUrl(photoData.path);
+
+  const {error}=await supabase.from('operator_forms').insert({
+    reference_number:reference,
+    district_id:p.district_id,
+    user_id:user.id,
+    constituency:document.getElementById('formConstituency').value,
+    taluka:document.getElementById('formTaluka').value,
+    operator_name:document.getElementById('operatorName').value.trim(),
+    date_of_birth:document.getElementById('dateOfBirth').value,
+    home_address:document.getElementById('homeAddress').value.trim(),
+    pin_code:document.getElementById('pinCode').value.trim(),
+    mobile_number:document.getElementById('mobileNumber').value.trim(),
+    whatsapp_number:document.getElementById('whatsappNumber').value.trim(),
+    personal_email:document.getElementById('personalEmail').value.trim(),
+    photo_url:publicUrlData.publicUrl,
+    status:'pending'
+  });
+
+  if(error){
+    msg.textContent='फॉर्म Submit झाला नाही: '+error.message;
+    btn.disabled=false;
+    return;
+  }
+
+  document.getElementById('referenceNumber').textContent=reference;
+  document.getElementById('submitSuccess').classList.remove('hidden');
+  document.getElementById('operatorForm').reset();
+  msg.textContent='';
+  btn.disabled=false;
 }
 
 async function loadDashboard(){
@@ -307,6 +544,7 @@ async function loadDashboard(){
     document.getElementById('acs').innerHTML=(districts||[])
       .map(d=>`<div><button style="width:100%" onclick="openDistrict(${d.id})">${d.id} - ${d.name} (${d.login_code})</button></div>`).join('');
     document.getElementById('talukas').innerHTML='<div>डावीकडील जिल्ह्यावर क्लिक करा. त्या जिल्ह्याचे विधानसभा मतदारसंघ आणि तालुके येथे दिसतील.</div>';
+    await loadPendingOperatorForms();
     return;
   }
 
@@ -336,6 +574,16 @@ async function showDistrict(districtId){
   document.getElementById('summary').textContent=`एकूण विधानसभा मतदारसंघ: ${(acs||[]).length} | एकूण तालुके: ${(ts||[]).length}`;
   document.getElementById('acs').innerHTML=(acs||[]).map(x=>`<div>${x.constituency_no ?? ''} - ${x.name}</div>`).join('');
   document.getElementById('talukas').innerHTML=(ts||[]).map(x=>`<div>${x.name}</div>`).join('');
+  const csel=document.getElementById('formConstituency');
+  const tsel=document.getElementById('formTaluka');
+  if(csel){
+    csel.innerHTML='<option value="">विधानसभा मतदारसंघ निवडा</option>' +
+      (acs||[]).map(x=>`<option value="${escapeHtml((x.constituency_no ?? '')+' - '+x.name)}">${escapeHtml((x.constituency_no ?? '')+' - '+x.name)}</option>`).join('');
+  }
+  if(tsel){
+    tsel.innerHTML='<option value="">तालुका निवडा</option>' +
+      (ts||[]).map(x=>`<option value="${escapeHtml(x.name)}">${escapeHtml(x.name)}</option>`).join('');
+  }
 }
 
 async function openDistrict(districtId){ await showDistrict(districtId); }
