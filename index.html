@@ -35,6 +35,18 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 .grid{grid-template-columns:1fr}.container{margin:18px auto;padding:0 12px}.card{padding:18px}
 }
 </style>
+<style>
+#idleWarning{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+#idleWarning .idle-box{
+  max-width:430px;width:100%;background:#fff;border-radius:14px;
+  padding:25px;text-align:center;box-shadow:0 10px 35px rgba(0,0,0,.25);
+}
+#idleWarning .idle-count{font-size:30px;font-weight:800;margin:10px 0;}
+</style>
+
 </head>
 <body>
 <header class="site-header">
@@ -300,6 +312,82 @@ function showAdminLogin(){
   document.getElementById('email').placeholder='Admin Login Email';
   document.getElementById('password').placeholder='Admin Password';
 }
+</script>
+
+<script>
+/* 5 मिनिटे कोणतीही activity नसल्यास auto-logout */
+let idleTimer = null;
+let idleCountdownTimer = null;
+let idleSecondsLeft = 60;
+let idleWarningOpen = false;
+
+function createIdleWarning(){
+  if(document.getElementById('idleWarning')) return;
+  const box=document.createElement('div');
+  box.id='idleWarning';
+  box.style.display='none';
+  box.innerHTML=`
+    <div class="idle-box">
+      <h2>⚠️ Session समाप्त होणार आहे</h2>
+      <p>गेल्या 5 मिनिटांत कोणतीही activity आढळली नाही.</p>
+      <div class="idle-count" id="idleCountdown">60</div>
+      <p>तुम्ही काम करत असल्यास खालील बटण दाबा.</p>
+      <button type="button" onclick="continueSession()">काम सुरू ठेवा</button>
+      <button type="button" onclick="logoutNow()">Logout</button>
+    </div>`;
+  document.body.appendChild(box);
+}
+
+function resetIdleTimer(){
+  if(idleWarningOpen) return;
+  clearTimeout(idleTimer);
+  idleTimer=setTimeout(showIdleWarning, 5*60*1000);
+}
+
+function showIdleWarning(){
+  createIdleWarning();
+  idleWarningOpen=true;
+  idleSecondsLeft=60;
+  document.getElementById('idleCountdown').textContent=idleSecondsLeft;
+  document.getElementById('idleWarning').style.display='flex';
+
+  clearInterval(idleCountdownTimer);
+  idleCountdownTimer=setInterval(()=>{
+    idleSecondsLeft--;
+    const el=document.getElementById('idleCountdown');
+    if(el) el.textContent=idleSecondsLeft;
+    if(idleSecondsLeft<=0){
+      clearInterval(idleCountdownTimer);
+      logoutNow();
+    }
+  },1000);
+}
+
+function continueSession(){
+  idleWarningOpen=false;
+  clearInterval(idleCountdownTimer);
+  const w=document.getElementById('idleWarning');
+  if(w) w.style.display='none';
+  resetIdleTimer();
+}
+
+async function logoutNow(){
+  clearTimeout(idleTimer);
+  clearInterval(idleCountdownTimer);
+  await supabase.auth.signOut();
+  location.reload();
+}
+
+['click','keydown','mousemove','scroll','touchstart'].forEach(evt=>{
+  document.addEventListener(evt, resetIdleTimer, {passive:true});
+});
+
+window.addEventListener('load', ()=>{
+  setTimeout(resetIdleTimer, 1500);
+});
+
+window.continueSession=continueSession;
+window.logoutNow=logoutNow;
 </script>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
@@ -660,11 +748,28 @@ async function showDistrict(districtId){
 
 async function openDistrict(districtId){ await showDistrict(districtId); }
 
-async function logout(){
-  await supabase.auth.signOut();
-  location.reload();
+async function logout(){ await logoutNow(); }
+
+// Page refresh केल्यानंतर Supabase session कायम ठेवून पुन्हा Dashboard उघडा.
+async function restoreSession(){
+  const {data:{session},error}=await supabase.auth.getSession();
+  if(error){
+    console.error('Session restore error:', error.message);
+    return;
+  }
+  if(session && session.user){
+    await loadDashboard();
+  }
 }
+
+supabase.auth.onAuthStateChange((event, session)=>{
+  if(event === 'SIGNED_IN' && session){
+    setTimeout(()=>loadDashboard(), 0);
+  }
+});
+
 window.login=login;window.logout=logout;window.openDistrict=openDistrict;
+document.addEventListener('DOMContentLoaded', restoreSession);
 </script>
 </main><footer>निवडणूक विभाग डाटा एन्ट्री ऑपरेटर संघटना • ऑनलाइन माहिती प्रणाली</footer></body>
 </html>
