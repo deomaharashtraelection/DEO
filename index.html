@@ -85,6 +85,7 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 <nav class="navbar"><div class="nav">
 <a href="#">मुख्यपृष्ठ</a><a href="#login">अर्ज</a><a href="#dashboard">माहिती अपडेट</a>
 <a href="#dashboard">अर्जाची स्थिती</a><a href="#login" onclick="openDistrictLogin(event)">Login</a><a href="#login" onclick="openAdminLogin(event)">Admin</a>
+<a href="#" id="menuLogout" class="hidden" onclick="logoutFromMenu(event)">Logout</a>
 </div></nav>
 <main class="container">
 
@@ -440,6 +441,8 @@ async function logoutNow(){
   const warning=document.getElementById('idleWarning');
   if(warning) warning.style.display='none';
 
+  showLoggedOutMenu();
+
   try{
     const {error}=await supabase.auth.signOut({scope:'local'});
     if(error) console.error('Logout error:',error.message);
@@ -468,6 +471,7 @@ window.addEventListener('load', ()=>{
 
 window.continueSession=continueSession;
 window.logoutNow=logoutNow;
+window.logoutFromMenu=logoutFromMenu;
 </script>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
@@ -560,6 +564,25 @@ function disableAuthMenu(){
       a.onclick=(e)=>{e.preventDefault();return false;};
     }
   });
+
+  const logoutLink=document.getElementById('menuLogout');
+  if(logoutLink){
+    logoutLink.classList.remove('hidden');
+    logoutLink.classList.remove('nav-disabled');
+    logoutLink.removeAttribute('aria-disabled');
+    logoutLink.onclick=logoutFromMenu;
+  }
+}
+
+function showLoggedOutMenu(){
+  const logoutLink=document.getElementById('menuLogout');
+  if(logoutLink) logoutLink.classList.add('hidden');
+}
+
+function logoutFromMenu(event){
+  if(event) event.preventDefault();
+  logoutNow();
+  return false;
 }
 
 
