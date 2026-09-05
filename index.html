@@ -48,6 +48,25 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 #idleWarning .idle-count{font-size:30px;font-weight:800;margin:10px 0;}
 </style>
 
+
+<style>
+.admin-kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin:18px 0}
+.admin-kpi{background:#fff;border:1px solid #dbe3ec;border-radius:12px;padding:18px;text-align:center;box-shadow:0 2px 8px #0000000b}
+.admin-kpi .num{font-size:30px;font-weight:800;color:#17365d}
+.admin-kpi .lbl{margin-top:5px;font-weight:700;color:#475467}
+.admin-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:15px 0}
+.admin-toolbar input,.admin-toolbar select{flex:1;min-width:180px;padding:11px;border:1px solid #cbd5e1;border-radius:8px}
+.admin-table-wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:10px}
+.admin-table{width:100%;border-collapse:collapse;min-width:850px;background:#fff}
+.admin-table th,.admin-table td{padding:11px 10px;border-bottom:1px solid #e5e7eb;text-align:center;white-space:nowrap}
+.admin-table th{background:#f1f5f9;color:#17365d;font-weight:800}
+.admin-table tr:hover td{background:#f8fafc}
+.admin-status-pending{color:#a16207;font-weight:800}.admin-status-approved{color:#15803d;font-weight:800}.admin-status-rejected{color:#b91c1c;font-weight:800}
+.admin-section-title{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.admin-refresh{width:auto;padding:9px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-weight:700}
+@media(max-width:950px){.admin-kpi-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.admin-kpi-grid{grid-template-columns:repeat(2,1fr)}.admin-kpi .num{font-size:24px}}
+</style>
 </head>
 <body>
 <header class="site-header">
@@ -503,6 +522,136 @@ function disableAuthMenu(){
 }
 
 
+
+let masterAdminDistrictRows = [];
+
+async function showMasterAdminDashboard(){
+  const login=document.getElementById('login');
+  const dashboard=document.getElementById('dashboard');
+  login.classList.add('hidden');
+  dashboard.classList.remove('hidden');
+  disableAuthMenu();
+  document.getElementById('districtDashboardTabs').classList.add('hidden');
+  document.getElementById('title').textContent='महाराष्ट्र — Master Admin Dashboard';
+  document.getElementById('dashboardWelcome').textContent='सर्व जिल्ह्यांचा एकत्रित Report';
+  document.getElementById('summary').textContent='जिल्हानिहाय Operator Forms, Pending, Approved आणि Rejected स्थिती';
+
+  const {data:districts,error:de}=await supabase.from('districts')
+    .select('id,name,login_code').order('id');
+  if(de){document.getElementById('msg').textContent=de.message;return;}
+
+  const {data:forms,error:fe}=await supabase.from('operator_forms')
+    .select('id,district_id,reference_number,operator_name,constituency,taluka,status,created_at')
+    .order('created_at',{ascending:false});
+  if(fe){document.getElementById('msg').textContent=fe.message;return;}
+
+  const allForms=forms||[];
+  const byDistrict={};
+  (districts||[]).forEach(d=>byDistrict[d.id]={
+    id:d.id,name:d.name,login_code:d.login_code,total:0,pending:0,approved:0,rejected:0
+  });
+
+  allForms.forEach(f=>{
+    const r=byDistrict[f.district_id];
+    if(!r)return;
+    r.total++;
+    if(f.status==='pending')r.pending++;
+    else if(f.status==='approved')r.approved++;
+    else if(f.status==='rejected')r.rejected++;
+  });
+  masterAdminDistrictRows=Object.values(byDistrict);
+
+  const total=allForms.length;
+  const pending=allForms.filter(f=>f.status==='pending').length;
+  const approved=allForms.filter(f=>f.status==='approved').length;
+  const rejected=allForms.filter(f=>f.status==='rejected').length;
+
+  document.getElementById('acs').innerHTML=`
+    <div id="masterAdminPanel">
+      <div class="admin-kpi-grid">
+        <div class="admin-kpi"><div class="num">${(districts||[]).length}</div><div class="lbl">एकूण जिल्हे</div></div>
+        <div class="admin-kpi"><div class="num">${total}</div><div class="lbl">एकूण Forms</div></div>
+        <div class="admin-kpi"><div class="num">${pending}</div><div class="lbl">🟡 Pending</div></div>
+        <div class="admin-kpi"><div class="num">${approved}</div><div class="lbl">🟢 Approved</div></div>
+        <div class="admin-kpi"><div class="num">${rejected}</div><div class="lbl">🔴 Rejected</div></div>
+      </div>
+
+      <div class="card" style="margin-top:0;">
+        <div class="admin-section-title">
+          <h3 style="margin:0;">📊 जिल्हानिहाय Report</h3>
+          <button class="admin-refresh" type="button" onclick="showMasterAdminDashboard()">🔄 Refresh Report</button>
+        </div>
+
+        <div class="admin-toolbar">
+          <input id="districtReportSearch" type="search" placeholder="🔎 जिल्हा शोधा..." oninput="filterMasterAdminReport()">
+          <select id="districtReportStatus" onchange="filterMasterAdminReport()">
+            <option value="">सर्व Status</option>
+            <option value="pending">🟡 Pending असलेले</option>
+            <option value="approved">🟢 Approved असलेले</option>
+            <option value="rejected">🔴 Rejected असलेले</option>
+          </select>
+        </div>
+
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead><tr>
+              <th>अ.क्र.</th><th>जिल्हा</th><th>Login Code</th>
+              <th>एकूण Forms</th><th>🟡 Pending</th><th>🟢 Approved</th><th>🔴 Rejected</th><th>Report</th>
+            </tr></thead>
+            <tbody id="masterAdminReportBody"></tbody>
+          </table>
+        </div>
+        <p id="masterAdminReportInfo" style="margin:12px 0 0;color:#667085;"></p>
+      </div>
+
+      <div class="card">
+        <h3>📌 एकूण राज्यस्तरीय स्थिती</h3>
+        <p>एकूण जिल्हे: <strong>${(districts||[]).length}</strong> &nbsp;|&nbsp;
+        एकूण Forms: <strong>${total}</strong> &nbsp;|&nbsp;
+        Pending: <strong>${pending}</strong> &nbsp;|&nbsp;
+        Approved: <strong>${approved}</strong> &nbsp;|&nbsp;
+        Rejected: <strong>${rejected}</strong></p>
+      </div>
+    </div>`;
+
+  document.getElementById('talukas').innerHTML='';
+  renderMasterAdminReport();
+  await loadPendingOperatorForms();
+}
+
+function filterMasterAdminReport(){
+  renderMasterAdminReport();
+}
+
+function renderMasterAdminReport(){
+  const body=document.getElementById('masterAdminReportBody');
+  if(!body)return;
+
+  const q=(document.getElementById('districtReportSearch')?.value||'').trim().toLowerCase();
+  const status=document.getElementById('districtReportStatus')?.value||'';
+
+  const rows=masterAdminDistrictRows.filter(r=>{
+    const matchName=r.name.toLowerCase().includes(q) || String(r.login_code||'').toLowerCase().includes(q);
+    const matchStatus=!status || r[status]>0;
+    return matchName && matchStatus;
+  });
+
+  body.innerHTML=rows.map((r,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td style="text-align:left;font-weight:800;">${escapeHtml(r.name)}</td>
+      <td>${escapeHtml(r.login_code||'')}</td>
+      <td><strong>${r.total}</strong></td>
+      <td class="admin-status-pending">${r.pending}</td>
+      <td class="admin-status-approved">${r.approved}</td>
+      <td class="admin-status-rejected">${r.rejected}</td>
+      <td><button type="button" style="width:auto;margin:0;padding:7px 12px;" onclick="openDistrict(${r.id})">जिल्हा उघडा</button></td>
+    </tr>`).join('');
+
+  const info=document.getElementById('masterAdminReportInfo');
+  if(info)info.textContent=`दाखविलेले जिल्हे: ${rows.length} / ${masterAdminDistrictRows.length}`;
+}
+
 async function loadPendingOperatorForms(){
   const {data:{user}} = await supabase.auth.getUser();
   if(!user) return;
@@ -712,21 +861,7 @@ async function loadDashboard(){
   }
 
   if(p.role === 'admin'){
-    const {data:districts,error:de}=await supabase.from('districts')
-      .select('id,name,login_code').order('id');
-    if(de){document.getElementById('msg').textContent=de.message;return;}
-
-    document.getElementById('login').classList.add('hidden');
-    document.getElementById('dashboard').classList.remove('hidden');
-    disableAuthMenu();
-    document.getElementById('districtDashboardTabs').classList.add('hidden');
-    document.getElementById('title').textContent='महाराष्ट्र — Master Admin';
-    document.getElementById('dashboardWelcome').textContent='सर्व जिल्ह्यांचे Master Admin Dashboard';
-    document.getElementById('summary').textContent=`एकूण जिल्हे: ${(districts||[]).length}`;
-    document.getElementById('acs').innerHTML=(districts||[])
-      .map(d=>`<div><button style="width:100%" onclick="openDistrict(${d.id})">${d.id} - ${d.name} (${d.login_code})</button></div>`).join('');
-    document.getElementById('talukas').innerHTML='<div>डावीकडील जिल्ह्यावर क्लिक करा. त्या जिल्ह्याचे विधानसभा मतदारसंघ आणि तालुके येथे दिसतील.</div>';
-    await loadPendingOperatorForms();
+    await showMasterAdminDashboard();
     return;
   }
 
@@ -833,7 +968,7 @@ supabase.auth.onAuthStateChange((event, session)=>{
   }
 });
 
-window.login=login;window.logout=logout;window.openDistrict=openDistrict;
+window.login=login;window.logout=logout;window.openDistrict=openDistrict;window.showMasterAdminDashboard=showMasterAdminDashboard;window.filterMasterAdminReport=filterMasterAdminReport;
 document.addEventListener('DOMContentLoaded', restoreSession);
 </script>
 </main><footer>निवडणूक विभाग डाटा एन्ट्री ऑपरेटर संघटना • ऑनलाइन माहिती प्रणाली</footer></body>
