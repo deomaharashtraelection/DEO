@@ -361,10 +361,12 @@ function showAdminLogin(){
 
 <script>
 /* 5 मिनिटे कोणतीही activity नसल्यास auto-logout */
+const IDLE_LIMIT_MS = 5 * 60 * 1000;
+const WARNING_MS = 60 * 1000;
 let idleTimer = null;
 let idleCountdownTimer = null;
-let idleSecondsLeft = 60;
 let idleWarningOpen = false;
+let idleSecondsLeft = 60;
 
 function createIdleWarning(){
   if(document.getElementById('idleWarning')) return;
@@ -385,24 +387,33 @@ function createIdleWarning(){
 
 function resetIdleTimer(){
   if(idleWarningOpen) return;
+
   clearTimeout(idleTimer);
-  idleTimer=setTimeout(showIdleWarning, 5*60*1000);
+  idleTimer=setTimeout(showIdleWarning, IDLE_LIMIT_MS);
 }
 
 function showIdleWarning(){
   createIdleWarning();
   idleWarningOpen=true;
-  idleSecondsLeft=60;
-  document.getElementById('idleCountdown').textContent=idleSecondsLeft;
-  document.getElementById('idleWarning').style.display='flex';
+  idleSecondsLeft=Math.ceil(WARNING_MS/1000);
+
+  const warning=document.getElementById('idleWarning');
+  const countdown=document.getElementById('idleCountdown');
+  if(!warning) return;
+
+  warning.style.display='flex';
+  if(countdown) countdown.textContent=idleSecondsLeft;
 
   clearInterval(idleCountdownTimer);
   idleCountdownTimer=setInterval(()=>{
     idleSecondsLeft--;
+
     const el=document.getElementById('idleCountdown');
-    if(el) el.textContent=idleSecondsLeft;
+    if(el) el.textContent=Math.max(0,idleSecondsLeft);
+
     if(idleSecondsLeft<=0){
       clearInterval(idleCountdownTimer);
+      idleCountdownTimer=null;
       logoutNow();
     }
   },1000);
@@ -411,16 +422,40 @@ function showIdleWarning(){
 function continueSession(){
   idleWarningOpen=false;
   clearInterval(idleCountdownTimer);
-  const w=document.getElementById('idleWarning');
-  if(w) w.style.display='none';
+  idleCountdownTimer=null;
+
+  const warning=document.getElementById('idleWarning');
+  if(warning) warning.style.display='none';
+
   resetIdleTimer();
 }
 
 async function logoutNow(){
   clearTimeout(idleTimer);
+  idleTimer=null;
   clearInterval(idleCountdownTimer);
-  await supabase.auth.signOut();
-  location.reload();
+  idleCountdownTimer=null;
+  idleWarningOpen=false;
+
+  const warning=document.getElementById('idleWarning');
+  if(warning) warning.style.display='none';
+
+  try{
+    const {error}=await supabase.auth.signOut({scope:'local'});
+    if(error) console.error('Logout error:',error.message);
+  }catch(err){
+    console.error('Logout exception:',err);
+  }finally{
+    // Supabase signOut झाल्यावर local session data साफ करण्याची खात्री.
+    try{
+      localStorage.removeItem('supabase.auth.token');
+      Object.keys(localStorage)
+        .filter(k=>k.startsWith('sb-') && k.endsWith('-auth-token'))
+        .forEach(k=>localStorage.removeItem(k));
+    }catch(e){}
+
+    window.location.replace(window.location.pathname + '?loggedout=' + Date.now());
+  }
 }
 
 ['click','keydown','mousemove','scroll','touchstart'].forEach(evt=>{
@@ -428,7 +463,7 @@ async function logoutNow(){
 });
 
 window.addEventListener('load', ()=>{
-  setTimeout(resetIdleTimer, 1500);
+  setTimeout(resetIdleTimer, 1000);
 });
 
 window.continueSession=continueSession;
