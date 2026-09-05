@@ -444,7 +444,9 @@ async function logoutNow(){
   showLoggedOutMenu();
 
   try{
-    const {error}=await supabase.auth.signOut({scope:'local'});
+    const client = window.supabaseClient;
+    if(!client) throw new Error('Supabase client उपलब्ध नाही.');
+    const {error}=await client.auth.signOut({scope:'local'});
     if(error) console.error('Logout error:',error.message);
   }catch(err){
     console.error('Logout exception:',err);
@@ -480,6 +482,7 @@ const DISTRICT_LOGIN_LIST = [{'code': 1, 'name': 'नंदुरबार', 'lo
 const SUPABASE_URL = 'https://gkooyusburhispbwgzgr.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_j_bRcMJ2lSuMD0dTdgBWxw_AQStY-Nx';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+window.supabaseClient = supabase;
 
 async function login(){
   const email=document.getElementById('email').value.trim();
