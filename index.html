@@ -186,6 +186,12 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 </div>
 </div>
 
+<div id="myFormsPanel" class="hidden">
+<h3>📋 माझे Forms</h3>
+<p>आपण Submit केलेले सर्व Forms आणि त्यांची सद्यस्थिती येथे दिसेल.</p>
+<div id="myFormsList"><p>Forms loading...</p></div>
+</div>
+
 <div id="dataEntryPanel" class="hidden">
 <h3>📝 ऑपरेटर Data Entry Form</h3>
 <p>ही Data Entry सुविधा फक्त District Login साठी आहे. खालील सर्व माहिती काळजीपूर्वक भरावी. Submit केल्यानंतर हा फॉर्म Admin कडे Approval साठी जाईल.</p>
@@ -975,6 +981,9 @@ window.showMasterAdminDashboard=showMasterAdminDashboard;
 window.filterMasterAdminReport=filterMasterAdminReport;
 window.showDataEntryTab=showDataEntryTab;
 window.showMyFormsTab=showMyFormsTab;
+window.submitOperatorForm=submitOperatorForm;
+window.approveOperatorForm=approveOperatorForm;
+window.rejectOperatorForm=rejectOperatorForm;
 document.addEventListener('DOMContentLoaded', restoreSession);
 </script>
 </main><footer>निवडणूक विभाग डाटा एन्ट्री ऑपरेटर संघटना • ऑनलाइन माहिती प्रणाली</footer></body>
