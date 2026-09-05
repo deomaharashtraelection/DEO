@@ -105,6 +105,7 @@ function closeLogin(){
 }
 function openDistrictLogin(event){
   if(event) event.preventDefault();
+  window.currentLoginType='district';
   const login=document.getElementById('login');
   login.classList.remove('hidden');
   showDistrictLogin();
@@ -113,6 +114,7 @@ function openDistrictLogin(event){
 
 function openAdminLogin(event){
   if(event) event.preventDefault();
+  window.currentLoginType='admin';
   const login=document.getElementById('login');
   login.classList.remove('hidden');
   showAdminLogin();
@@ -120,6 +122,7 @@ function openAdminLogin(event){
 }
 
 function showDistrictLogin(){
+  window.currentLoginType='district';
   document.getElementById('districtLoginPanel').classList.remove('hidden');
   document.getElementById('districtTab').classList.add('active');
   document.getElementById('adminTab').classList.add('hidden');
@@ -130,6 +133,7 @@ function showDistrictLogin(){
 }
 
 function showAdminLogin(){
+  window.currentLoginType='admin';
   document.getElementById('districtLoginPanel').classList.add('hidden');
   document.getElementById('districtTab').classList.add('hidden');
   document.getElementById('adminTab').classList.remove('hidden');
@@ -150,10 +154,77 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 async function login(){
   const email=document.getElementById('email').value.trim();
   const password=document.getElementById('password').value;
-  const {error}=await supabase.auth.signInWithPassword({email,password});
-  document.getElementById('msg').textContent=error ? error.message : '';
-  if(!error) await loadDashboard();
+  const msg=document.getElementById('msg');
+
+  if(!email || !password){
+    msg.textContent='Login Email आणि Password भरा.';
+    return;
+  }
+
+  const {data,error}=await supabase.auth.signInWithPassword({email,password});
+
+  if(error){
+    msg.textContent=error.message;
+    return;
+  }
+
+  const user=data.user;
+
+  // Profile मधून Role आणि District तपासा.
+  const {data:p,error:pe}=await supabase.from('profiles')
+    .select('role,district_id').eq('user_id',user.id).single();
+
+  if(pe || !p){
+    await supabase.auth.signOut();
+    msg.textContent='या Login साठी profile उपलब्ध नाही.';
+    return;
+  }
+
+  const selectedDistrict=document.getElementById('districtSelect')?.value;
+
+  // District Login मध्ये Admin account चालू देऊ नका.
+  if(window.currentLoginType === 'district'){
+    if(p.role === 'admin'){
+      await supabase.auth.signOut();
+      msg.textContent='हे Admin Login आहे. कृपया Admin बटण वापरा.';
+      return;
+    }
+
+    if(!p.district_id){
+      await supabase.auth.signOut();
+      msg.textContent='या Login साठी जिल्हा mapping उपलब्ध नाही.';
+      return;
+    }
+
+    const {data:d}=await supabase.from('districts')
+      .select('id,name').eq('id',p.district_id).single();
+
+    if(!d || d.name !== selectedDistrict){
+      await supabase.auth.signOut();
+      msg.textContent='या Login ID ला निवडलेल्या जिल्ह्याचा प्रवेश नाही.';
+      return;
+    }
+
+    await showDistrict(p.district_id);
+    return;
+  }
+
+  // Admin Login मध्ये District account चालू देऊ नका.
+  if(window.currentLoginType === 'admin'){
+    if(p.role !== 'admin'){
+      await supabase.auth.signOut();
+      msg.textContent='हे District Login आहे. कृपया Login बटण वापरा.';
+      return;
+    }
+
+    await loadDashboard();
+    return;
+  }
+
+  await supabase.auth.signOut();
+  msg.textContent='कृपया योग्य Login प्रकार निवडा.';
 }
+
 async function loadDashboard(){
   const {data:{user},error:ue}=await supabase.auth.getUser();
   if(ue){document.getElementById('msg').textContent=ue.message;return;}
@@ -213,7 +284,6 @@ async function openDistrict(districtId){ await showDistrict(districtId); }
 
 async function logout(){await supabase.auth.signOut();location.reload();}
 window.login=login;window.logout=logout;window.openDistrict=openDistrict;
-loadDashboard();
 </script>
 </main><footer>निवडणूक विभाग डाटा एन्ट्री ऑपरेटर संघटना • ऑनलाइन माहिती प्रणाली</footer></body>
 </html>
