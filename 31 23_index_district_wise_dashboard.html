@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="mr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>निवडणूक विभाग - डाटा एन्ट्री ऑपरेटर संघटना</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans Devanagari","Mangal",Arial,sans-serif;background:#f5f7fa;color:#172033}
+.site-header{width:100%;background:linear-gradient(135deg,#17365d,#245b8f);color:#fff;padding:18px 20px;box-shadow:0 3px 10px rgba(0,0,0,.15)}
+.header-container{max-width:1200px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.brand{display:flex;align-items:center;gap:16px}
+.logo{width:78px;height:78px;border-radius:50%;object-fit:contain;background:#fff;padding:4px;border:3px solid rgba(255,255,255,.8);flex-shrink:0}
+.main-title{margin:0;font-size:32px;font-weight:800;line-height:1.25}
+.sub-title{margin:3px 0 0;font-size:21px;font-weight:500;line-height:1.35}
+.english{margin-top:7px;font-size:13px;opacity:.92}
+.badge{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.3);padding:10px 15px;border-radius:8px;text-align:center;white-space:nowrap;font-size:14px}
+.navbar{background:#fff;border-bottom:1px solid #e5e7eb}
+.nav{max-width:1200px;margin:auto;display:flex;justify-content:center;flex-wrap:wrap}
+.nav a{color:#17365d;text-decoration:none;padding:14px 18px;font-size:15px;font-weight:700}
+.nav a:hover{background:#eef4f9}
+.nav a.nav-disabled{pointer-events:none;opacity:.55;cursor:default}
+.container{max-width:1000px;margin:28px auto;padding:0 16px}
+.card{border:1px solid #ddd;border-radius:12px;padding:24px;box-shadow:0 2px 10px #0001;background:#fff;margin-bottom:22px}
+input,button{padding:12px;margin:6px 0;width:100%;box-sizing:border-box}
+button{cursor:pointer}
+.hidden{display:none}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.login-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px}.tab{background:#eef4f9;color:#17365d;border:1px solid #cbd5e1;font-weight:700}.tab.active{background:#17365d;color:#fff}
+footer{text-align:center;padding:20px;color:#667085;font-size:13px}
+@media(max-width:700px){
+#districtStats{grid-template-columns:1fr 1fr !important;}
+.site-header{padding:16px 12px}.header-container{flex-direction:column;text-align:center}
+.brand{flex-direction:column;gap:10px}.logo{width:68px;height:68px}
+.main-title{font-size:24px}.sub-title{font-size:18px}.english{font-size:12px}
+.badge{width:100%;white-space:normal}.nav{flex-direction:column}
+.nav a{width:100%;text-align:center;border-bottom:1px solid #eee;padding:12px}
+.grid{grid-template-columns:1fr}.container{margin:18px auto;padding:0 12px}.card{padding:18px}
+}
+</style>
+<style>
+#idleWarning{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+#idleWarning .idle-box{
+  max-width:430px;width:100%;background:#fff;border-radius:14px;
+  padding:25px;text-align:center;box-shadow:0 10px 35px rgba(0,0,0,.25);
+}
+#idleWarning .idle-count{font-size:30px;font-weight:800;margin:10px 0;}
+</style>
+
+</head>
+<body>
+<header class="site-header">
+<div class="header-container">
+<div class="brand">
+<img class="logo" src="LOGO.png" alt="संघटनेचे Logo">
+<div>
+<h1 class="main-title">निवडणूक विभाग</h1>
+<div class="sub-title">डाटा एन्ट्री ऑपरेटर संघटना</div>
+<div class="english">Election Department Data Entry Operators Association</div>
+</div>
+</div>
+<div class="badge">महाराष्ट्र राज्य<br><strong>ऑनलाईन माहिती प्रणाली</strong></div>
+</div>
+</header>
+<nav class="navbar"><div class="nav">
+<a href="#">मुख्यपृष्ठ</a><a href="#login">अर्ज</a><a href="#dashboard">माहिती अपडेट</a>
+<a href="#dashboard">अर्जाची स्थिती</a><a href="#login" onclick="openDistrictLogin(event)">Login</a><a href="#login" onclick="openAdminLogin(event)">Admin</a>
+</div></nav>
+<main class="container">
+
+<div class="card hidden" id="login">
+<h2 id="loginHeading">🔐 Login</h2>
+
+<div class="login-tabs" id="loginTabs">
+  <button type="button" id="districtTab" class="tab active" onclick="showDistrictLogin()">जिल्हा Login</button>
+  <button type="button" id="adminTab" class="tab" onclick="showAdminLogin()">Admin Login</button>
+</div>
+
+<div id="districtLoginPanel">
+  <p>आपल्या जिल्ह्याचा Login निवडा.</p>
+  <select id="districtSelect" style="padding:12px;margin:6px 0;width:100%;box-sizing:border-box">
+    <option value="नंदुरबार">नंदुरबार</option>
+    <option value="धुळे">धुळे</option>
+    <option value="जळगाव">जळगाव</option>
+    <option value="बुलढाणा">बुलढाणा</option>
+    <option value="अकोला">अकोला</option>
+    <option value="वाशीम">वाशीम</option>
+    <option value="अमरावती">अमरावती</option>
+    <option value="वर्धा">वर्धा</option>
+    <option value="नागपूर">नागपूर</option>
+    <option value="भंडारा">भंडारा</option>
+    <option value="गोंदिया">गोंदिया</option>
+    <option value="गडचिरोली">गडचिरोली</option>
+    <option value="चंद्रपूर">चंद्रपूर</option>
+    <option value="यवतमाळ">यवतमाळ</option>
+    <option value="नांदेड">नांदेड</option>
+    <option value="हिंगोली">हिंगोली</option>
+    <option value="परभणी">परभणी</option>
+    <option value="जालना">जालना</option>
+    <option value="औरंगाबाद">औरंगाबाद</option>
+    <option value="नाशिक">नाशिक</option>
+    <option value="पालघर">पालघर</option>
+    <option value="ठाणे">ठाणे</option>
+    <option value="मुंबई उपनगर">मुंबई उपनगर</option>
+    <option value="मुंबई शहर">मुंबई शहर</option>
+    <option value="रायगड">रायगड</option>
+    <option value="पुणे">पुणे</option>
+    <option value="अहमदनगर">अहमदनगर</option>
+    <option value="बीड">बीड</option>
+    <option value="लातूर">लातूर</option>
+    <option value="उस्मानाबाद">उस्मानाबाद</option>
+    <option value="सोलापूर">सोलापूर</option>
+    <option value="सातारा">सातारा</option>
+    <option value="रत्नागिरी">रत्नागिरी</option>
+    <option value="सिंधुदुर्ग">सिंधुदुर्ग</option>
+    <option value="कोल्हापूर">कोल्हापूर</option>
+    <option value="सांगली">सांगली</option>
+  </select>
+</div>
+
+<label>Login Email</label>
+<input id="email" type="email" placeholder="Login Email">
+<label>Password</label>
+<input id="password" type="password" placeholder="Password">
+
+<button onclick="login()">Login</button>
+<p id="msg"></p>
+<button type="button" class="secondary" onclick="closeLogin()">Close</button>
+</div>
+
+
+<div class="card hidden" id="dashboard" aria-label="District Home Page">
+<h2 id="title"></h2>
+<p id="summary"></p>
+<p id="dashboardWelcome" style="font-weight:700;margin-top:6px;"></p>
+
+<div id="districtDashboardTabs" class="login-tabs" style="margin-top:18px;">
+  <button type="button" class="tab active" id="homeTab" onclick="showHomeTab()">🏠 मुख्यपृष्ठ</button>
+  <button type="button" class="tab" id="dataEntryTab" onclick="showDataEntryTab()">📝 Data Entry</button>
+  <button type="button" class="tab" id="myFormsTab" onclick="showMyFormsTab()">📋 माझे Forms</button>
+</div>
+
+<div id="homePanel">
+<div id="districtStats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0;">
+  <div class="card" style="margin:0;text-align:center;padding:16px;">
+    <div style="font-size:28px;font-weight:800;" id="statConstituencies">0</div>
+    <div>विधानसभा मतदारसंघ</div>
+  </div>
+  <div class="card" style="margin:0;text-align:center;padding:16px;">
+    <div style="font-size:28px;font-weight:800;" id="statTalukas">0</div>
+    <div>तालुके</div>
+  </div>
+  <div class="card" style="margin:0;text-align:center;padding:16px;">
+    <div style="font-size:28px;font-weight:800;" id="statMyForms">0</div>
+    <div>माझे Forms</div>
+  </div>
+  <div class="card" style="margin:0;text-align:center;padding:16px;">
+    <div style="font-size:28px;font-weight:800;" id="statPending">0</div>
+    <div>Pending Approval</div>
+  </div>
+</div>
+
+<div class="grid">
+<div><h3>विधानसभा मतदारसंघ</h3><div id="acs"></div></div>
+<div><h3>तालुके</h3><div id="talukas"></div></div>
+</div>
+</div>
+
+<div id="dataEntryPanel" class="hidden">
+<h3>📝 ऑपरेटर Data Entry Form</h3>
+<p>खालील सर्व माहिती काळजीपूर्वक भरावी. Submit केल्यानंतर हा फॉर्म Admin कडे Approval साठी जाईल.</p>
+
+<form id="operatorForm" onsubmit="submitOperatorForm(event)">
+  <label>विधानसभा मतदारसंघ</label>
+  <select id="formConstituency" required style="padding:12px;margin:6px 0;width:100%;box-sizing:border-box;">
+    <option value="">विधानसभा मतदारसंघ निवडा</option>
+  </select>
+
+  <label>तालुका</label>
+  <select id="formTaluka" required style="padding:12px;margin:6px 0;width:100%;box-sizing:border-box;">
+    <option value="">तालुका निवडा</option>
+  </select>
+
+  <label>ऑपरेटरचे पूर्ण नाव (मराठीत)</label>
+  <input id="operatorName" type="text" required placeholder="पूर्ण नाव मराठीत">
+
+  <label>जन्मतारीख</label>
+  <input id="dateOfBirth" type="date" required>
+
+  <label>घरचा पत्ता (मराठीत)</label>
+  <textarea id="homeAddress" rows="4" required placeholder="पूर्ण घरचा पत्ता मराठीत" style="width:100%;padding:12px;margin:6px 0;box-sizing:border-box;"></textarea>
+
+  <label>पिन कोड</label>
+  <input id="pinCode" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required placeholder="६ अंकी पिन कोड">
+
+  <label>मोबाईल नंबर</label>
+  <input id="mobileNumber" type="tel" inputmode="numeric" maxlength="10" pattern="[6-9][0-9]{9}" required placeholder="१० अंकी मोबाईल नंबर">
+
+  <label>WhatsApp Number</label>
+  <input id="whatsappNumber" type="tel" inputmode="numeric" maxlength="10" pattern="[6-9][0-9]{9}" required placeholder="१० अंकी WhatsApp नंबर">
+
+  <label>स्वतःचा ईमेल आयडी</label>
+  <input id="personalEmail" type="email" required placeholder="आपला ईमेल आयडी">
+
+  <label>स्वतःचा पासपोर्ट साईज फोटो</label>
+  <input id="passportPhoto" type="file" accept="image/jpeg,image/png,image/webp" required>
+
+  <button type="submit" id="submitOperatorBtn">सबमिट</button>
+</form>
+
+<div id="submitSuccess" class="hidden" style="margin-top:18px;padding:18px;border:1px solid #b7dfc5;border-radius:8px;background:#f0fff4;">
+  <h3>✅ Submitted Successfully</h3>
+  <p>आपला फॉर्म Admin कडे Approval साठी पाठविण्यात आला आहे.</p>
+  <p><strong>Reference Number:</strong> <span id="referenceNumber"></span></p>
+  <p><strong>Status:</strong> Pending Admin Approval</p>
+</div>
+
+<p id="dataEntryMsg"></p>
+</div></div>
+</div>
+
+<script>
+function showHomeTab(){
+  document.getElementById('homePanel').classList.remove('hidden');
+  document.getElementById('dataEntryPanel').classList.add('hidden');
+  document.getElementById('myFormsPanel').classList.add('hidden');
+  document.getElementById('homeTab').classList.add('active');
+  document.getElementById('dataEntryTab').classList.remove('active');
+}
+
+function showDataEntryTab(){
+  document.getElementById('homePanel').classList.add('hidden');
+  document.getElementById('myFormsPanel').classList.add('hidden');
+  document.getElementById('dataEntryPanel').classList.remove('hidden');
+  document.getElementById('homeTab').classList.remove('active');
+  document.getElementById('dataEntryTab').classList.add('active');
+}
+
+function showMyFormsTab(){
+  document.getElementById('homePanel').classList.add('hidden');
+  document.getElementById('dataEntryPanel').classList.add('hidden');
+  document.getElementById('myFormsPanel').classList.remove('hidden');
+  document.getElementById('homeTab').classList.remove('active');
+  document.getElementById('dataEntryTab').classList.remove('active');
+  document.getElementById('myFormsTab').classList.add('active');
+  loadMyForms();
+}
+
+async function loadMyForms(){
+  const list=document.getElementById('myFormsList');
+  if(!list) return;
+  list.innerHTML='<p>Forms loading...</p>';
+
+  const {data:{user},error:ue}=await supabase.auth.getUser();
+  if(ue || !user){ list.innerHTML='<p>कृपया पुन्हा Login करा.</p>'; return; }
+
+  const {data:forms,error}=await supabase.from('operator_forms')
+    .select('reference_number,operator_name,constituency,taluka,status,rejection_reason,created_at')
+    .eq('user_id',user.id).order('created_at',{ascending:false});
+
+  if(error){ list.innerHTML='<p>'+escapeHtml(error.message)+'</p>'; return; }
+  if(!forms?.length){ list.innerHTML='<p>अद्याप कोणताही Form Submit केलेला नाही.</p>'; return; }
+
+  list.innerHTML=forms.map(f=>`
+    <div class="card" style="margin-top:12px;">
+      <p><strong>Reference Number:</strong> ${escapeHtml(f.reference_number)}</p>
+      <p><strong>नाव:</strong> ${escapeHtml(f.operator_name)}</p>
+      <p><strong>विधानसभा:</strong> ${escapeHtml(f.constituency)}</p>
+      <p><strong>तालुका:</strong> ${escapeHtml(f.taluka)}</p>
+      <p><strong>Status:</strong> ${f.status==='approved'?'🟢 Approved':f.status==='rejected'?'🔴 Rejected':'🟡 Pending Approval'}</p>
+      ${f.rejection_reason?`<p><strong>Reject कारण:</strong> ${escapeHtml(f.rejection_reason)}</p>`:''}
+    </div>`).join('');
+}
+
+function saveDataEntry(){
+  document.getElementById('dataEntryMsg').textContent =
+    'Data Entry form तयार आहे. प्रत्यक्ष database मध्ये Save करण्यासाठी Supabase table जोडणे आवश्यक आहे.';
+}
+
+function closeLogin(){
+  document.getElementById('login').classList.add('hidden');
+}
+function openDistrictLogin(event){
+  if(event) event.preventDefault();
+
+  // Login झाल्यानंतर पुन्हा Login tab उघडू देऊ नका.
+  const dashboard=document.getElementById('dashboard');
+  if(dashboard && !dashboard.classList.contains('hidden')) return false;
+
+  window.currentLoginType='district';
+  const login=document.getElementById('login');
+  login.classList.remove('hidden');
+  showDistrictLogin();
+  login.scrollIntoView({behavior:'smooth',block:'start'});
+  return false;
+}
+
+function openAdminLogin(event){
+  if(event) event.preventDefault();
+
+  // Login झाल्यानंतर पुन्हा Admin Login tab उघडू देऊ नका.
+  const dashboard=document.getElementById('dashboard');
+  if(dashboard && !dashboard.classList.contains('hidden')) return false;
+
+  window.currentLoginType='admin';
+  const login=document.getElementById('login');
+  login.classList.remove('hidden');
+  showAdminLogin();
+  login.scrollIntoView({behavior:'smooth',block:'start'});
+  return false;
+}
+
+function showDistrictLogin(){
+  window.currentLoginType='district';
+  document.getElementById('districtLoginPanel').classList.remove('hidden');
+  document.getElementById('districtTab').classList.add('active');
+  document.getElementById('adminTab').classList.add('hidden');
+  document.getElementById('loginHeading').textContent='🔐 जिल्हा Login';
+  document.getElementById('msg').textContent='';
+  document.getElementById('email').placeholder='District Login Email';
+  document.getElementById('password').placeholder='District Password';
+}
+
+function showAdminLogin(){
+  window.currentLoginType='admin';
+  document.getElementById('districtLoginPanel').classList.add('hidden');
+  document.getElementById('districtTab').classList.add('hidden');
+  document.getElementById('adminTab').classList.remove('hidden');
+  document.getElementById('adminTab').classList.add('active');
+  document.getElementById('loginHeading').textContent='👑 Admin Login';
+  document.getElementById('msg').textContent='';
+  document.getElementById('email').placeholder='Admin Login Email';
+  document.getElementById('password').placeholder='Admin Password';
+}
+</script>
+
+<script>
+/* 5 मिनिटे कोणतीही activity नसल्यास auto-logout */
+let idleTimer = null;
+let idleCountdownTimer = null;
+let idleSecondsLeft = 60;
+let idleWarningOpen = false;
+
+function createIdleWarning(){
+  if(document.getElementById('idleWarning')) return;
+  const box=document.createElement('div');
+  box.id='idleWarning';
+  box.style.display='none';
+  box.innerHTML=`
+    <div class="idle-box">
+      <h2>⚠️ Session समाप्त होणार आहे</h2>
+      <p>गेल्या 5 मिनिटांत कोणतीही activity आढळली नाही.</p>
+      <div class="idle-count" id="idleCountdown">60</div>
+      <p>तुम्ही काम करत असल्यास खालील बटण दाबा.</p>
+      <button type="button" onclick="continueSession()">काम सुरू ठेवा</button>
+      <button type="button" onclick="logoutNow()">Logout</button>
+    </div>`;
+  document.body.appendChild(box);
+}
+
+function resetIdleTimer(){
+  if(idleWarningOpen) return;
+  clearTimeout(idleTimer);
+  idleTimer=setTimeout(showIdleWarning, 5*60*1000);
+}
+
+function showIdleWarning(){
+  createIdleWarning();
+  idleWarningOpen=true;
+  idleSecondsLeft=60;
+  document.getElementById('idleCountdown').textContent=idleSecondsLeft;
+  document.getElementById('idleWarning').style.display='flex';
+
+  clearInterval(idleCountdownTimer);
+  idleCountdownTimer=setInterval(()=>{
+    idleSecondsLeft--;
+    const el=document.getElementById('idleCountdown');
+    if(el) el.textContent=idleSecondsLeft;
+    if(idleSecondsLeft<=0){
+      clearInterval(idleCountdownTimer);
+      logoutNow();
+    }
+  },1000);
+}
+
+function continueSession(){
+  idleWarningOpen=false;
+  clearInterval(idleCountdownTimer);
+  const w=document.getElementById('idleWarning');
+  if(w) w.style.display='none';
+  resetIdleTimer();
+}
+
+async function logoutNow(){
+  clearTimeout(idleTimer);
+  clearInterval(idleCountdownTimer);
+  await supabase.auth.signOut();
+  location.reload();
+}
+
+['click','keydown','mousemove','scroll','touchstart'].forEach(evt=>{
+  document.addEventListener(evt, resetIdleTimer, {passive:true});
+});
+
+window.addEventListener('load', ()=>{
+  setTimeout(resetIdleTimer, 1500);
+});
+
+window.continueSession=continueSession;
+window.logoutNow=logoutNow;
+</script>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const DISTRICT_LOGIN_LIST = [{'code': 1, 'name': 'नंदुरबार', 'loginId': 'DIST01', 'email': 'district01@maharashtradistrict.in', 'role': 'district'}, {'code': 2, 'name': 'धुळे', 'loginId': 'DIST02', 'email': 'district02@maharashtradistrict.in', 'role': 'district'}, {'code': 3, 'name': 'जळगाव', 'loginId': 'DIST03', 'email': 'district03@maharashtradistrict.in', 'role': 'district'}, {'code': 4, 'name': 'बुलढाणा', 'loginId': 'DIST04', 'email': 'district04@maharashtradistrict.in', 'role': 'district'}, {'code': 5, 'name': 'अकोला', 'loginId': 'DIST05', 'email': 'district05@maharashtradistrict.in', 'role': 'district'}, {'code': 6, 'name': 'वाशीम', 'loginId': 'DIST06', 'email': 'district06@maharashtradistrict.in', 'role': 'district'}, {'code': 7, 'name': 'अमरावती', 'loginId': 'DIST07', 'email': 'district07@maharashtradistrict.in', 'role': 'district'}, {'code': 8, 'name': 'वर्धा', 'loginId': 'DIST08', 'email': 'district08@maharashtradistrict.in', 'role': 'district'}, {'code': 9, 'name': 'नागपूर', 'loginId': 'DIST09', 'email': 'district09@maharashtradistrict.in', 'role': 'district'}, {'code': 10, 'name': 'भंडारा', 'loginId': 'DIST10', 'email': 'district10@maharashtradistrict.in', 'role': 'district'}, {'code': 11, 'name': 'गोंदिया', 'loginId': 'DIST11', 'email': 'district11@maharashtradistrict.in', 'role': 'district'}, {'code': 12, 'name': 'गडचिरोली', 'loginId': 'DIST12', 'email': 'district12@maharashtradistrict.in', 'role': 'district'}, {'code': 13, 'name': 'चंद्रपूर', 'loginId': 'DIST13', 'email': 'district13@maharashtradistrict.in', 'role': 'district'}, {'code': 14, 'name': 'यवतमाळ', 'loginId': 'DIST14', 'email': 'district14@maharashtradistrict.in', 'role': 'district'}, {'code': 15, 'name': 'नांदेड', 'loginId': 'DIST15', 'email': 'district15@maharashtradistrict.in', 'role': 'district'}, {'code': 16, 'name': 'हिंगोली', 'loginId': 'DIST16', 'email': 'district16@maharashtradistrict.in', 'role': 'district'}, {'code': 17, 'name': 'परभणी', 'loginId': 'DIST17', 'email': 'district17@maharashtradistrict.in', 'role': 'district'}, {'code': 18, 'name': 'जालना', 'loginId': 'DIST18', 'email': 'district18@maharashtradistrict.in', 'role': 'district'}, {'code': 19, 'name': 'औरंगाबाद', 'loginId': 'DIST19', 'email': 'district19@maharashtradistrict.in', 'role': 'district'}, {'code': 20, 'name': 'नाशिक', 'loginId': 'DIST20', 'email': 'district20@maharashtradistrict.in', 'role': 'district'}, {'code': 21, 'name': 'पालघर', 'loginId': 'DIST21', 'email': 'district21@maharashtradistrict.in', 'role': 'district'}, {'code': 22, 'name': 'ठाणे', 'loginId': 'DIST22', 'email': 'district22@maharashtradistrict.in', 'role': 'district'}, {'code': 23, 'name': 'मुंबई उपनगर', 'loginId': 'DIST23', 'email': 'district23@maharashtradistrict.in', 'role': 'district'}, {'code': 24, 'name': 'मुंबई शहर', 'loginId': 'DIST24', 'email': 'district24@maharashtradistrict.in', 'role': 'district'}, {'code': 25, 'name': 'रायगड', 'loginId': 'DIST25', 'email': 'district25@maharashtradistrict.in', 'role': 'district'}, {'code': 26, 'name': 'पुणे', 'loginId': 'DIST26', 'email': 'district26@maharashtradistrict.in', 'role': 'district'}, {'code': 27, 'name': 'अहमदनगर', 'loginId': 'DIST27', 'email': 'district27@maharashtradistrict.in', 'role': 'district'}, {'code': 28, 'name': 'बीड', 'loginId': 'DIST28', 'email': 'district28@maharashtradistrict.in', 'role': 'district'}, {'code': 29, 'name': 'लातूर', 'loginId': 'DIST29', 'email': 'district29@maharashtradistrict.in', 'role': 'district'}, {'code': 30, 'name': 'उस्मानाबाद', 'loginId': 'DIST30', 'email': 'district30@maharashtradistrict.in', 'role': 'district'}, {'code': 31, 'name': 'सोलापूर', 'loginId': 'DIST31', 'email': 'district31@maharashtradistrict.in', 'role': 'district'}, {'code': 32, 'name': 'सातारा', 'loginId': 'DIST32', 'email': 'district32@maharashtradistrict.in', 'role': 'district'}, {'code': 33, 'name': 'रत्नागिरी', 'loginId': 'DIST33', 'email': 'district33@maharashtradistrict.in', 'role': 'district'}, {'code': 34, 'name': 'सिंधुदुर्ग', 'loginId': 'DIST34', 'email': 'district34@maharashtradistrict.in', 'role': 'district'}, {'code': 35, 'name': 'कोल्हापूर', 'loginId': 'DIST35', 'email': 'district35@maharashtradistrict.in', 'role': 'district'}, {'code': 36, 'name': 'सांगली', 'loginId': 'DIST36', 'email': 'district36@maharashtradistrict.in', 'role': 'district'}];
+const SUPABASE_URL = 'https://gkooyusburhispbwgzgr.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_j_bRcMJ2lSuMD0dTdgBWxw_AQStY-Nx';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function login(){
+  const email=document.getElementById('email').value.trim();
+  const password=document.getElementById('password').value;
+  const msg=document.getElementById('msg');
+
+  if(!email || !password){
+    msg.textContent='Login Email आणि Password भरा.';
+    return;
+  }
+
+  const {data,error}=await supabase.auth.signInWithPassword({email,password});
+
+  if(error){
+    msg.textContent=error.message;
+    return;
+  }
+
+  const user=data.user;
+
+  // Profile मधून Role आणि District तपासा.
+  const {data:p,error:pe}=await supabase.from('profiles')
+    .select('role,district_id').eq('user_id',user.id).single();
+
+  if(pe || !p){
+    await supabase.auth.signOut();
+    msg.textContent='या Login साठी profile उपलब्ध नाही.';
+    return;
+  }
+
+  const selectedDistrict=document.getElementById('districtSelect')?.value;
+
+  // District Login मध्ये Admin account चालू देऊ नका.
+  if(window.currentLoginType === 'district'){
+    if(p.role === 'admin'){
+      await supabase.auth.signOut();
+      msg.textContent='हे Admin Login आहे. कृपया Admin बटण वापरा.';
+      return;
+    }
+
+    if(!p.district_id){
+      await supabase.auth.signOut();
+      msg.textContent='या Login साठी जिल्हा mapping उपलब्ध नाही.';
+      return;
+    }
+
+    const {data:d}=await supabase.from('districts')
+      .select('id,name').eq('id',p.district_id).single();
+
+    if(!d || d.name !== selectedDistrict){
+      await supabase.auth.signOut();
+      msg.textContent='या Login ID ला निवडलेल्या जिल्ह्याचा प्रवेश नाही.';
+      return;
+    }
+
+    await showDistrict(p.district_id);
+    return;
+  }
+
+  // Admin Login मध्ये District account चालू देऊ नका.
+  if(window.currentLoginType === 'admin'){
+    if(p.role !== 'admin'){
+      await supabase.auth.signOut();
+      msg.textContent='हे District Login आहे. कृपया Login बटण वापरा.';
+      return;
+    }
+
+    await loadDashboard();
+    return;
+  }
+
+  await supabase.auth.signOut();
+  msg.textContent='कृपया योग्य Login प्रकार निवडा.';
+}
+
+function disableAuthMenu(){
+  document.querySelectorAll('.nav a').forEach(a=>{
+    const label=a.textContent.trim();
+    if(label==='Login' || label==='Admin'){
+      a.classList.add('nav-disabled');
+      a.setAttribute('aria-disabled','true');
+      a.onclick=(e)=>{e.preventDefault();return false;};
+    }
+  });
+}
+
+
+async function loadPendingOperatorForms(){
+  const {data:{user}} = await supabase.auth.getUser();
+  if(!user) return;
+
+  const {data:p} = await supabase.from('profiles')
+    .select('role').eq('user_id',user.id).single();
+
+  if(!p || p.role !== 'admin') return;
+
+  let panel=document.getElementById('adminApprovalPanel');
+  if(!panel){
+    panel=document.createElement('div');
+    panel.id='adminApprovalPanel';
+    panel.className='card';
+    document.getElementById('dashboard').appendChild(panel);
+  }
+
+  panel.innerHTML='<h3>📊 Admin Dashboard</h3><p>Dashboard loading...</p>';
+
+  const {data:forms,error}=await supabase.from('operator_forms')
+    .select('*').order('created_at',{ascending:false});
+
+  if(error){
+    panel.innerHTML='<h3>📊 Admin Dashboard</h3><p>'+escapeHtml(error.message)+'</p>';
+    return;
+  }
+
+  const all=forms||[];
+  const pending=all.filter(f=>f.status==='pending');
+  const approved=all.filter(f=>f.status==='approved');
+  const rejected=all.filter(f=>f.status==='rejected');
+
+  const statStyle='flex:1;min-width:150px;padding:18px;border:1px solid #ddd;border-radius:10px;text-align:center;';
+  panel.innerHTML=`
+    <h3>📊 Operator Approval Dashboard</h3>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin:15px 0;">
+      <div style="${statStyle}"><strong style="font-size:28px;">${all.length}</strong><br>एकूण Forms</div>
+      <div style="${statStyle}"><strong style="font-size:28px;">${pending.length}</strong><br>🟡 Pending</div>
+      <div style="${statStyle}"><strong style="font-size:28px;">${approved.length}</strong><br>🟢 Approved</div>
+      <div style="${statStyle}"><strong style="font-size:28px;">${rejected.length}</strong><br>🔴 Rejected</div>
+    </div>
+    <h3>🟡 Pending Approval</h3>
+    <div id="pendingFormsList"></div>
+  `;
+
+  const list=document.getElementById('pendingFormsList');
+  if(!pending.length){
+    list.innerHTML='<p>सध्या कोणताही Pending Form नाही.</p>';
+    return;
+  }
+
+  const cards=[];
+  for(const f of pending){
+    let photoHtml='';
+    if(f.photo_url){
+      const {data:signed}=await supabase.storage
+        .from('operator-photos').createSignedUrl(f.photo_url, 300);
+      if(signed?.signedUrl){
+        photoHtml=`<p><img src="${signed.signedUrl}" alt="Passport Photo" style="width:100px;height:120px;object-fit:cover;border-radius:6px;border:1px solid #ddd;"></p>`;
+      }
+    }
+
+    cards.push(`
+      <div class="card" style="margin-top:12px;">
+        ${photoHtml}
+        <p><strong>Reference Number:</strong> ${escapeHtml(f.reference_number)}</p>
+        <p><strong>नाव:</strong> ${escapeHtml(f.operator_name)}</p>
+        <p><strong>जन्मतारीख:</strong> ${escapeHtml(f.date_of_birth)}</p>
+        <p><strong>विधानसभा:</strong> ${escapeHtml(f.constituency)}</p>
+        <p><strong>तालुका:</strong> ${escapeHtml(f.taluka)}</p>
+        <p><strong>पत्ता:</strong> ${escapeHtml(f.home_address)}</p>
+        <p><strong>पिन:</strong> ${escapeHtml(f.pin_code)}</p>
+        <p><strong>मोबाईल:</strong> ${escapeHtml(f.mobile_number)}</p>
+        <p><strong>WhatsApp:</strong> ${escapeHtml(f.whatsapp_number)}</p>
+        <p><strong>ईमेल:</strong> ${escapeHtml(f.personal_email)}</p>
+        <button type="button" onclick="approveOperatorForm('${f.id}')">🟢 Approve</button>
+        <button type="button" onclick="rejectOperatorForm('${f.id}')">🔴 Reject</button>
+      </div>`);
+  }
+  list.innerHTML=cards.join('');
+}
+
+
+function escapeHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g, m => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+  }[m]));
+}
+
+async function approveOperatorForm(id){
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user) return;
+
+  const {error}=await supabase.from('operator_forms').update({
+    status:'approved',
+    approved_by:user.id,
+    approved_at:new Date().toISOString()
+  }).eq('id',id);
+
+  if(error){ alert(error.message); return; }
+  await loadPendingOperatorForms();
+}
+
+async function rejectOperatorForm(id){
+  const reason=prompt('Reject करण्याचे कारण लिहा:');
+  if(reason===null) return;
+
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user) return;
+
+  const {error}=await supabase.from('operator_forms').update({
+    status:'rejected',
+    rejection_reason:reason,
+    approved_by:user.id,
+    approved_at:new Date().toISOString()
+  }).eq('id',id);
+
+  if(error){ alert(error.message); return; }
+  await loadPendingOperatorForms();
+}
+
+async function submitOperatorForm(event){
+  event.preventDefault();
+
+  const btn=document.getElementById('submitOperatorBtn');
+  const msg=document.getElementById('dataEntryMsg');
+  btn.disabled=true;
+  msg.textContent='फॉर्म Submit होत आहे...';
+
+  const {data:{user},error:ue}=await supabase.auth.getUser();
+  if(ue || !user){
+    msg.textContent='कृपया पुन्हा Login करा.';
+    btn.disabled=false;
+    return;
+  }
+
+  const {data:p,error:pe}=await supabase.from('profiles')
+    .select('role,district_id').eq('user_id',user.id).single();
+
+  if(pe || !p || p.role==='admin' || !p.district_id){
+    msg.textContent='या Login साठी Data Entry उपलब्ध नाही.';
+    btn.disabled=false;
+    return;
+  }
+
+  const photo=document.getElementById('passportPhoto').files[0];
+  if(!photo){
+    msg.textContent='पासपोर्ट साईज फोटो निवडा.';
+    btn.disabled=false;
+    return;
+  }
+
+  const reference='OP-' + new Date().getFullYear() + '-' +
+    Math.random().toString(36).substring(2,8).toUpperCase();
+
+  const {data:photoData,error:photoError}=await supabase.storage
+    .from('operator-photos')
+    .upload(`${p.district_id}/${reference}-${photo.name}`,photo,{upsert:false});
+
+  if(photoError){
+    msg.textContent='फोटो Upload झाला नाही: '+photoError.message;
+    btn.disabled=false;
+    return;
+  }
+
+  const {error}=await supabase.from('operator_forms').insert({
+    reference_number:reference,
+    district_id:p.district_id,
+    user_id:user.id,
+    constituency:document.getElementById('formConstituency').value,
+    taluka:document.getElementById('formTaluka').value,
+    operator_name:document.getElementById('operatorName').value.trim(),
+    date_of_birth:document.getElementById('dateOfBirth').value,
+    home_address:document.getElementById('homeAddress').value.trim(),
+    pin_code:document.getElementById('pinCode').value.trim(),
+    mobile_number:document.getElementById('mobileNumber').value.trim(),
+    whatsapp_number:document.getElementById('whatsappNumber').value.trim(),
+    personal_email:document.getElementById('personalEmail').value.trim(),
+    photo_url:photoData.path,
+    status:'pending'
+  });
+
+  if(error){
+    msg.textContent='फॉर्म Submit झाला नाही: '+error.message;
+    btn.disabled=false;
+    return;
+  }
+
+  document.getElementById('referenceNumber').textContent=reference;
+  document.getElementById('submitSuccess').classList.remove('hidden');
+  document.getElementById('operatorForm').reset();
+  msg.textContent='';
+  btn.disabled=false;
+}
+
+async function loadDashboard(){
+  const {data:{user},error:ue}=await supabase.auth.getUser();
+  if(ue){document.getElementById('msg').textContent=ue.message;return;}
+  if(!user)return;
+
+  const {data:p,error:pe}=await supabase.from('profiles')
+    .select('role,district_id').eq('user_id',user.id).single();
+
+  if(pe || !p){
+    document.getElementById('msg').textContent=pe?.message || 'या Login साठी profile उपलब्ध नाही.';
+    return;
+  }
+
+  if(p.role === 'admin'){
+    const {data:districts,error:de}=await supabase.from('districts')
+      .select('id,name,login_code').order('id');
+    if(de){document.getElementById('msg').textContent=de.message;return;}
+
+    document.getElementById('login').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    disableAuthMenu();
+    document.getElementById('districtDashboardTabs').classList.add('hidden');
+    document.getElementById('title').textContent='महाराष्ट्र — Master Admin';
+    document.getElementById('dashboardWelcome').textContent='सर्व जिल्ह्यांचे Master Admin Dashboard';
+    document.getElementById('summary').textContent=`एकूण जिल्हे: ${(districts||[]).length}`;
+    document.getElementById('acs').innerHTML=(districts||[])
+      .map(d=>`<div><button style="width:100%" onclick="openDistrict(${d.id})">${d.id} - ${d.name} (${d.login_code})</button></div>`).join('');
+    document.getElementById('talukas').innerHTML='<div>डावीकडील जिल्ह्यावर क्लिक करा. त्या जिल्ह्याचे विधानसभा मतदारसंघ आणि तालुके येथे दिसतील.</div>';
+    await loadPendingOperatorForms();
+    return;
+  }
+
+  if(!p.district_id){
+    document.getElementById('msg').textContent='या Login साठी जिल्हा mapping उपलब्ध नाही.';
+    return;
+  }
+  await showDistrict(p.district_id);
+}
+
+
+async function loadDistrictDashboardStats(userId, districtId, acCount, talukaCount){
+  const c=document.getElementById('statConstituencies');
+  const t=document.getElementById('statTalukas');
+  const m=document.getElementById('statMyForms');
+  const p=document.getElementById('statPending');
+
+  if(c) c.textContent=acCount ?? 0;
+  if(t) t.textContent=talukaCount ?? 0;
+
+  const {data:forms,error}=await supabase.from('operator_forms')
+    .select('status').eq('user_id',userId);
+
+  if(!error && forms){
+    if(m) m.textContent=forms.length;
+    if(p) p.textContent=forms.filter(x=>x.status==='pending').length;
+  } else {
+    if(m) m.textContent='0';
+    if(p) p.textContent='0';
+  }
+}
+
+async function showDistrict(districtId){
+  const {data:d,error:de}=await supabase.from('districts')
+    .select('id,name,login_code').eq('id',districtId).single();
+  if(de || !d){document.getElementById('msg').textContent=de?.message || 'जिल्ह्याची माहिती मिळाली नाही.';return;}
+
+  const {data:acs,error:ae}=await supabase.from('constituencies')
+    .select('constituency_no,name').eq('district_id',d.id).order('constituency_no');
+  const {data:ts,error:te}=await supabase.from('talukas')
+    .select('name').eq('district_id',d.id).order('name');
+
+  if(ae || te){document.getElementById('msg').textContent=ae?.message || te?.message || 'जिल्ह्याचा डेटा मिळवताना त्रुटी आली.';return;}
+
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('dashboard').classList.remove('hidden');
+  disableAuthMenu();
+  document.getElementById('title').textContent=`${d.name} जिल्हा Dashboard — ${d.login_code}`;
+  document.getElementById('dashboardWelcome').textContent=`${d.name} जिल्ह्यासाठी आपले District Dashboard`;
+  document.getElementById('summary').textContent=`एकूण विधानसभा मतदारसंघ: ${(acs||[]).length} | एकूण तालुके: ${(ts||[]).length}`;
+  document.getElementById('districtDashboardTabs').classList.remove('hidden');
+  const {data:{user:districtUser}}=await supabase.auth.getUser();
+  if(districtUser) await loadDistrictDashboardStats(districtUser.id,d.id,(acs||[]).length,(ts||[]).length);
+  document.getElementById('acs').innerHTML=(acs||[]).map(x=>`<div>${x.constituency_no ?? ''} - ${x.name}</div>`).join('');
+  document.getElementById('talukas').innerHTML=(ts||[]).map(x=>`<div>${x.name}</div>`).join('');
+  const csel=document.getElementById('formConstituency');
+  const tsel=document.getElementById('formTaluka');
+  if(csel){
+    csel.innerHTML='<option value="">विधानसभा मतदारसंघ निवडा</option>' +
+      (acs||[]).map(x=>`<option value="${escapeHtml((x.constituency_no ?? '')+' - '+x.name)}">${escapeHtml((x.constituency_no ?? '')+' - '+x.name)}</option>`).join('');
+  }
+  if(tsel){
+    tsel.innerHTML='<option value="">तालुका निवडा</option>' +
+      (ts||[]).map(x=>`<option value="${escapeHtml(x.name)}">${escapeHtml(x.name)}</option>`).join('');
+  }
+}
+
+async function openDistrict(districtId){ await showDistrict(districtId); }
+
+async function logout(){ await logoutNow(); }
+
+// Page refresh केल्यानंतर Supabase session कायम ठेवून पुन्हा Dashboard उघडा.
+async function restoreSession(){
+  const {data:{session},error}=await supabase.auth.getSession();
+  if(error){
+    console.error('Session restore error:', error.message);
+    return;
+  }
+  if(session && session.user){
+    await loadDashboard();
+  }
+}
+
+supabase.auth.onAuthStateChange((event, session)=>{
+  if(event === 'SIGNED_IN' && session){
+    setTimeout(()=>loadDashboard(), 0);
+  }
+});
+
+window.login=login;window.logout=logout;window.openDistrict=openDistrict;
+document.addEventListener('DOMContentLoaded', restoreSession);
+</script>
+</main><footer>निवडणूक विभाग डाटा एन्ट्री ऑपरेटर संघटना • ऑनलाइन माहिती प्रणाली</footer></body>
+</html>
