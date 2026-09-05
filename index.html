@@ -245,22 +245,22 @@ function showHomeTab(){
   document.getElementById('dataEntryPanel').classList.add('hidden');
   document.getElementById('myFormsPanel').classList.add('hidden');
   document.getElementById('dataEntryTab').classList.add('active');
-  document.getElementById('myFormsTab').classList.remove('active');
+  document.getElementById('myFormsTab').classList.add('active');
 }
 
 function showDataEntryTab(){
   document.getElementById('homePanel').classList.add('hidden');
   document.getElementById('myFormsPanel').classList.add('hidden');
   document.getElementById('dataEntryPanel').classList.remove('hidden');
-  document.getElementById('homeTab').classList.remove('active');
   document.getElementById('dataEntryTab').classList.add('active');
+  document.getElementById('myFormsTab').classList.add('active');
 }
 
 function showMyFormsTab(){
   document.getElementById('homePanel').classList.add('hidden');
   document.getElementById('dataEntryPanel').classList.add('hidden');
   document.getElementById('myFormsPanel').classList.remove('hidden');
-  document.getElementById('dataEntryTab').classList.remove('active');
+  document.getElementById('dataEntryTab').classList.add('active');
   document.getElementById('myFormsTab').classList.add('active');
   loadMyForms();
 }
