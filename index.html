@@ -23,7 +23,7 @@ body{margin:0;font-family:"Noto Sans Devanagari","Mangal",Arial,sans-serif;backg
 .card{border:1px solid #ddd;border-radius:12px;padding:24px;box-shadow:0 2px 10px #0001;background:#fff;margin-bottom:22px}
 input,button{padding:12px;margin:6px 0;width:100%;box-sizing:border-box}
 button{cursor:pointer}
-.hidden{display:none}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.hidden{display:none}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.login-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px}.tab{background:#eef4f9;color:#17365d;border:1px solid #cbd5e1;font-weight:700}.tab.active{background:#17365d;color:#fff}
 footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 @media(max-width:700px){
 .site-header{padding:16px 12px}.header-container{flex-direction:column;text-align:center}
@@ -51,18 +51,42 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 </header>
 <nav class="navbar"><div class="nav">
 <a href="#">मुख्यपृष्ठ</a><a href="#login">अर्ज</a><a href="#dashboard">माहिती अपडेट</a>
-<a href="#dashboard">अर्जाची स्थिती</a><a href="#login" onclick="openLogin(event)">Login</a><a href="#dashboard">Admin</a>
+<a href="#dashboard">अर्जाची स्थिती</a><a href="#login" onclick="openDistrictLogin(event)">Login</a><a href="#login" onclick="openAdminLogin(event)">Admin</a>
 </div></nav>
 <main class="container">
 
-<div class="card" id="login">
-<h2>जिल्हा Login</h2>
-<p>Username/Email + Password — OTP नाही.</p>
+<div class="card hidden" id="login">
+<h2 id="loginHeading">🔐 Login</h2>
+
+<div class="login-tabs">
+  <button type="button" id="districtTab" class="tab active" onclick="showDistrictLogin()">जिल्हा Login</button>
+  <button type="button" id="adminTab" class="tab" onclick="showAdminLogin()">Admin Login</button>
+</div>
+
+<div id="districtLoginPanel">
+  <p>आपल्या जिल्ह्याचा Login निवडा.</p>
+  <select id="districtSelect" style="padding:12px;margin:6px 0;width:100%;box-sizing:border-box">
+    <option>अहिल्यानगर</option><option>अकोला</option><option>अमरावती</option><option>बीड</option>
+    <option>भंडारा</option><option>बुलढाणा</option><option>चंद्रपूर</option><option>छत्रपती संभाजीनगर</option>
+    <option>धुळे</option><option>गडचिरोली</option><option>गोंदिया</option><option>हिंगोली</option>
+    <option>जळगाव</option><option>जालना</option><option>कोल्हापूर</option><option>लातूर</option>
+    <option>मुंबई शहर</option><option>मुंबई उपनगर</option><option>नागपूर</option><option>नांदेड</option>
+    <option>नंदुरबार</option><option>नाशिक</option><option>धाराशिव</option><option>पालघर</option>
+    <option>परभणी</option><option>पुणे</option><option>रायगड</option><option>रत्नागिरी</option>
+    <option>सांगली</option><option>सातारा</option><option>सिंधुदुर्ग</option><option>सोलापूर</option>
+    <option>ठाणे</option><option>वर्धा</option><option>वाशिम</option><option>यवतमाळ</option>
+  </select>
+</div>
+
+<label>Login Email</label>
 <input id="email" type="email" placeholder="Login Email">
+<label>Password</label>
 <input id="password" type="password" placeholder="Password">
+
 <button onclick="login()">Login</button>
 <p id="msg"></p>
 </div>
+
 
 <div class="card hidden" id="dashboard">
 <h2 id="title"></h2>
@@ -75,13 +99,36 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 </div>
 
 <script>
-function openLogin(event){
+function openDistrictLogin(event){
   if(event) event.preventDefault();
-  const login = document.getElementById('login');
-  if(login){
-    login.classList.remove('hidden');
-    login.scrollIntoView({behavior:'smooth', block:'start'});
-  }
+  const login=document.getElementById('login');
+  login.classList.remove('hidden');
+  showDistrictLogin();
+  login.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function openAdminLogin(event){
+  if(event) event.preventDefault();
+  const login=document.getElementById('login');
+  login.classList.remove('hidden');
+  showAdminLogin();
+  login.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function showDistrictLogin(){
+  document.getElementById('districtLoginPanel').classList.remove('hidden');
+  document.getElementById('districtTab').classList.add('active');
+  document.getElementById('adminTab').classList.remove('active');
+  document.getElementById('loginHeading').textContent='🔐 जिल्हा Login';
+  document.getElementById('msg').textContent='';
+}
+
+function showAdminLogin(){
+  document.getElementById('districtLoginPanel').classList.add('hidden');
+  document.getElementById('districtTab').classList.remove('active');
+  document.getElementById('adminTab').classList.add('active');
+  document.getElementById('loginHeading').textContent='👑 Admin Login';
+  document.getElementById('msg').textContent='';
 }
 </script>
 <script type="module">
