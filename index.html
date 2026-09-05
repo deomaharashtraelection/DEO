@@ -297,6 +297,28 @@ async function login(){
   msg.textContent='कृपया योग्य Login प्रकार निवडा.';
 }
 
+function setLoggedInHomeState(){
+  const logoutBtn=document.getElementById('navLogout');
+  if(logoutBtn) logoutBtn.classList.remove('hidden');
+
+  document.querySelectorAll('.nav a').forEach(a=>{
+    const label=a.textContent.trim();
+    if(label==='Login' || label==='Admin'){
+      a.classList.add('nav-disabled');
+      a.setAttribute('aria-disabled','true');
+      a.onclick=(e)=>{e.preventDefault();return false;};
+    }
+  });
+
+  // Login झाल्यानंतर Home Page वरच राहा.
+  const login=document.getElementById('login');
+  const dashboard=document.getElementById('dashboard');
+  if(login) login.classList.add('hidden');
+  if(dashboard) dashboard.classList.add('hidden');
+  window.scrollTo({top:0,behavior:'smooth'});
+  history.replaceState(null,'',window.location.pathname + window.location.search);
+}
+
 function showHeaderLogout(){
   const btn=document.getElementById('navLogout');
   if(btn) btn.classList.remove('hidden');
@@ -335,6 +357,7 @@ async function loadDashboard(){
     document.getElementById('dashboard').classList.remove('hidden');
     showHeaderLogout();
     disableAuthMenu();
+    setLoggedInHomeState();
     document.getElementById('title').textContent='महाराष्ट्र — Master Admin';
     document.getElementById('summary').textContent=`एकूण जिल्हे: ${(districts||[]).length}`;
     document.getElementById('acs').innerHTML=(districts||[])
@@ -366,6 +389,7 @@ async function showDistrict(districtId){
   document.getElementById('dashboard').classList.remove('hidden');
   showHeaderLogout();
   disableAuthMenu();
+  setLoggedInHomeState();
   document.getElementById('title').textContent=`${d.name} जिल्हा — ${d.login_code}`;
   document.getElementById('summary').textContent=`एकूण विधानसभा मतदारसंघ: ${(acs||[]).length} | एकूण तालुके: ${(ts||[]).length}`;
   document.getElementById('acs').innerHTML=(acs||[]).map(x=>`<div>${x.constituency_no ?? ''} - ${x.name}</div>`).join('');
@@ -376,8 +400,6 @@ async function openDistrict(districtId){ await showDistrict(districtId); }
 
 async function logout(){
   await supabase.auth.signOut();
-  const btn=document.getElementById('navLogout');
-  if(btn) btn.classList.add('hidden');
   location.reload();
 }
 window.login=login;window.logout=logout;window.openDistrict=openDistrict;
