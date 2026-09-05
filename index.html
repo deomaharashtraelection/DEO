@@ -19,7 +19,7 @@ body{margin:0;font-family:"Noto Sans Devanagari","Mangal",Arial,sans-serif;backg
 .nav{max-width:1200px;margin:auto;display:flex;justify-content:center;flex-wrap:wrap}
 .nav a{color:#17365d;text-decoration:none;padding:14px 18px;font-size:15px;font-weight:700}
 .nav a:hover{background:#eef4f9}
-.nav a.nav-disabled{pointer-events:none;opacity:.55;cursor:default}.nav a.nav-logout{color:#b42318}.nav a.nav-logout:hover{background:#fef3f2}
+.nav a.nav-disabled{pointer-events:none;opacity:.55;cursor:default}
 .container{max-width:1000px;margin:28px auto;padding:0 16px}
 .card{border:1px solid #ddd;border-radius:12px;padding:24px;box-shadow:0 2px 10px #0001;background:#fff;margin-bottom:22px}
 input,button{padding:12px;margin:6px 0;width:100%;box-sizing:border-box}
@@ -52,7 +52,7 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 </header>
 <nav class="navbar"><div class="nav">
 <a href="#">मुख्यपृष्ठ</a><a href="#login">अर्ज</a><a href="#dashboard">माहिती अपडेट</a>
-<a href="#dashboard">अर्जाची स्थिती</a><a href="#login" onclick="openDistrictLogin(event)">Login</a><a href="#login" onclick="openAdminLogin(event)">Admin</a><a href="#" id="navLogout" class="nav-logout hidden" onclick="logout(event)">Logout</a>
+<a href="#dashboard">अर्जाची स्थिती</a><a href="#login" onclick="openDistrictLogin(event)">Login</a><a href="#login" onclick="openAdminLogin(event)">Admin</a><a href="#" id="logoutNav" class="hidden" onclick="logout();return false;">Logout</a>
 </div></nav>
 <main class="container">
 
@@ -128,12 +128,6 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 </div>
 
 <script>
-function setNavLogoutVisible(show){
-  const btn=document.getElementById('navLogout');
-  if(!btn)return;
-  btn.classList.toggle('hidden', !show);
-}
-
 function closeLogin(){
   document.getElementById('login').classList.add('hidden');
 }
@@ -281,6 +275,10 @@ function disableAuthMenu(){
       a.onclick=(e)=>{e.preventDefault();return false;};
     }
   });
+
+  // Login झाल्यानंतर Logout फक्त वरच्या मेनूमध्ये दाखवा.
+  const logoutNav=document.getElementById('logoutNav');
+  if(logoutNav) logoutNav.classList.remove('hidden');
 }
 
 async function loadDashboard(){
@@ -342,9 +340,7 @@ async function showDistrict(districtId){
 
 async function openDistrict(districtId){ await showDistrict(districtId); }
 
-async function logout(event){
-  if(event) event.preventDefault();
-  setNavLogoutVisible(false);
+async function logout(){
   await supabase.auth.signOut();
   location.reload();
 }
