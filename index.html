@@ -50,9 +50,9 @@ body{font-family:Arial,"Noto Sans Devanagari",sans-serif;background:#f5f7fb;marg
 <div class="modalbox" onclick="event.stopPropagation()">
 <h2>Data Entry तपासणी</h2><div id="modalContent"></div>
 <div class="actions">
-<button id="acceptBtn" type="button" class="success">✓ Accept</button>
-<button id="rejectBtn" type="button" class="danger">✕ Reject</button>
-<button id="closeBtn" type="button">Close</button>
+<button id="acceptBtn" type="button" class="success" onclick="approveEntry()">✓ Accept</button>
+<button id="rejectBtn" type="button" class="danger" onclick="rejectEntry()">✕ Reject</button>
+<button id="closeBtn" type="button" onclick="closeModal()">Close</button>
 </div><div id="approvalMsg" class="msg"></div></div></div>
 
 <script type="module">
@@ -79,9 +79,8 @@ window.openEntry=async id=>{selectedEntry=allEntries.find(x=>x.id===id);if(!sele
 window.closeModal=()=>{$('modal').classList.add('hidden');$('approvalMsg').textContent='';selectedEntry=null};
 window.approveEntry=async()=>{if(!selectedEntry)return;const {error}=await supabase.from('data_entries').update({status:'accepted',approved_by:currentUser.id,approved_at:new Date().toISOString(),rejection_reason:null}).eq('id',selectedEntry.id);$('approvalMsg').textContent=error?error.message:'Entry ACCEPTED झाली.';if(!error){selectedEntry.status='accepted';renderStats();renderAdminEntries();setTimeout(closeModal,500)}};
 window.rejectEntry=async()=>{if(!selectedEntry)return;const reason=prompt('Reject करण्याचे कारण लिहा:','Correction Required');if(reason===null)return;const {error}=await supabase.from('data_entries').update({status:'rejected',approved_by:currentUser.id,approved_at:new Date().toISOString(),rejection_reason:reason}).eq('id',selectedEntry.id);$('approvalMsg').textContent=error?error.message:'Entry REJECTED झाली.';if(!error){selectedEntry.status='rejected';selectedEntry.rejection_reason=reason;renderStats();renderAdminEntries();setTimeout(closeModal,500)}};
-$('closeBtn').addEventListener('click',window.closeModal);
-$('acceptBtn').addEventListener('click',window.approveEntry);
-$('rejectBtn').addEventListener('click',window.rejectEntry);
+// Buttons use direct onclick handlers so they work reliably in module scripts.
+
 $('modal').addEventListener('click',e=>{if(e.target===$('modal')) window.closeModal()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('modal').classList.contains('hidden')) window.closeModal()});
 
