@@ -135,7 +135,7 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 <p id="summary"></p>
 <p id="dashboardWelcome" style="font-weight:700;margin-top:6px;"></p>
 
-<div id="districtDashboardTabs" class="login-tabs hidden" style="margin-top:18px;">
+<div id="districtDashboardTabs" class="login-tabs" style="margin-top:18px;">
   <button type="button" class="tab active" id="homeTab" onclick="showHomeTab()">🏠 मुख्यपृष्ठ</button>
   <button type="button" class="tab" id="dataEntryTab" onclick="showDataEntryTab()">📝 Data Entry</button>
   <button type="button" class="tab" id="myFormsTab" onclick="showMyFormsTab()">📋 माझे Forms</button>
@@ -790,9 +790,13 @@ async function showDistrict(districtId){
   // Data Entry आणि माझे Forms हे फक्त District Login साठी.
   if(currentRole === 'district'){
     document.getElementById('districtDashboardTabs').classList.remove('hidden');
+    document.getElementById('dataEntryTab').classList.remove('hidden');
+    document.getElementById('myFormsTab').classList.remove('hidden');
     await loadDistrictDashboardStats(districtUser.id,d.id,(acs||[]).length,(ts||[]).length);
   } else {
     document.getElementById('districtDashboardTabs').classList.add('hidden');
+    document.getElementById('dataEntryTab').classList.add('hidden');
+    document.getElementById('myFormsTab').classList.add('hidden');
   }
   document.getElementById('acs').innerHTML=(acs||[]).map(x=>`<div>${x.constituency_no ?? ''} - ${x.name}</div>`).join('');
   document.getElementById('talukas').innerHTML=(ts||[]).map(x=>`<div>${x.name}</div>`).join('');
