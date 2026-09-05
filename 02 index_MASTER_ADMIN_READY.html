@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="mr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>District Login</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px}
+.card{border:1px solid #ddd;border-radius:12px;padding:24px;box-shadow:0 2px 10px #0001}
+input,button{padding:12px;margin:6px 0;width:100%;box-sizing:border-box}
+button{cursor:pointer}
+.hidden{display:none}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+</style>
+</head>
+<body>
+<div class="card" id="login">
+<h2>जिल्हा Login</h2>
+<p>Username/Email + Password — OTP नाही.</p>
+<input id="email" type="email" placeholder="Login Email">
+<input id="password" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+<p id="msg"></p>
+</div>
+
+<div class="card hidden" id="dashboard">
+<h2 id="title"></h2>
+<p id="summary"></p>
+<button onclick="logout()">Logout</button>
+<div class="grid">
+<div><h3>विधानसभा मतदारसंघ</h3><div id="acs"></div></div>
+<div><h3>तालुके</h3><div id="talukas"></div></div>
+</div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const SUPABASE_URL = 'https://gkooyusburhispbwgzgr.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_j_bRcMJ2lSuMD0dTdgBWxw_AQStY-Nx';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function login(){
+  const email=document.getElementById('email').value.trim();
+  const password=document.getElementById('password').value;
+  const {error}=await supabase.auth.signInWithPassword({email,password});
+  document.getElementById('msg').textContent=error ? error.message : '';
+  if(!error) await loadDashboard();
+}
+async function loadDashboard(){
+  const {data:{user},error:ue}=await supabase.auth.getUser();
+  if(ue){document.getElementById('msg').textContent=ue.message;return;}
+  if(!user)return;
+
+  const {data:p,error:pe}=await supabase.from('profiles')
+    .select('role,district_id').eq('user_id',user.id).single();
+
+  if(pe || !p){
+    document.getElementById('msg').textContent=pe?.message || 'या Login साठी profile उपलब्ध नाही.';
+    return;
+  }
+
+  if(p.role === 'admin'){
+    const {data:districts,error:de}=await supabase.from('districts')
+      .select('id,name,login_code').order('id');
+    if(de){document.getElementById('msg').textContent=de.message;return;}
+
+    document.getElementById('login').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    document.getElementById('title').textContent='महाराष्ट्र — Master Admin';
+    document.getElementById('summary').textContent=`एकूण जिल्हे: ${(districts||[]).length}`;
+    document.getElementById('acs').innerHTML=(districts||[])
+      .map(d=>`<div><button style="width:100%" onclick="openDistrict(${d.id})">${d.id} - ${d.name} (${d.login_code})</button></div>`).join('');
+    document.getElementById('talukas').innerHTML='<div>डावीकडील जिल्ह्यावर क्लिक करा. त्या जिल्ह्याचे विधानसभा मतदारसंघ आणि तालुके येथे दिसतील.</div>';
+    return;
+  }
+
+  if(!p.district_id){
+    document.getElementById('msg').textContent='या Login साठी जिल्हा mapping उपलब्ध नाही.';
+    return;
+  }
+  await showDistrict(p.district_id);
+}
+
+async function showDistrict(districtId){
+  const {data:d,error:de}=await supabase.from('districts')
+    .select('id,name,login_code').eq('id',districtId).single();
+  if(de || !d){document.getElementById('msg').textContent=de?.message || 'जिल्ह्याची माहिती मिळाली नाही.';return;}
+
+  const {data:acs,error:ae}=await supabase.from('constituencies')
+    .select('constituency_no,name').eq('district_id',d.id).order('constituency_no');
+  const {data:ts,error:te}=await supabase.from('talukas')
+    .select('name').eq('district_id',d.id).order('name');
+
+  if(ae || te){document.getElementById('msg').textContent=ae?.message || te?.message || 'जिल्ह्याचा डेटा मिळवताना त्रुटी आली.';return;}
+
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('dashboard').classList.remove('hidden');
+  document.getElementById('title').textContent=`${d.name} जिल्हा — ${d.login_code}`;
+  document.getElementById('summary').textContent=`एकूण विधानसभा मतदारसंघ: ${(acs||[]).length} | एकूण तालुके: ${(ts||[]).length}`;
+  document.getElementById('acs').innerHTML=(acs||[]).map(x=>`<div>${x.constituency_no ?? ''} - ${x.name}</div>`).join('');
+  document.getElementById('talukas').innerHTML=(ts||[]).map(x=>`<div>${x.name}</div>`).join('');
+}
+
+async function openDistrict(districtId){ await showDistrict(districtId); }
+
+async function logout(){await supabase.auth.signOut();location.reload();}
+window.login=login;window.logout=logout;window.openDistrict=openDistrict;
+loadDashboard();
+</script>
+</body>
+</html>
