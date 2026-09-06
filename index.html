@@ -163,7 +163,7 @@ function logout(){location.reload()}
 function tab(t){["entry","forms","pending","approved","admin","adminAccepted","adminCorrection","adminDelete","summary"].forEach(x=>$(x).classList.add("hidden"));$(t).classList.remove("hidden");if(t==="forms")renderForms();if(t==="pending")renderPending();if(t==="approved")renderAccepted();if(t==="admin")renderAdmin();if(t==="adminAccepted"){loadAdminAcceptedDistricts();renderAdminAccepted()}if(t==="adminCorrection"){renderAdminCorrection()}if(t==="adminDelete"){renderAdminDelete()}if(t==="summary"){loadSummaryDistricts();renderSummary()}}
 function loadAssemblies(){
  let ds=session.type==="admin"?Object.keys(DATA):[session.district],a=[];
- ds.forEach(d=>(DATA[d]?.assemblies||[]).forEach(v=>a.push({d:d,a:v})));
+ ds.forEach(d=>{(DATA[d]?.assemblies||[]).forEach(v=>a.push({d:d,a:v}));a.push({d:d,a:"जिल्हा निवडणूक शाखा"});});
  a.sort((x,y)=>assemblyNo(x.a)-assemblyNo(y.a)||String(x.a||"").localeCompare(String(y.a||""),"mr")||String(x.d||"").localeCompare(String(y.d||""),"mr"));
  $("assembly").innerHTML='<option value="">-- निवडा --</option>'+a.map(x=>'<option data-d="'+esc(x.d)+'" value="'+esc(x.a)+'">'+esc(x.a)+(session.type==="admin"?" — "+esc(x.d):"")+"</option>").join("");
  $("taluka").innerHTML='<option value="">-- निवडा --</option>';
