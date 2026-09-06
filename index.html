@@ -71,19 +71,19 @@ footer{text-align:center;padding:20px;color:#667085;font-size:13px}
 <body>
 <header class="site-header">
 <div class="header-container">
-<div class="brand">
+<a class="brand" href="#" onclick="goHome(event)" style="color:inherit;text-decoration:none;">
 <img class="logo" src="LOGO.png" alt="संघटनेचे Logo">
 <div>
 <h1 class="main-title">निवडणूक विभाग</h1>
 <div class="sub-title">डाटा एन्ट्री ऑपरेटर संघटना</div>
 <div class="english">Election Department Data Entry Operators Association</div>
 </div>
-</div>
+</a>
 <div class="badge">महाराष्ट्र राज्य<br><strong>ऑनलाईन माहिती प्रणाली</strong></div>
 </div>
 </header>
 <nav class="navbar"><div class="nav">
-<a href="#">मुख्यपृष्ठ</a><a href="#login">अर्ज</a><a href="#dashboard">माहिती अपडेट</a>
+<a href="#" onclick="goHome(event)">मुख्यपृष्ठ</a><a href="#login">अर्ज</a><a href="#dashboard">माहिती अपडेट</a>
 <a href="#dashboard">अर्जाची स्थिती</a><a href="#login" onclick="openDistrictLogin(event)">Login</a><a href="#login" onclick="openAdminLogin(event)">Admin</a>
 <a href="#" id="menuLogout" class="hidden" onclick="logoutFromMenu(event)">Logout</a>
 </div></nav>
@@ -260,14 +260,16 @@ function showDataEntryTab(){
   document.getElementById('myFormsPanel').classList.add('hidden');
   document.getElementById('dataEntryPanel').classList.remove('hidden');
   document.getElementById('dataEntryTab').classList.add('active');
-  document.getElementById('myFormsTab').classList.add('active');
+  document.getElementById('myFormsTab').classList.remove('active');
+  const success=document.getElementById('submitSuccess');
+  if(success) success.classList.add('hidden');
 }
 
 function showMyFormsTab(){
   document.getElementById('homePanel').classList.add('hidden');
   document.getElementById('dataEntryPanel').classList.add('hidden');
   document.getElementById('myFormsPanel').classList.remove('hidden');
-  document.getElementById('dataEntryTab').classList.add('active');
+  document.getElementById('dataEntryTab').classList.remove('active');
   document.getElementById('myFormsTab').classList.add('active');
   loadMyForms();
 }
@@ -301,6 +303,17 @@ async function loadMyForms(){
 function saveDataEntry(){
   document.getElementById('dataEntryMsg').textContent =
     'Data Entry form तयार आहे. प्रत्यक्ष database मध्ये Save करण्यासाठी Supabase table जोडणे आवश्यक आहे.';
+}
+
+function goHome(event){
+  if(event) event.preventDefault();
+  const login=document.getElementById('login');
+  const dashboard=document.getElementById('dashboard');
+  if(login) login.classList.add('hidden');
+  if(dashboard) dashboard.classList.add('hidden');
+  window.scrollTo({top:0,behavior:'smooth'});
+  history.replaceState(null,'',window.location.pathname + window.location.search);
+  return false;
 }
 
 function closeLogin(){
@@ -441,26 +454,35 @@ async function logoutNow(){
   const warning=document.getElementById('idleWarning');
   if(warning) warning.style.display='none';
 
-  showLoggedOutMenu();
+  const logoutLink=document.getElementById('menuLogout');
+  if(logoutLink){
+    logoutLink.classList.add('hidden');
+    logoutLink.textContent='Logout';
+  }
+
+  const login=document.getElementById('login');
+  const dashboard=document.getElementById('dashboard');
+  if(login) login.classList.add('hidden');
+  if(dashboard) dashboard.classList.add('hidden');
 
   try{
-    const client = window.supabaseClient;
-    if(!client) throw new Error('Supabase client उपलब्ध नाही.');
-    const {error}=await client.auth.signOut({scope:'local'});
-    if(error) console.error('Logout error:',error.message);
+    const client=window.supabaseClient;
+    if(client){
+      const result=await client.auth.signOut({scope:'local'});
+      if(result?.error) console.error('Logout error:',result.error.message);
+    }
   }catch(err){
     console.error('Logout exception:',err);
-  }finally{
-    // Supabase signOut झाल्यावर local session data साफ करण्याची खात्री.
-    try{
-      localStorage.removeItem('supabase.auth.token');
-      Object.keys(localStorage)
-        .filter(k=>k.startsWith('sb-') && k.endsWith('-auth-token'))
-        .forEach(k=>localStorage.removeItem(k));
-    }catch(e){}
-
-    window.location.replace(window.location.pathname + '?loggedout=' + Date.now());
   }
+
+  // Local session keys साफ करा; त्यामुळे refresh केल्यावर जुना login परत येणार नाही.
+  try{
+    Object.keys(localStorage)
+      .filter(k=>k.startsWith('sb-') && k.endsWith('-auth-token'))
+      .forEach(k=>localStorage.removeItem(k));
+  }catch(e){}
+
+  window.location.replace(window.location.pathname + '?loggedout=' + Date.now());
 }
 
 ['click','keydown','mousemove','scroll','touchstart'].forEach(evt=>{
@@ -559,9 +581,15 @@ async function login(){
 }
 
 function disableAuthMenu(){
+  const logoutLink=document.getElementById('menuLogout');
+  if(logoutLink){
+    logoutLink.classList.remove('hidden');
+    logoutLink.classList.remove('nav-disabled');
+  }
+
   document.querySelectorAll('.nav a').forEach(a=>{
     const label=a.textContent.trim();
-    if(label==='Login' || label==='Admin'){
+    if((label==='Login' || label==='Admin') && a.id!=='menuLogout'){
       a.classList.add('nav-disabled');
       a.setAttribute('aria-disabled','true');
       a.onclick=(e)=>{e.preventDefault();return false;};
@@ -874,12 +902,16 @@ async function submitOperatorForm(event){
   const reference='OP-' + new Date().getFullYear() + '-' +
     Math.random().toString(36).substring(2,8).toUpperCase();
 
+  // Photo upload
+  const safePhotoName=photo.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+  const photoPath=`${p.district_id}/${reference}-${Date.now()}-${safePhotoName}`;
+
   const {data:photoData,error:photoError}=await supabase.storage
     .from('operator-photos')
-    .upload(`${p.district_id}/${reference}-${photo.name}`,photo,{upsert:false});
+    .upload(photoPath,photo,{upsert:false});
 
   if(photoError){
-    msg.textContent='फोटो Upload झाला नाही: '+photoError.message;
+    msg.textContent='फोटो Upload झाला नाही. Supabase Storage मधील "operator-photos" bucket आणि त्याची INSERT policy तपासा. तपशील: '+photoError.message;
     btn.disabled=false;
     return;
   }
@@ -902,7 +934,7 @@ async function submitOperatorForm(event){
   });
 
   if(error){
-    msg.textContent='फॉर्म Submit झाला नाही: '+error.message;
+    msg.textContent='फॉर्म Submit झाला नाही. Supabase operator_forms table/RLS तपासा. तपशील: '+error.message;
     btn.disabled=false;
     return;
   }
@@ -1026,6 +1058,8 @@ async function restoreSession(){
   }
   if(session && session.user){
     await loadDashboard();
+  }else{
+    showLoggedOutMenu();
   }
 }
 
