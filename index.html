@@ -50,6 +50,7 @@ table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8p
 <button class="w" onclick="tab('pending')">Approval Pending</button>
 <button class="s" onclick="tab('approved')">Approved List</button>
 <button id="adminBtn" class="p hidden" onclick="tab('admin')">Admin Approval</button>
+<button id="adminApprovedBtn" class="s hidden" onclick="tab('adminApproved')">Approved Forms</button>
 </div>
 </div>
 
@@ -78,10 +79,22 @@ table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8p
 </form>
 </section>
 
-<section id="forms" class="card hidden"><h2>Entered Forms</h2><input id="formSearch" placeholder="Reference / नाव / मोबाईल" oninput="renderForms()"><div class="wrap"><table><thead><tr><th>Reference</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Status</th><th>Action</th></tr></thead><tbody id="formsBody"></tbody></table></div></section>
+<section id="forms" class="card hidden"><h2>Entered Forms</h2><input id="formSearch" placeholder="Reference / नाव / मोबाईल" oninput="renderForms()"><div class="wrap"><table><thead><tr><th>Reference</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Status</th><th>Reject Remark</th><th>Action</th></tr></thead><tbody id="formsBody"></tbody></table></div></section>
 <section id="pending" class="card hidden"><h2>Approval Pending</h2><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Status</th><th>Action</th></tr></thead><tbody id="pendingBody"></tbody></table></div></section>
 <section id="approved" class="card hidden"><h2>Approved List</h2><input id="approvedSearch" placeholder="Reference / जिल्हा / नाव" oninput="renderApproved()"><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Action</th></tr></thead><tbody id="approvedBody"></tbody></table></div></section>
 <section id="admin" class="card hidden"><h2>Admin Approval Panel</h2><div class="grid"><div class="card">Total Forms<br><span class="stat" id="total">0</span></div><div class="card">Pending<br><span class="stat" id="pend">0</span></div><div class="card">Approved<br><span class="stat" id="appv">0</span></div></div><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Action</th></tr></thead><tbody id="adminBody"></tbody></table></div></section>
+
+<section id="adminApproved" class="card hidden">
+<h2>Admin → Approved Forms</h2>
+<div class="grid">
+<div><label>जिल्हानुसार Filter</label><select id="adminApprovedDistrict" onchange="renderAdminApproved()"><option value="">-- सर्व जिल्हे --</option></select></div>
+<div><label>Search</label><input id="adminApprovedSearch" placeholder="Reference / नाव / Assembly / Taluka" oninput="renderAdminApproved()"></div>
+</div>
+<div style="margin:10px 0">
+<button class="s" onclick="downloadApprovedCSV()">Approved Forms CSV Download</button>
+</div>
+<div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Approved Date</th><th>Action</th></tr></thead><tbody id="adminApprovedBody"></tbody></table></div>
+</section>
 </div></div>
 
 <div id="modal" class="modal hidden"><div class="modalbox"><div class="top"><h2>Form View / Preview</h2><button class="m" onclick="closeModal()">Close</button></div><div id="modalContent"></div></div></div>
@@ -121,12 +134,12 @@ function enter(){
  $("loginPage").classList.add("hidden");$("app").classList.remove("hidden");
  $("currentDistrict").textContent=session.type==="admin"?"सर्व 36 जिल्हे":session.district;
  $("session").textContent=(session.type==="admin"?"Admin Login":"District Login")+" • "+session.username;
- $("adminBtn").classList.toggle("hidden",session.type!=="admin");
+ $("adminBtn").classList.toggle("hidden",session.type!=="admin");$("adminApprovedBtn").classList.toggle("hidden",session.type!=="admin");
  $("district").value=session.type==="admin"?"Admin":session.district;
  loadAssemblies();tab(session.type==="admin"?"admin":"entry");
 }
 function logout(){location.reload()}
-function tab(t){["entry","forms","pending","approved","admin"].forEach(x=>$(x).classList.add("hidden"));$(t).classList.remove("hidden");if(t==="forms")renderForms();if(t==="pending")renderPending();if(t==="approved")renderApproved();if(t==="admin")renderAdmin()}
+function tab(t){["entry","forms","pending","approved","admin","adminApproved"].forEach(x=>$(x).classList.add("hidden"));$(t).classList.remove("hidden");if(t==="forms")renderForms();if(t==="pending")renderPending();if(t==="approved")renderApproved();if(t==="admin")renderAdmin();if(t==="adminApproved"){loadAdminApprovedDistricts();renderAdminApproved()}}
 function loadAssemblies(){
  let ds=session.type==="admin"?Object.keys(DATA):[session.district],a=[];
  ds.forEach(d=>(DATA[d]?.assemblies||[]).forEach(v=>a.push({d:d,a:v})));
@@ -174,19 +187,51 @@ function scoped(){let a=forms();return session.type==="admin"?a:a.filter(x=>x.di
 function badge(s){return "<span class='badge "+(s==="Approved"?"ok":s==="Rejected"?"rej":"")+"'>"+esc(s)+"</span>"}
 function renderForms(){
  let q=$("formSearch").value.toLowerCase(),a=scoped().filter(x=>JSON.stringify(x).toLowerCase().includes(q));
- $("formsBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+badge(x.status)+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+(x.status!=="Approved"&&x.status!=="Sent for Approval"?("<button class='w' onclick=\"edit('"+x.id+"')\">Edit</button><button class='s' onclick=\"send('"+x.id+"')\">Send Approval</button>"):"")+"</td></tr>").join("")||"<tr><td colspan='6'>माहिती उपलब्ध नाही.</td></tr>"
+ $("formsBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+badge(x.status)+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+(x.status!=="Approved"&&x.status!=="Sent for Approval"?("<button class='w' onclick=\"edit('"+x.id+"')\">Edit</button><button class='s' onclick=\"send('"+x.id+"')\">Send Approval</button>"):"")+"</td></tr>").join("")||"<tr><td colspan='7'>माहिती उपलब्ध नाही.</td></tr>"
 }
 function renderPending(){
  let a=forms().filter(x=>x.status==="Sent for Approval"||x.status==="Approval Pending");if(session.type!=="admin")a=a.filter(x=>x.district===session.district);
  $("pendingBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+badge(x.status)+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+(session.type==="admin"&&x.status==="Sent for Approval"?("<button class='s' onclick=\"approve('"+x.id+"')\">Approve</button><button class='d' onclick=\"rejectForm('"+x.id+"')\">Reject</button>"):"")+"</td></tr>").join("")||"<tr><td colspan='5'>Approval Pending नाही.</td></tr>"
 }
 function send(id){let a=forms(),x=a.find(z=>z.id===id);if(x&&(session.type==="admin"||x.district===session.district)){x.status="Sent for Approval";save(a);renderForms();alert("Admin Approval साठी पाठवले.")}}
-function approve(id){let a=forms(),x=a.find(z=>z.id===id);if(x){x.status="Approved";x.approvedAt=new Date().toISOString();x.approvedBy=session.username;save(a);renderAdmin();renderApproved();renderPending()}}
-function rejectForm(id){let a=forms(),x=a.find(z=>z.id===id);if(x){x.status="Rejected";save(a);renderAdmin();renderPending()}}
+function approve(id){let a=forms(),x=a.find(z=>z.id===id);if(x){x.status="Approved";x.approvedAt=new Date().toISOString();x.approvedBy=session.username;save(a);renderAdmin();renderApproved();renderPending();renderAdminApproved()}}
+function rejectForm(id){let a=forms(),x=a.find(z=>z.id===id);if(!x)return;let remark=prompt("Reject Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Reject Remark लिहिणे आवश्यक आहे.");return}x.status="Rejected";x.rejectRemark=remark;x.rejectedAt=new Date().toISOString();x.rejectedBy=session.username;save(a);renderAdmin();renderPending();renderForms();alert("Form Reject करण्यात आला. Remark सेव्ह करण्यात आला.")}
 function renderApproved(){let q=$("approvedSearch").value.toLowerCase(),a=scoped().filter(x=>x.status==="Approved"&&JSON.stringify(x).toLowerCase().includes(q));$("approvedBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View Form</button></td></tr>").join("")||"<tr><td colspan='6'>Approved List मध्ये माहिती नाही.</td></tr>"}
 function renderAdmin(){let a=forms(),p=a.filter(x=>x.status==="Sent for Approval");$("total").textContent=a.length;$("pend").textContent=p.length;$("appv").textContent=a.filter(x=>x.status==="Approved").length;$("adminBody").innerHTML=p.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button><button class='s' onclick=\"approve('"+x.id+"')\">Approve</button><button class='d' onclick=\"rejectForm('"+x.id+"')\">Reject</button></td></tr>").join("")||"<tr><td colspan='6'>Approval साठी Form नाही.</td></tr>"}
 function view(id){let x=forms().find(z=>z.id===id);if(!x)return;$("modalContent").innerHTML="<div class='grid'>"+[["Reference",x.reference],["Status",x.status],["District",x.district],["Assembly",x.assembly],["Taluka",x.taluka],["Operator",x.name],["DOB / Age",x.dob+" / "+x.age],["PIN",x.pin],["Email",x.email],["Mobile",x.mobile],["WhatsApp",x.whatsapp]].map(v=>"<div><b>"+v[0]+":</b> "+esc(v[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(x.address)+"</p>"+(x.photo?"<img class='photo' src='"+x.photo+"'>":"");$("modal").classList.remove("hidden")}
 function edit(id){let x=forms().find(z=>z.id===id);if(!x||session.type!=="admin"&&x.district!==session.district)return;$("editId").value=x.id;loadAssemblies();$("assembly").value=x.assembly;loadTalukas();setTimeout(()=>$("taluka").value=x.taluka,0);$("name").value=x.name;$("dob").value=x.dob;$("age").value=x.age;$("address").value=x.address;$("pin").value=x.pin;$("email").value=x.email;$("mobile").value=x.mobile;$("whatsapp").value=x.whatsapp;photoData=x.photo||"";proofData=x.proof||"";if(photoData){$("photoPreview").src=photoData;$("photoPreview").classList.remove("hidden")}tab("entry")}
+
+
+function loadAdminApprovedDistricts(){
+ let ds=[...new Set(forms().filter(x=>x.status==="Approved").map(x=>x.district))].sort((a,b)=>a.localeCompare(b,"mr"));
+ let cur=$("adminApprovedDistrict").value;
+ $("adminApprovedDistrict").innerHTML='<option value="">-- सर्व जिल्हे --</option>'+ds.map(d=>"<option>"+esc(d)+"</option>").join("");
+ if(ds.includes(cur))$("adminApprovedDistrict").value=cur;
+}
+function renderAdminApproved(){
+ if(session.type!=="admin")return;
+ let district=$("adminApprovedDistrict").value;
+ let q=($("adminApprovedSearch").value||"").toLowerCase();
+ let a=forms().filter(x=>x.status==="Approved");
+ if(district)a=a.filter(x=>x.district===district);
+ if(q)a=a.filter(x=>JSON.stringify(x).toLowerCase().includes(q));
+ $("adminApprovedBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+(x.approvedAt?new Date(x.approvedAt).toLocaleString("en-IN"):"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button></td></tr>").join("")||"<tr><td colspan='7'>Approved Forms उपलब्ध नाहीत.</td></tr>";
+}
+function downloadApprovedCSV(){
+ if(session.type!=="admin")return;
+ let district=$("adminApprovedDistrict").value,q=($("adminApprovedSearch").value||"").toLowerCase();
+ let a=forms().filter(x=>x.status==="Approved");
+ if(district)a=a.filter(x=>x.district===district);
+ if(q)a=a.filter(x=>JSON.stringify(x).toLowerCase().includes(q));
+ if(!a.length){alert("Download करण्यासाठी Approved Forms उपलब्ध नाहीत.");return}
+ const headers=["Reference","District","Assembly Constituency","Taluka","Operator Name","DOB","Age","Address","PIN","Email","Mobile","WhatsApp","Status","Approved Date","Approved By"];
+ const rows=a.map(x=>[x.reference,x.district,x.assembly,x.taluka,x.name,x.dob,x.age,x.address,x.pin,x.email,x.mobile,x.whatsapp,x.status,x.approvedAt?new Date(x.approvedAt).toLocaleString("en-IN"):"",x.approvedBy||""]);
+ const csv=[headers,...rows].map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");
+ const blob=new Blob(["\\ufeff"+csv],{type:"text/csv;charset=utf-8"});
+ const url=URL.createObjectURL(blob),aEl=document.createElement("a");
+ aEl.href=url;aEl.download="Approved_Forms"+(district?"_"+district:"_All_Districts")+".csv";
+ document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
+}
 function closeModal(){$("modal").classList.add("hidden")}
 init();
 </script></body></html>
