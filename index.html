@@ -171,7 +171,7 @@ function loadAssemblies(){
 function loadTalukas(){
  let a=$("assembly").value,ds=session.type==="admin"?Object.keys(DATA):[session.district],t=[];
  let selectedDistrict=session.type==="admin"?($("assembly").selectedOptions[0]?.dataset.d||""):session.district;
- ds.forEach(d=>{if((DATA[d]?.assemblies||[]).includes(a))t=t.concat(DATA[d]?.talukas||[])});
+ ds.forEach(d=>{if((DATA[d]?.assemblies||[]).includes(a)||(a==="जिल्हा निवडणूक शाखा"&&d!=="मुंबई शहर"))t=t.concat(DATA[d]?.talukas||[])});
  t=[...new Set(t)].sort((x,y)=>x.localeCompare(y,"mr"));
  $("taluka").innerHTML='<option value="">-- निवडा --</option>'+t.map(x=>"<option>"+esc(x)+"</option>").join("");
  $("taluka").required=selectedDistrict!=="मुंबई शहर";
