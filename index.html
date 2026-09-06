@@ -170,8 +170,12 @@ function loadAssemblies(){
 }
 function loadTalukas(){
  let a=$("assembly").value,ds=session.type==="admin"?Object.keys(DATA):[session.district],t=[];
- let selectedDistrict=session.type==="admin"?($("assembly").selectedOptions[0]?.dataset.d||""):session.district;
- ds.forEach(d=>{if((DATA[d]?.assemblies||[]).includes(a)||(a==="जिल्हा निवडणूक शाखा"&&d!=="मुंबई शहर"))t=t.concat(DATA[d]?.talukas||[])});
+ let selectedDistrict=session.type==="admin"?$("assembly").selectedOptions[0]?.dataset.d||"":session.district;
+ if(a==="जिल्हा निवडणूक शाखा"){
+  if(selectedDistrict&&selectedDistrict!=="मुंबई शहर")t=[selectedDistrict];
+ }else{
+  ds.forEach(d=>{if((DATA[d]?.assemblies||[]).includes(a))t=t.concat(DATA[d]?.talukas||[])});
+ }
  t=[...new Set(t)].sort((x,y)=>x.localeCompare(y,"mr"));
  $("taluka").innerHTML='<option value="">-- निवडा --</option>'+t.map(x=>"<option>"+esc(x)+"</option>").join("");
  $("taluka").required=selectedDistrict!=="मुंबई शहर";
@@ -213,11 +217,44 @@ function preview(){
  $("modalContent").innerHTML="<div class='grid'>"+[["Reference",d.reference||"Submit नंतर"],["District",d.district],["Assembly",d.assembly],["Taluka",d.taluka],["Operator",d.name],["DOB / Age",d.dob+" / "+d.age],["PIN",d.pin],["Email",d.email],["Mobile",d.mobile],["WhatsApp",d.whatsapp]].map(x=>"<div><b>"+x[0]+":</b> "+esc(x[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(d.address)+"</p>"+(d.photo?"<img class='photo' src='"+d.photo+"'>":"")+"<br><button class='s' onclick='saveEntry()'>Confirm & Submit</button><button class='m' onclick='closeModal()'>Back</button>";
  $("modal").classList.remove("hidden")
 }
-function saveEntry(){
- let d=previewData,a=forms();
- if(!d.reference){const dc=String(DATA[d.district]?.code||"00").padStart(2,"0");const ac=String(assemblyNo(d.assembly)).padStart(3,"0");const prefix="D"+dc+"-"+ac+"-";const deleted=getDeletedForms();const used=[...a,...deleted].filter(x=>x.district===d.district&&assemblyNo(x.assembly)===assemblyNo(d.assembly)&&String(x.reference||"").startsWith(prefix)).map(x=>{const m=String(x.reference||"").match(/-(\d+)$/);return m?parseInt(m[1],10):0}).filter(Number.isFinite);const seq=(used.length?Math.max(...used):0)+1;d.reference=prefix+String(seq).padStart(2,"0");d.entryDate=new Date().toISOString();}
- if(!d.id){d.id="F"+Date.now()+Math.random().toString(36).slice(2,8);d.status="Approval Pending";d.createdAt=new Date().toISOString()}
- let i=a.findIndex(x=>x.id===d.id);if(i>=0)a[i]=d;else a.push(d);save(a);closeModal();clearForm();alert("Form Submit झाला. Reference Number: "+d.reference);tab("forms");renderForms()
+function compressImageData(data,maxW=600,maxH=750,quality=0.78){
+ return new Promise((resolve,reject)=>{
+  if(!data||!/^data:image\//i.test(data)){resolve(data);return}
+  const im=new Image();
+  im.onload=()=>{
+   try{
+    const scale=Math.min(maxW/im.naturalWidth,maxH/im.naturalHeight,1);
+    const c=document.createElement("canvas");
+    c.width=Math.max(1,Math.round(im.naturalWidth*scale));
+    c.height=Math.max(1,Math.round(im.naturalHeight*scale));
+    c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+    resolve(c.toDataURL("image/jpeg",quality));
+   }catch(e){reject(e)}
+  };
+  im.onerror=()=>reject(new Error("Image compression failed"));
+  im.src=data;
+ });
+}
+async function saveEntry(){
+ try{
+  let d=previewData,a=forms();
+  if(!d)return;
+  if(!d.reference){const dc=String(DATA[d.district]?.code||"00").padStart(2,"0");const ac=String(assemblyNo(d.assembly)).padStart(3,"0");const prefix="D"+dc+"-"+ac+"-";const deleted=getDeletedForms();const used=[...a,...deleted].filter(x=>x.district===d.district&&assemblyNo(x.assembly)===assemblyNo(d.assembly)&&String(x.reference||"").startsWith(prefix)).map(x=>{const m=String(x.reference||"").match(/-(\d+)$/);return m?parseInt(m[1],10):0}).filter(Number.isFinite);const seq=(used.length?Math.max(...used):0)+1;d.reference=prefix+String(seq).padStart(2,"0");d.entryDate=new Date().toISOString();}
+  if(!d.id){d.id="F"+Date.now()+Math.random().toString(36).slice(2,8);d.status="Approval Pending";d.createdAt=new Date().toISOString()}
+  let i=a.findIndex(x=>x.id===d.id);if(i>=0)a[i]=d;else a.push(d);
+  try{save(a)}catch(storageError){
+   try{
+    if(d.photo&&/^data:image\//i.test(d.photo))d.photo=await compressImageData(d.photo);
+    if(d.proof&&/^data:image\//i.test(d.proof))d.proof=await compressImageData(d.proof,800,1000,0.72);
+    if(i>=0)a[i]=d;else a[a.length-1]=d;
+    save(a);
+   }catch(retryError){throw storageError}
+  }
+  closeModal();clearForm();alert("Form Submit झाला. Reference Number: "+d.reference);tab("forms");renderForms();
+ }catch(e){
+  console.error(e);
+  alert("Form Submit करता आले नाही. कृपया पुन्हा प्रयत्न करा.");
+ }
 }
 function clearForm(){$("form").reset();$("closeEditBtn").classList.add("hidden");$("editId").value="";$("age").value="";photoData="";proofData="";$("photoPreview").classList.add("hidden");$("cropPhotoBtn").classList.add("hidden");$("proofName").textContent="";$("district").value=session.type==="admin"?"Admin":session.district;loadAssemblies()}
 function closeEntry(){clearForm();tab("forms")}
