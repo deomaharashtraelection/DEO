@@ -198,7 +198,7 @@ function preview(){
 }
 function saveEntry(){
  let d=previewData,a=forms();
- if(!d.reference)d.reference=(DATA[d.district]?.code||"00")+"-2026-"+String(a.length+1).padStart(6,"0");
+ if(!d.reference){const dc=String(DATA[d.district]?.code||"00").padStart(2,"0");const ac=String(assemblyNo(d.assembly)).padStart(3,"0");const prefix="D"+dc+"-"+ac+"-";const deleted=getDeletedForms();const used=[...a,...deleted].filter(x=>x.district===d.district&&assemblyNo(x.assembly)===assemblyNo(d.assembly)&&String(x.reference||"").startsWith(prefix)).map(x=>{const m=String(x.reference||"").match(/-(\d+)$/);return m?parseInt(m[1],10):0}).filter(Number.isFinite);const seq=(used.length?Math.max(...used):0)+1;d.reference=prefix+String(seq).padStart(2,"0");d.entryDate=new Date().toISOString();}
  if(!d.id){d.id="F"+Date.now()+Math.random().toString(36).slice(2,8);d.status="Approval Pending";d.createdAt=new Date().toISOString()}
  let i=a.findIndex(x=>x.id===d.id);if(i>=0)a[i]=d;else a.push(d);save(a);closeModal();clearForm();alert("Form Submit झाला. Reference Number: "+d.reference);tab("forms");renderForms()
 }
