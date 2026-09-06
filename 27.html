@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>महाराष्ट्र जिल्हा Data Entry Portal</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:"Noto Sans Devanagari",Mangal,Arial,sans-serif;background:#f4f7fb;color:#172033}
+header{background:#123b68;color:#fff;padding:16px 22px;display:flex;justify-content:space-between;align-items:center}
+.container{max-width:1200px;margin:22px auto;padding:0 15px}.card{background:#fff;border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 3px 15px #0001}
+.login{max-width:500px;margin:60px auto}h1,h2{color:#123b68}header h1{color:#fff;margin:0;font-size:20px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}@media(max-width:720px){.grid{grid-template-columns:1fr}}
+label{font-weight:700;display:block;margin:8px 0 5px}input,select,textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:7px;font-size:15px}textarea{min-height:85px}
+button{border:0;border-radius:7px;padding:10px 14px;font-weight:700;cursor:pointer;margin:3px}.p{background:#1261a0;color:#fff}.s{background:#15803d;color:#fff}.w{background:#d97706;color:#fff}.d{background:#b91c1c;color:#fff}.m{background:#e5e7eb;color:#111}
+.hidden{display:none!important}.notice{background:#eff6ff;border-left:4px solid #2563eb;padding:11px;margin:10px 0}.small{font-size:13px;color:#475569}
+table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:left;vertical-align:top}th{background:#eef4fa}.wrap{overflow:auto}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.photo{width:120px;height:150px;object-fit:cover;border:1px dashed #aaa;border-radius:7px}
+.badge{padding:4px 8px;border-radius:12px;background:#fff3cd}.ok{background:#dcfce7}.rej{background:#fee2e2}
+.modal{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;padding:15px;z-index:5}.modalbox{background:#fff;max-width:850px;width:100%;max-height:90vh;overflow:auto;padding:18px;border-radius:12px}
+.stat{font-size:24px;font-weight:800;color:#123b68}
+</style>
+</head>
+<body>
+
+<div id="loginPage" class="container">
+<div class="card login">
+<h2 style="text-align:center">🗂️ महाराष्ट्र जिल्हा Data Entry Portal</h2>
+<div class="notice"><b>36 जिल्ह्यांसाठी 36 स्वतंत्र Login</b><br>प्रत्येक District Login मध्ये फक्त त्या जिल्ह्याचा Data दिसेल.</div>
+<label>Login Type</label>
+<select id="loginType" onchange="toggleLogin()"><option value="district">District Login</option><option value="admin">Admin Login</option></select>
+<div id="districtBox">
+<label>जिल्हा निवडा</label><select id="loginDistrict"></select>
+</div>
+<label>Username</label><input id="username" autocomplete="username">
+<label>Password</label><input id="password" type="password" autocomplete="current-password">
+<button class="p" style="width:100%;margin-top:12px" onclick="login()">Login</button>
+<div id="loginMsg" class="small" style="color:#b91c1c;margin-top:8px"></div>
+<div class="small" style="margin-top:12px"><b>Admin:</b> admin / admin123<br><b>District:</b> जिल्हा निवडल्यानंतर Username Auto-Fill होईल.</div>
+</div>
+</div>
+
+<div id="app" class="hidden">
+<header><div><h1>महाराष्ट्र जिल्हा Data Entry Portal</h1><div id="session"></div></div><button class="m" onclick="logout()">Logout</button></header>
+<div class="container">
+<div class="card top">
+<div><h2 style="margin:0 0 5px">Dashboard</h2>Current District: <b id="currentDistrict"></b></div>
+<div>
+<button class="p" onclick="tab('entry')">Data Entry</button>
+<button class="m" onclick="tab('forms')">Entered Forms</button>
+<button class="w" onclick="tab('pending')">Approval Pending</button>
+<button class="s" onclick="tab('approved')">Approved List</button>
+<button id="adminApprovedBtn" class="s hidden" onclick="tab('adminApproved')">Approved Forms</button>
+<button id="adminCorrectionBtn" class="w hidden" onclick="tab('adminCorrection')">Correction Requests</button><button id="adminDeleteBtn" class="d hidden" onclick="tab('adminDelete')">Delete Requests</button>
+<button class="w" onclick="tab('summary')">AC-wise Summary</button>
+</div>
+</div>
+
+<section id="entry" class="card">
+<h2>Data Entry Form</h2>
+<div class="notice">सर्व माहिती अनिवार्य आहे. Preview → Submit केल्यानंतर Unique Reference Number तयार होईल.</div>
+<form id="form" onsubmit="event.preventDefault();preview()">
+<input type="hidden" id="editId">
+<div class="grid">
+<div><label>District</label><input id="district" readonly></div>
+<div><label>Assembly Constituency *</label><select id="assembly" required onchange="loadTalukas()"></select></div>
+<div><label>Taluka *</label><select id="taluka" required></select></div>
+<div><label>Operator Full Name (Marathi) *</label><input id="name" required></div>
+<div><label>Date of Birth *</label><input id="dob" type="date" required onchange="ageCalc()"></div>
+<div><label>Age</label><input id="age" readonly></div>
+<div><label>Home Address (Marathi) *</label><textarea id="address" required></textarea></div>
+<div><label>PIN Code (6 digit) *</label><input id="pin" maxlength="6" pattern="[0-9]{6}" required></div>
+<div><label>Email *</label><input id="email" type="email" required></div>
+<div><label>Mobile Number (10 digit) *</label><input id="mobile" maxlength="10" pattern="[0-9]{10}" required></div>
+<div><label>WhatsApp Number (10 digit) *</label><input id="whatsapp" maxlength="10" pattern="[0-9]{10}" required></div>
+<div><label>Passport Size Photo *</label><input id="photo" type="file" accept="image/*" required onchange="readFile(this)"></div>
+<div><label>Identity Proof *</label><input id="proof" type="file" accept=".pdf,.jpg,.jpeg,.png" required onchange="readFile(this)"></div>
+</div>
+<img id="photoPreview" class="photo hidden"><div id="proofName" class="small"></div>
+<button class="p" type="submit">Preview & Submit</button><button class="m" type="button" onclick="clearForm()">Clear</button><button class="m" type="button" onclick="closeEntry()">Close</button><button id="closeEditBtn" class="m hidden" type="button" onclick="closeEdit()">Close Edit</button>
+</form>
+</section>
+
+<section id="forms" class="card hidden"><h2>Entered Forms</h2><input id="formSearch" placeholder="Reference / नाव / मोबाईल" oninput="renderForms()"><div class="wrap"><table><thead><tr><th>Reference</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Status</th><th>Reject Remark</th><th>Action</th></tr></thead><tbody id="formsBody"></tbody></table></div></section>
+<section id="pending" class="card hidden"><h2>Approval Pending</h2><div class="grid"><div class="card">Total Forms<br><span class="stat" id="total">0</span></div><div class="card">Approval Pending<br><span class="stat" id="pend">0</span></div><div class="card">Approved<br><span class="stat" id="appv">0</span></div><div class="card">Delete Requests<br><span class="stat" id="delReqTotal">0</span></div><div class="card">Correction Requests<br><span class="stat" id="adminCorrectionTotal">0</span></div></div><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Status</th><th>Action</th></tr></thead><tbody id="pendingBody"></tbody></table></div></section>
+<section id="approved" class="card hidden"><h2>Approved List</h2><input id="approvedSearch" placeholder="Reference / जिल्हा / नाव" oninput="renderApproved()"><div style="margin:10px 0"><button class="s" onclick="downloadApprovedExcel()">Excel Download</button> <button class="m" onclick="downloadApprovedPDF()">PDF Download</button></div><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Action</th></tr></thead><tbody id="approvedBody"></tbody></table></div></section>
+<section id="admin" class="card hidden"><h2>Admin Approval Panel</h2><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Action</th></tr></thead><tbody id="adminBody"></tbody></table></div></section>
+
+<section id="adminApproved" class="card hidden">
+<h2>Admin → Approved Forms</h2>
+<div class="grid">
+<div><label>जिल्हानुसार Filter</label><select id="adminApprovedDistrict" onchange="renderAdminApproved()"><option value="">-- सर्व जिल्हे --</option></select></div>
+<div><label>Search</label><input id="adminApprovedSearch" placeholder="Reference / नाव / Assembly / Taluka" oninput="renderAdminApproved()"></div>
+</div>
+<div style="margin:10px 0">
+<button class="s" onclick="downloadApprovedExcel()">Approved Forms Excel Download</button> <button class="m" onclick="downloadApprovedPDF()">Approved Forms PDF Download</button>
+</div>
+<div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator + Photo</th><th>Assembly</th><th>Taluka</th><th>Approved Date</th><th>Action</th></tr></thead><tbody id="adminApprovedBody"></tbody></table></div>
+</section>
+
+<section id="adminDelete" class="card hidden"><h2>Admin → Delete Requests</h2><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Delete Remark</th><th>Action</th></tr></thead><tbody id="adminDeleteBody"></tbody></table></div></section>
+
+<section id="adminCorrection" class="card hidden">
+<h2>Admin → Correction Requests</h2>
+<div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Request Remark</th><th>Action</th></tr></thead><tbody id="adminCorrectionBody"></tbody></table></div>
+</section>
+
+<section id="summary" class="card hidden">
+<h2>विधानसभा मतदारसंघानुसार आकडेवारीचा घोषवारा</h2>
+<div class="grid">
+<div><label>जिल्हा</label><select id="summaryDistrict" onchange="renderSummary()"><option value="">-- सर्व जिल्हे --</option></select></div>
+</div>
+<div style="margin:10px 0">
+<button class="s" onclick="downloadSummaryExcel()">Summary Excel Download</button> <button class="m" onclick="downloadSummaryPDF()">Summary PDF Download</button>
+</div>
+<div class="wrap"><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Total Forms</th><th>Approval Pending</th><th>Approved</th><th>Rejected</th><th>Correction</th><th>Deleted</th></tr></thead><tbody id="summaryBody"></tbody></table></div>
+</section>
+</div></div>
+
+<div id="modal" class="modal hidden"><div class="modalbox"><div class="top"><h2>Form View / Preview</h2><button class="m" onclick="closeModal()">Close</button></div><div id="modalContent"></div></div></div>
+
+<script>
+const DATA={"अकोला": {"code": "5", "assemblies": ["२८- अकोट", "२९- बाळापूर", "३०- अकोला पश्चिम", "३१- अकोला पूर्व", "३२- मूर्तिजापूर (अ.जा.)"], "talukas": ["अकोट", "अकोला", "तेल्हारा", "पातूर", "बार्शीटाकळी", "बाळापूर", "मुर्तिजापूर"]}, "अमरावती": {"code": "7", "assemblies": ["३६- धामणगाव रेल्वे", "३७- बडनेरा", "३८- अमरावती", "३९- तिवसा", "४०- दर्यापूर (अ.जा.)", "४१- मेळघाट (अ.ज.)", "४२- अचलपूर", "४३- मोर्शी"], "talukas": ["अंजनगाव सुर्जी", "अचलपूर", "अमरावती", "चांदुर बाजार", "चांदुर रेल्वे", "चिखलदरा", "तिवसा", "दर्यापूर", "धामणगाव रेल्वे", "धारणी", "नांदगाव खंडेश्वर", "भातकुली", "मोर्शी", "वरुड"]}, "अहमदनगर": {"code": "27", "assemblies": ["२१६- अकोले (अ.ज.)", "२१७- संगमनेर", "२१८- शिर्डी", "२१९- कोपरगाव", "२२०- श्रीरामपूर (अ.जा.)", "२२१- नेवासा", "२२२- शेवगाव", "२२३- राहुरी", "२२४- पारनेर", "२२५- अहमदनगर शहर", "२२६- श्रीगोंदा", "२२७- कर्जत जामखेड"], "talukas": ["अकोले", "कर्जत", "कोपरगाव", "जामखेड", "नगर", "नेवासा", "पाथर्डी", "पारनेर", "राहाता", "राहुरी", "शेवगाव", "श्रीगोंदा", "श्रीरामपूर", "संगमनेर"]}, "उस्मानाबाद": {"code": "30", "assemblies": ["२४०- उमरगा (अ.जा.)", "२४१- तुळजापूर", "२४२- उस्मानाबाद", "२४३- परंडा"], "talukas": ["उमरगा", "कळंब", "तुळजापूर", "धाराशिव", "परांडा", "भूम", "लोहारा", "वाशी"]}, "औरंगाबाद": {"code": "19", "assemblies": ["१०४- सिल्लोड", "१०५- कन्नड", "१०६- फुलंब्री", "१०७- औरंगाबाद (मध्य)", "१०८- औरंगाबाद (पश्चिम) (अ.जा.)", "१०९- औरंगाबाद (पूर्व)", "११०- पैठण", "१११- गंगापूर", "११२- वैजापूर"], "talukas": ["कन्नड", "खुलताबाद", "गंगापूर", "छत्रपती संभाजीनगर", "पैठण", "फुलंब्री", "वैजापूर", "सिल्लोड", "सोयगाव"]}, "कोल्हापूर": {"code": "35", "assemblies": ["२७१- चंदगड", "२७२- राधानगरी", "२७३- कागल", "२७४- कोल्हापूर दक्षिण", "२७५- करवीर", "२७६- कोल्हापूर उत्तर", "२७७- शाहूवाडी", "२७८- हातकणंगले (अ.जा.)", "२७९- इचलकरंजी", "२८०- शिरोळ"], "talukas": ["आजरा", "करवीर", "कागल", "गगनबावडा", "गडहिंग्लज", "चंदगड", "पन्हाळा", "भुदरगड", "राधानगरी", "शाहूवाडी", "शिरोळ", "हातकणंगले"]}, "गडचिरोली": {"code": "12", "assemblies": ["६७- आरमोरी (अ.ज.)", "६८- गडचिरोली (अ.ज.)", "६९- अहेरी (अ.ज.)"], "talukas": ["अहेरी", "आरमोरी", "एटापल्ली", "कुरखेडा", "कोरची", "गडचिरोली", "चामोर्शी", "देसाईगंज (वडसा)", "धानोरा", "भामरागड", "मुलचेरा", "सिरोंचा"]}, "गोंदिया": {"code": "11", "assemblies": ["६३- अर्जुनी मोरगाव (अ.जा.)", "६४- तिरोरा", "६५- गोंदिया", "६६- आमगाव (अ.ज.)"], "talukas": ["अर्जुनी मोरगाव", "आमगाव", "गोंदिया", "गोरेगाव", "तिरोडा", "देवरी", "सडक अर्जुनी", "सालेकसा"]}, "चंद्रपूर": {"code": "13", "assemblies": ["७०- राजुरा", "७१- चंद्रपूर (अ.जा.)", "७२- बल्लारपूर", "७३- ब्रह्मपुरी", "७४- चिमूर", "७५- वरोरा"], "talukas": ["कोरपना", "गोंडपिपरी", "चंद्रपूर", "चिमूर", "जिवती", "नागभीड", "पोंभुर्णा", "बल्लारपूर", "ब्रह्मपुरी", "भद्रावती", "मूल", "राजुरा", "वरोरा", "सावली", "सिंदेवाही"]}, "जळगाव": {"code": "3", "assemblies": ["१०- चोपडा (अ.ज.)", "११- रावेर", "१२- भुसावळ (अ.जा.)", "१३- जळगाव शहर", "१४- जळगाव ग्रामीण", "१५- अमळनेर", "१६- एरंडोल", "१७- चाळीसगाव", "१८- पाचोरा", "१९- जामनेर", "२०- मुक्ताईनगर"], "talukas": ["अमळनेर", "एरंडोल", "चाळीसगाव", "चोपडा", "जळगाव", "जामनेर", "धरणगाव", "पाचोरा", "पारोळा", "बोदवड", "भडगाव", "भुसावळ", "मुक्ताईनगर", "यावल", "रावेर"]}, "जालना": {"code": "18", "assemblies": ["१००- घनसावंगी", "१०१- जालना", "१०२- बदनापूर (अ.जा.)", "१०३- भोकरदन", "९९- परतूर"], "talukas": ["अंबड", "घनसावंगी", "जाफ्राबाद", "जालना", "परतूर", "बदनापूर", "भोकरदन", "मंठा"]}, "ठाणे": {"code": "22", "assemblies": ["१३४- भिवंडी ग्रामीण (अ.ज.)", "१३५- शहापूर (अ.ज.)", "१३६- भिवंडी पश्चिम", "१३७- भिवंडी पूर्व", "१३८- कल्याण पश्चिम", "१३९- मुरबाड", "१४०- अंबरनाथ (अ.जा.)", "१४१- उल्हासनगर", "१४२- कल्याण पूर्व", "१४३- डोंबिवली", "१४४- कल्याण ग्रामीण", "१४५- मीरा भाईंदर", "१४६- ओवळा-माजिवडा", "१४७- कोपरी-पाचपाखाडी", "१४८- ठाणे", "१४९- मुंब्रा-कलवा", "१५०- ऐरोली", "१५१- बेलापूर"], "talukas": ["अंबरनाथ", "उल्हासनगर", "कल्याण", "ठाणे", "भिवंडी", "मुरबाड", "शहापूर"]}, "धुळे": {"code": "2", "assemblies": ["५- साक्री (अ.ज.)", "६- धुळे ग्रामीण", "७- धुळे शहर", "८- शिंदखेडा", "९- शिरपूर (अ.ज.)"], "talukas": ["धुळे", "शिंदखेडा", "शिरपूर", "साक्री"]}, "नंदुरबार": {"code": "1", "assemblies": ["१- अक्कलकुवा (अ.ज.)", "२- शहादा (अ.ज.)", "३- नंदुरबार (अ.ज.)", "४- नवापूर (अ.ज.)"], "talukas": ["अक्कलकुवा", "अक्राणी", "तळोदे", "नंदुरबार", "नवापूर", "शहादा"]}, "नांदेड": {"code": "15", "assemblies": ["८३- किनवट", "८४- हदगाव", "८५- भोकर", "८६- नांदेड उत्तर", "८७- नांदेड दक्षिण", "८८- लोहा", "८९- नायगाव", "९०- देगलूर (अ.जा.)", "९१- मुखेड"], "talukas": ["अर्धापूर", "उमरी", "कंधार", "किनवट", "देगलूर", "धर्माबाद", "नांदेड", "नायगाव", "बिलोली", "भोकर", "माहूर", "मुखेड", "मुदखेड", "लोहा", "हदगाव", "हिमायतनगर"]}, "नागपूर": {"code": "9", "assemblies": ["४८- काटोल", "४९- सावनेर", "५०- हिंगणा", "५१- उमरेड (अ.जा.)", "५२- नागपूर दक्षिण पश्चिम", "५३- नागपूर दक्षिण", "५४- नागपूर पूर्व", "५५- नागपूर मध्य", "५६- नागपूर पश्चिम", "५७- नागपूर उत्तर (अ.जा.)", "५८- कामठी", "५९- रामटेक"], "talukas": ["उमरेड", "कळमेश्वर", "काटोल", "कामठी", "कुही", "नरखेड", "नागपूर ग्रामीण", "नागपूर शहर", "पारशिवनी", "भिवापूर", "मौदा", "रामटेक", "सावनेर", "हिंगणा"]}, "नाशिक": {"code": "20", "assemblies": ["११३- नांदगाव", "११४- मालेगाव (मध्य)", "११५- मालेगाव (बाह्य)", "११६- बागलाण (अ.ज.)", "११७- कळवण (अ.ज.)", "११८- चांदवड", "११९- येवला", "१२०- सिन्नर", "१२१- निफाड", "१२२- दिंडोरी (अ.ज.)", "१२३- नाशिक पूर्व", "१२४- नाशिक (मध्य)", "१२५- नाशिक पश्चिम", "१२६- देवळाली (अ.जा.)", "१२७- इगतपुरी (अ.ज.)"], "talukas": ["इगतपुरी", "कळवण", "चांदवड", "त्र्यंबकेश्वर", "दिंडोरी", "देवळा", "नांदगाव", "नाशिक", "निफाड", "पेठ", "मालेगाव", "येवला", "सटाणा", "सिन्नर", "सुरगाणा"]}, "परभणी": {"code": "17", "assemblies": ["९५- जिंतूर", "९६- परभणी", "९७- गंगाखेड", "९८- पाथरी"], "talukas": ["गंगाखेड", "जिंतूर", "परभणी", "पाथरी", "पालम", "पूर्णा", "मानवत", "सेलू", "सोनपेठ"]}, "पालघर": {"code": "21", "assemblies": ["१२८- डहाणू (अ.ज.)", "१२९- विक्रमगड (अ.ज.)", "१३०- पालघर (अ.ज.)", "१३१- बोईसर (अ.ज.)", "१३२- नालासोपारा", "१३३- वसई"], "talukas": ["जव्हार", "डहाणू", "तलासरी", "पालघर", "मोखाडा", "वसई", "वाडा", "विक्रमगड"]}, "पुणे": {"code": "26", "assemblies": ["१९५- जुन्नर", "१९६- आंबेगाव", "१९७- खेड आळंदी", "१९८- शिरूर", "१९९- दौंड", "२००- इंदापूर", "२०१- बारामती", "२०२- पुरंदर", "२०३- भोर", "२०४- मावळ", "२०५- चिंचवड", "२०६- पिंपरी (अ.जा.)", "२०७- भोसरी", "२०८- वडगाव शेरी", "२०९- शिवाजीनगर", "२१०- कोथरूड", "२११- खडकवासला", "२१२- पर्वती", "२१३- हडपसर", "२१४- पुणे कॅन्टोन्मेंट (अ.जा.)", "२१५- कसबा पेठ"], "talukas": ["आंबेगाव", "इंदापूर", "खेड", "जुन्नर", "दौंड", "पुणे शहर", "पुरंदर", "बारामती", "भोर", "मावळ", "मुळशी", "राजगड", "शिरूर जिल्हा", "हवेली"]}, "बीड": {"code": "28", "assemblies": ["२२८- गेवराई", "२२९- माझलगाव", "२३०- बीड", "२३१- आष्टी", "२३२- केज (अ.जा.)", "२३३- परळी"], "talukas": ["अंबेजोगाई", "आष्टी", "केज", "गेवराई", "धारूर", "परळी वैजनाथ", "पाटोदा", "बीड", "माजलगाव", "वडवणी", "शिरूर"]}, "बुलढाणा": {"code": "4", "assemblies": ["२१- मलकापूर", "२२- बुलढाणा", "२३- चिखली", "२४- सिंदखेड राजा", "२५- मेहकर (अ.जा.)", "२६- खामगाव", "२७- जळगाव (जामोड)"], "talukas": ["खामगाव", "चिखली", "जळगाव जामोद", "देउळगाव राजा", "नांदुरा", "बुलढाणा", "मलकापूर", "मेहकर", "मोताळा", "लोणार", "शेगाव", "संग्रामपूर", "सिंदखेड राजा"]}, "भंडारा": {"code": "10", "assemblies": ["६०- तुमसर", "६१- भंडारा (अ.जा.)", "६२- साकोली"], "talukas": ["तुमसर", "पवनी", "भंडारा", "मोहाडी", "लाखनी", "लाखांदूर", "साकोली"]}, "मुंबई उपनगर": {"code": "23", "assemblies": ["१५२- बोरिवली", "१५३- दहिसर", "१५४- मागठाणे", "१५५- मुलुंड", "१५६- विक्रोळी", "१५७- भांडुप पश्चिम", "१५८- जोगेश्वरी पूर्व", "१५९- दिंडोशी", "१६०- कांदिवली पूर्व", "१६१- चारकोप", "१६२- मलाड पश्चिम", "१६३- गोरेगाव", "१६४- वर्सोवा", "१६५- अंधेरी पश्चिम", "१६६- अंधेरी पूर्व", "१६७- विलेपारले", "१६८- चांदिवली", "१६९- घाटकोपर पश्चिम", "१७०- घाटकोपर पूर्व", "१७१- मानखुर्द शिवाजीनगर", "१७२- अणुशक्ती नगर", "१७३- चेंबूर", "१७४- कुर्ला (अ.जा.)", "१७५- कलिना", "१७६- वांद्रे पूर्व", "१७७- वांद्रे पश्चिम"], "talukas": ["अंधेरी", "कुर्ला", "बोरीवली"]}, "मुंबई शहर": {"code": "24", "assemblies": ["१७८- धारावी (अ.जा.)", "१७९- सायन कोळीवाडा", "१८०- वडाळा", "१८१- माहिम", "१८२- वरळी", "१८३- शिवडी", "१८४- बायकुला", "१८५- मलबार हिल", "१८६- मुंबादेवी", "१८७- कुलाबा"], "talukas": []}, "यवतमाळ": {"code": "14", "assemblies": ["७६- वणी", "७७- राळेगाव (अ.ज.)", "७८- यवतमाळ", "७९- दिग्रस", "८०- आर्णी (अ.ज.)", "८१- पुसद", "८२- उमरखेड (अ.जा.)"], "talukas": ["आर्णी", "उमरखेड", "कळंब", "केळापूर", "घाटंजी", "झरी जामणी", "दारव्हा", "दिग्रस", "नेर", "पुसद", "बाभुळगाव", "महागाव", "मारेगाव", "यवतमाळ", "राळेगाव", "वणी"]}, "रत्‍नागिरी": {"code": "33", "assemblies": ["२६३- दापोली", "२६४- गुहागर", "२६५- चिपळूण", "२६६- रत्नागिरी", "२६७- राजापूर"], "talukas": ["खेड", "गुहागर", "चिपळूण", "दापोली", "मंडणगड", "रत्‍नागिरी", "राजापूर", "लांजा", "संगमेश्वर"]}, "रायगड": {"code": "25", "assemblies": ["१८८- पनवेल", "१८९- कर्जत", "१९०- उरण", "१९१- पेण", "१९२- अलिबाग", "१९३- श्रीवर्धन", "१९४- महाड"], "talukas": ["अलिबाग", "उरण", "कर्जत", "खालापूर", "तळा", "पनवेल", "पेण", "पोलादपूर", "महाड", "माणगाव", "मुरूड", "म्हसळा", "रोहा", "श्रीवर्धन", "सुधागड"]}, "लातूर": {"code": "29", "assemblies": ["२३४- लातूर ग्रामीण", "२३५- लातूर शहर", "२३६- अहमदपूर", "२३७- उदगीर (अ.जा.)", "२३८- निलंगा", "२३९- औसा"], "talukas": ["अहमदपूर", "उदगीर", "औसा", "चाकूर", "जळकोट", "देवणी", "निलंगा", "रेणापूर", "लातूर", "शिरूर अनंतपाळ"]}, "वर्धा": {"code": "8", "assemblies": ["४४- आर्वी", "४५- देवळी", "४६- हिंगणघाट", "४७- वर्धा"], "talukas": ["आर्वी", "आष्टी", "कारंजा घाडगे", "देवळी", "वर्धा", "समुद्रपूर", "सेलू", "हिंगणघाट"]}, "वाशिम": {"code": "6", "assemblies": ["३३- रिसोड", "३४- वाशीम (अ.जा.)", "३५- कारंजा"], "talukas": ["कारंजा लाड", "मंगरुळपीर", "मानोरा", "मालेगाव", "रिसोड", "वाशिम"]}, "सांगली": {"code": "36", "assemblies": ["२८१- मिरज (अ.जा.)", "२८२- सांगली", "२८३- इस्लामपूर", "२८४- शिराळा", "२८५- पलूस-कडेगाव", "२८६- खानापूर", "२८७- तासगाव-कवठे महांकाळ", "२८८- जत"], "talukas": ["आटपाडी", "कडेगाव", "कवठेमहांकाळ", "खानापूर (विटा)", "जत", "तासगाव", "पलुस", "मिरज", "वाळवा", "शिराळा"]}, "सातारा": {"code": "32", "assemblies": ["२५५- फलटण (अ.जा.)", "२५६- वाई", "२५७- कोरेगाव", "२५८- माण", "२५९- कराड उत्तर", "२६०- कराड दक्षिण", "२६१- पाटण", "२६२- सातारा"], "talukas": ["कराड", "कोरेगाव", "खंडाळा", "खटाव", "जावळी", "पाटण", "फलटण", "महाबळेश्वर", "माण", "वाई", "सातारा"]}, "सिंधुदुर्ग": {"code": "34", "assemblies": ["२६८- कणकवली", "२६९- कुडाळ", "२७०- सावंतवाडी"], "talukas": ["कणकवली", "कुडाळ", "देवगड", "दोडामार्ग", "मालवण", "वेंगुर्ला", "वैभववाडी", "सावंतवाडी"]}, "सोलापूर": {"code": "31", "assemblies": ["२४४- करमाळा", "२४५- माढा", "२४६- बार्शी", "२४७- मोहोळ (अ.जा.)", "२४८- सोलापूर शहर उत्तर", "२४९- सोलापूर शहर मध्य", "२५०- अक्कलकोट", "२५१- सोलापूर दक्षिण", "२५२- पंढरपूर", "२५३- सांगोला", "२५४- माळशिरस (अ.जा.)"], "talukas": ["अक्कलकोट", "करमाळा", "पंढरपूर", "बार्शी", "मंगळवेढा", "माढा", "माळशिरस", "मोहोळ", "सांगोला", "सोलापूर उत्तर", "सोलापूर दक्षिण"]}, "हिंगोली": {"code": "16", "assemblies": ["९२- बसमत", "९३- कळमनुरी", "९४- हिंगोली"], "talukas": ["औंढा नागनाथ", "कळमनुरी", "वसमत", "सेनगाव", "हिंगोली"]}};
+const LOGINS=[{"district": "अकोला", "district_code": "05", "username": "D05", "password": "Maha@0526"}, {"district": "अमरावती", "district_code": "07", "username": "D07", "password": "Maha@0726"}, {"district": "अहमदनगर", "district_code": "27", "username": "D27", "password": "Maha@2726"}, {"district": "उस्मानाबाद", "district_code": "30", "username": "D30", "password": "Maha@3026"}, {"district": "औरंगाबाद", "district_code": "19", "username": "D19", "password": "Maha@1926"}, {"district": "कोल्हापूर", "district_code": "35", "username": "D35", "password": "Maha@3526"}, {"district": "गडचिरोली", "district_code": "12", "username": "D12", "password": "Maha@1226"}, {"district": "गोंदिया", "district_code": "11", "username": "D11", "password": "Maha@1126"}, {"district": "चंद्रपूर", "district_code": "13", "username": "D13", "password": "Maha@1326"}, {"district": "जळगाव", "district_code": "03", "username": "D03", "password": "Maha@0326"}, {"district": "जालना", "district_code": "18", "username": "D18", "password": "Maha@1826"}, {"district": "ठाणे", "district_code": "22", "username": "D22", "password": "Maha@2226"}, {"district": "धुळे", "district_code": "02", "username": "D02", "password": "Maha@0226"}, {"district": "नंदुरबार", "district_code": "01", "username": "D01", "password": "Maha@0126"}, {"district": "नांदेड", "district_code": "15", "username": "D15", "password": "Maha@1526"}, {"district": "नागपूर", "district_code": "09", "username": "D09", "password": "Maha@0926"}, {"district": "नाशिक", "district_code": "20", "username": "D20", "password": "Maha@2026"}, {"district": "परभणी", "district_code": "17", "username": "D17", "password": "Maha@1726"}, {"district": "पालघर", "district_code": "21", "username": "D21", "password": "Maha@2126"}, {"district": "पुणे", "district_code": "26", "username": "D26", "password": "Maha@2626"}, {"district": "बीड", "district_code": "28", "username": "D28", "password": "Maha@2826"}, {"district": "बुलढाणा", "district_code": "04", "username": "D04", "password": "Maha@0426"}, {"district": "भंडारा", "district_code": "10", "username": "D10", "password": "Maha@1026"}, {"district": "मुंबई उपनगर", "district_code": "23", "username": "D23", "password": "Maha@2326"}, {"district": "मुंबई शहर", "district_code": "24", "username": "D24", "password": "Maha@2426"}, {"district": "यवतमाळ", "district_code": "14", "username": "D14", "password": "Maha@1426"}, {"district": "रत्‍नागिरी", "district_code": "33", "username": "D33", "password": "Maha@3326"}, {"district": "रायगड", "district_code": "25", "username": "D25", "password": "Maha@2526"}, {"district": "लातूर", "district_code": "29", "username": "D29", "password": "Maha@2926"}, {"district": "वर्धा", "district_code": "08", "username": "D08", "password": "Maha@0826"}, {"district": "वाशिम", "district_code": "06", "username": "D06", "password": "Maha@0626"}, {"district": "सांगली", "district_code": "36", "username": "D36", "password": "Maha@3626"}, {"district": "सातारा", "district_code": "32", "username": "D32", "password": "Maha@3226"}, {"district": "सिंधुदुर्ग", "district_code": "34", "username": "D34", "password": "Maha@3426"}, {"district": "सोलापूर", "district_code": "31", "username": "D31", "password": "Maha@3126"}, {"district": "हिंगोली", "district_code": "16", "username": "D16", "password": "Maha@1626"}];
+const ADMIN={username:"admin",password:"admin123"};
+const KEY="maharashtraDistrictFormsV1";
+let session={type:"",district:"",username:""},photoData="",proofData="",previewData=null;
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+const forms=()=>JSON.parse(localStorage.getItem(KEY)||"[]");
+const save=a=>localStorage.setItem(KEY,JSON.stringify(a));
+
+function init(){
+  $("loginDistrict").innerHTML='<option value="">-- जिल्हा निवडा --</option>'+Object.keys(DATA).map(d=>'<option>'+esc(d)+'</option>').join("");
+  $("loginDistrict").onchange=()=>{
+    const x=LOGINS.find(z=>z.district===$("loginDistrict").value);
+    $("username").value=x?x.username:""; $("password").value=""; $("loginMsg").textContent="";
+  };
+}
+function toggleLogin(){$("districtBox").classList.toggle("hidden",$("loginType").value==="admin")}
+function login(){
+  const t=$("loginType").value,u=$("username").value.trim(),p=$("password").value;
+  if(t==="admin"){
+    if(u===ADMIN.username&&p===ADMIN.password){session={type:"admin",district:"ALL",username:u};enter()}
+    else $("loginMsg").textContent="Admin Username किंवा Password चुकीचे आहे.";
+    return;
+  }
+  const d=$("loginDistrict").value;
+  const x=LOGINS.find(z=>z.district===d&&z.username===u&&z.password===p);
+  if(!x){$("loginMsg").textContent="District / Username / Password चुकीचे आहे.";return}
+  session={type:"district",district:d,username:u};enter();
+}
+function enter(){
+ $("loginPage").classList.add("hidden");$("app").classList.remove("hidden");
+ $("currentDistrict").textContent=session.type==="admin"?"सर्व 36 जिल्हे":session.district;
+ $("session").textContent=(session.type==="admin"?"Admin Login":"District Login")+" • "+session.username;
+ $("adminApprovedBtn").classList.toggle("hidden",session.type!=="admin");$("adminCorrectionBtn").classList.toggle("hidden",session.type!=="admin");$("adminDeleteBtn").classList.toggle("hidden",session.type!=="admin");
+ $("district").value=session.type==="admin"?"Admin":session.district;
+ loadAssemblies();tab(session.type==="admin"?"admin":"entry");
+}
+function logout(){location.reload()}
+function tab(t){["entry","forms","pending","approved","admin","adminApproved","adminCorrection","adminDelete","summary"].forEach(x=>$(x).classList.add("hidden"));$(t).classList.remove("hidden");if(t==="forms")renderForms();if(t==="pending")renderPending();if(t==="approved")renderApproved();if(t==="admin")renderAdmin();if(t==="adminApproved"){loadAdminApprovedDistricts();renderAdminApproved()}if(t==="adminCorrection"){renderAdminCorrection()}if(t==="adminDelete"){renderAdminDelete()}if(t==="summary"){loadSummaryDistricts();renderSummary()}}
+function loadAssemblies(){
+ let ds=session.type==="admin"?Object.keys(DATA):[session.district],a=[];
+ ds.forEach(d=>(DATA[d]?.assemblies||[]).forEach(v=>a.push({d:d,a:v})));
+ a.sort((x,y)=>assemblyNo(x.a)-assemblyNo(y.a)||String(x.a||"").localeCompare(String(y.a||""),"mr")||String(x.d||"").localeCompare(String(y.d||""),"mr"));
+ $("assembly").innerHTML='<option value="">-- निवडा --</option>'+a.map(x=>'<option data-d="'+esc(x.d)+'" value="'+esc(x.a)+'">'+esc(x.a)+(session.type==="admin"?" — "+esc(x.d):"")+"</option>").join("");
+ $("taluka").innerHTML='<option value="">-- निवडा --</option>';
+}
+function loadTalukas(){
+ let a=$("assembly").value,ds=session.type==="admin"?Object.keys(DATA):[session.district],t=[];
+ ds.forEach(d=>{if((DATA[d]?.assemblies||[]).includes(a))t=t.concat(DATA[d]?.talukas||[])});
+ t=[...new Set(t)].sort((x,y)=>x.localeCompare(y,"mr"));
+ $("taluka").innerHTML='<option value="">-- निवडा --</option>'+t.map(x=>"<option>"+esc(x)+"</option>").join("");
+}
+function ageCalc(){
+ let b=new Date($("dob").value),n=new Date(),a=n.getFullYear()-b.getFullYear(),m=n.getMonth()-b.getMonth();
+ if(m<0||(m===0&&n.getDate()<b.getDate()))a--; $("age").value=a>=0?a:"";
+}
+function readFile(i){
+ let f=i.files[0];if(!f)return;
+ if(f.size>5*1024*1024){alert("फाईल 5 MB पेक्षा जास्त नसावी.");i.value="";return}
+ let r=new FileReader();r.onload=()=>{if(i.id==="photo"){photoData=r.result;$("photoPreview").src=photoData;$("photoPreview").classList.remove("hidden")}else{proofData=r.result;$("proofName").textContent="Selected: "+f.name}};r.readAsDataURL(f)
+}
+function collect(){
+ let o=$("assembly").selectedOptions[0];
+ return {id:$("editId").value||crypto.randomUUID(),reference:"",district:session.type==="admin"?(o?.dataset.d||""):session.district,
+ assembly:$("assembly").value,taluka:$("taluka").value,name:$("name").value.trim(),dob:$("dob").value,age:$("age").value,
+ address:$("address").value.trim(),pin:$("pin").value,email:$("email").value.trim(),mobile:$("mobile").value.trim(),
+ whatsapp:$("whatsapp").value.trim(),photo:photoData,proof:proofData,status:"Approval Pending",createdAt:new Date().toISOString()}
+}
+function preview(){
+ if(!$("form").reportValidity())return;
+ let d=collect(),old=$("editId").value?forms().find(x=>x.id===$("editId").value):null;
+ if(old){d.reference=old.reference;d.status=old.status==="Correction Approved"?"Sent for Approval":old.status;d.createdAt=old.createdAt}
+ previewData=d;
+ $("modalContent").innerHTML="<div class='grid'>"+[["Reference",d.reference||"Submit नंतर"],["District",d.district],["Assembly",d.assembly],["Taluka",d.taluka],["Operator",d.name],["DOB / Age",d.dob+" / "+d.age],["PIN",d.pin],["Email",d.email],["Mobile",d.mobile],["WhatsApp",d.whatsapp]].map(x=>"<div><b>"+x[0]+":</b> "+esc(x[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(d.address)+"</p>"+(d.photo?"<img class='photo' src='"+d.photo+"'>":"")+"<br><button class='s' onclick='saveEntry()'>Confirm & Submit</button><button class='m' onclick='closeModal()'>Back</button>";
+ $("modal").classList.remove("hidden")
+}
+function saveEntry(){
+ let d=previewData,a=forms();
+ if(!d.reference){const dc=String(DATA[d.district]?.code||"00").padStart(2,"0");const ac=String(assemblyNo(d.assembly)).padStart(3,"0");const prefix="D"+dc+"-"+ac+"-";const deleted=getDeletedForms();const used=[...a,...deleted].filter(x=>x.district===d.district&&assemblyNo(x.assembly)===assemblyNo(d.assembly)&&String(x.reference||"").startsWith(prefix)).map(x=>{const m=String(x.reference||"").match(/-(\d+)$/);return m?parseInt(m[1],10):0}).filter(Number.isFinite);const seq=(used.length?Math.max(...used):0)+1;d.reference=prefix+String(seq).padStart(2,"0");d.entryDate=new Date().toISOString();}
+ if(!d.id){d.id="F"+Date.now()+Math.random().toString(36).slice(2,8);d.status="Approval Pending";d.createdAt=new Date().toISOString()}
+ let i=a.findIndex(x=>x.id===d.id);if(i>=0)a[i]=d;else a.push(d);save(a);closeModal();clearForm();alert("Form Submit झाला. Reference Number: "+d.reference);tab("forms");renderForms()
+}
+function clearForm(){$("form").reset();$("closeEditBtn").classList.add("hidden");$("editId").value="";$("age").value="";photoData="";proofData="";$("photoPreview").classList.add("hidden");$("proofName").textContent="";$("district").value=session.type==="admin"?"Admin":session.district;loadAssemblies()}
+function closeEntry(){clearForm();tab("forms")}
+function closeEdit(){$("editId").value="";clearForm();tab("forms")}
+function scoped(){let a=forms();return session.type==="admin"?a:a.filter(x=>x.district===session.district)}
+function badge(s){return "<span class='badge "+(s==="Approved"?"ok":s==="Rejected"?"rej":"")+"'>"+esc(s)+"</span>"}
+function renderForms(){
+ let all=scoped();
+ let q=$("formSearch").value.toLowerCase(),a=all.filter(x=>JSON.stringify(x).toLowerCase().includes(q));
+ $("formsBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+badge(x.status)+"</td><td>"+(x.status==="Rejected"&&x.rejectRemark?"<span style='color:#b91c1c;font-weight:700'>"+esc(x.rejectRemark)+"</span>":"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+(x.status!=="Approved"&&x.status!=="Sent for Approval"&&x.status!=="Delete Requested"?"<button class='w' onclick=\"edit('"+x.id+"')\">Edit</button><button class='s' onclick=\"send('"+x.id+"')\">Send Approval</button>":x.status==="Correction Approved"?"<button class='w' onclick=\"edit('"+x.id+"')\">Edit for Correction</button>":"")+(session.type==="district"&&x.status!=="Delete Requested"?"<button class='d' onclick=\"requestDelete('"+x.id+"')\">Delete Request</button>":"")+"</td></tr>").join("")||"<tr><td colspan='7'>माहिती उपलब्ध नाही.</td></tr>"
+}
+function renderPending(){
+ let a=forms();if(session.type!=="admin")a=a.filter(x=>x.district===session.district);
+ $("total").textContent=a.length;
+ $("pend").textContent=a.filter(x=>x.status==="Sent for Approval"||x.status==="Approval Pending").length;
+ $("appv").textContent=a.filter(x=>x.status==="Approved").length;
+ $("delReqTotal").textContent=a.filter(x=>x.status==="Delete Requested").length;
+ $("adminCorrectionTotal").textContent=a.filter(x=>x.status==="Correction Requested").length;
+ let p=a.filter(x=>x.status==="Sent for Approval"||x.status==="Approval Pending");
+ $("pendingBody").innerHTML=p.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+badge(x.status)+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+(session.type==="admin"&&x.status==="Sent for Approval"?("<button class='s' onclick=\"approve('"+x.id+"')\">Approve</button><button class='d' onclick=\"rejectForm('"+x.id+"')\">Reject</button>"):"")+"</td></tr>").join("")||"<tr><td colspan='5'>Approval Pending नाही.</td></tr>"
+}
+function send(id){let a=forms(),x=a.find(z=>z.id===id);if(x&&(session.type==="admin"||x.district===session.district)){x.status="Sent for Approval";save(a);renderForms();alert("Admin Approval साठी पाठवले.")}}
+function approve(id){let a=forms(),x=a.find(z=>z.id===id);if(x){x.status="Approved";x.approvedAt=new Date().toISOString();x.approvedBy=session.username;save(a);renderAdmin();renderApproved();renderPending();renderAdminApproved();renderAdminCorrection();renderForms();renderSummary()}}
+function rejectForm(id){let a=forms(),x=a.find(z=>z.id===id);if(!x)return;let remark=prompt("Reject Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Reject Remark लिहिणे आवश्यक आहे.");return}x.status="Rejected";x.rejectRemark=remark;x.rejectedAt=new Date().toISOString();x.rejectedBy=session.username;save(a);renderAdmin();renderAdminCorrection();renderPending();renderForms();renderSummary();alert("Form Reject करण्यात आला. Remark सेव्ह करण्यात आला.")}
+function renderApproved(){let q=$("approvedSearch").value.toLowerCase(),a=scoped().filter(x=>x.status==="Approved"&&JSON.stringify(x).toLowerCase().includes(q));$("approvedBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View Form</button>"+(session.type!=="admin"?"<button class='w' onclick=\"requestCorrection('"+x.id+"')\">Correction Request</button>":"")+"</td></tr>").join("")||"<tr><td colspan='6'>Approved List मध्ये माहिती नाही.</td></tr>"}
+function requestCorrection(id){if(session.type!=="district")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.status!=="Approved"||x.district!==session.district)return;let remark=prompt("Correction Request चे कारण / Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Correction Remark लिहिणे आवश्यक आहे.");return}x.status="Correction Requested";x.correctionRemark=remark;x.correctionRequestedAt=new Date().toISOString();x.correctionRequestedBy=session.username;save(a);renderApproved();renderForms();renderPending();renderAdminCorrection();renderSummary();alert("Correction Request Admin कडे पाठवण्यात आली.")}
+function renderAdminCorrection(){if(session.type!=="admin")return;let a=forms().filter(x=>x.status==="Correction Requested");$("adminCorrectionBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.correctionRemark||"-")+"</td><td><button class='s' onclick=\"acceptCorrection('"+x.id+"')\">Accept</button><button class='p' onclick=\"view('"+x.id+"')\">View</button></td></tr>").join("")||"<tr><td colspan='7'>Correction Request उपलब्ध नाही.</td></tr>"}
+function acceptCorrection(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.status!=="Correction Requested")return;x.status="Correction Approved";x.correctionAcceptedAt=new Date().toISOString();x.correctionAcceptedBy=session.username;save(a);renderAdminCorrection();renderApproved();renderForms();renderPending();alert("Correction Request Accept झाली. District Login मध्ये फॉर्म दुरुस्तीसाठी उपलब्ध आहे.")}
+function requestDelete(id){if(session.type!=="district")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.district!==session.district)return;let remark=prompt("Entry Delete करण्याचे कारण / Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Delete Remark लिहिणे अनिवार्य आहे.");return}x.previousStatusBeforeDelete=x.status;x.status="Delete Requested";x.deleteRemark=remark;x.deleteRequestedAt=new Date().toISOString();x.deleteRequestedBy=session.username;save(a);renderForms();renderPending();alert("Delete Request Admin कडे पाठवण्यात आली.")}
+function renderAdminDelete(){if(session.type!=="admin")return;let a=forms().filter(x=>x.status==="Delete Requested");$("adminDeleteBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.deleteRemark||"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button><button class='s' onclick=\"approveDelete('"+x.id+"')\">Approve</button><button class='d' onclick=\"rejectDelete('"+x.id+"')\">Reject</button></td></tr>").join("")||"<tr><td colspan='7'>Delete Request उपलब्ध नाही.</td></tr>"}
+function getDeletedForms(){try{return JSON.parse(localStorage.getItem("deletedForms")||"[]")}catch(e){return []}}
+function saveDeletedForms(a){localStorage.setItem("deletedForms",JSON.stringify(a))}
+function approveDelete(id){if(session.type!=="admin")return;let a=forms(),i=a.findIndex(x=>x.id===id);if(i<0||a[i].status!=="Delete Requested")return;if(!confirm("ही Delete Request Approve करून Entry कायमची Delete करायची आहे का?"))return;let da=getDeletedForms();let deletedEntry={...a[i],deletedAt:new Date().toISOString(),deletedBy:session.username};da.push(deletedEntry);saveDeletedForms(da);a.splice(i,1);save(a);renderAdminDelete();renderAdmin();renderForms();renderApproved();renderPending();renderAdminApproved();renderAdminCorrection();renderSummary();alert("Delete Request Approve झाली आणि Entry Delete करण्यात आली.")}
+function rejectDelete(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.status!=="Delete Requested")return;let remark=prompt("Delete Request Reject करण्याचे कारण / Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Reject Remark लिहिणे अनिवार्य आहे.");return}x.status=x.previousStatusBeforeDelete||"Approved";x.deleteRejectRemark=remark;x.deleteRejectedAt=new Date().toISOString();x.deleteRejectedBy=session.username;save(a);renderAdminDelete();renderAdmin();renderForms();renderApproved();renderPending();renderAdminApproved();renderAdminCorrection();renderSummary();alert("Delete Request Reject करण्यात आली. Entry कायम ठेवण्यात आली.")}
+function renderAdmin(){let a=forms(),p=a.filter(x=>x.status==="Sent for Approval");$("adminBody").innerHTML=p.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button><button class='s' onclick=\"approve('"+x.id+"')\">Approve</button><button class='d' onclick=\"rejectForm('"+x.id+"')\">Reject</button></td></tr>").join("")||"<tr><td colspan='6'>Approval साठी Form नाही.</td></tr>"}
+function view(id){
+ let x=forms().find(z=>z.id===id);if(!x)return;
+ let media="";
+ if(x.photo)media+="<div style='margin-top:12px'><b>Photo:</b><br><img class='photo' src='"+x.photo+"'></div>";
+ if(x.proof){
+   let isPdf=/^data:application\/pdf/i.test(x.proof);
+   media+="<div style='margin-top:12px'><b>Identity Proof:</b><br><button class='p' type='button' onclick=\"viewFile('"+x.proof+"','"+(isPdf?"pdf":"image")+"')\">View Identity Proof</button></div>";
+ }
+ $("modalContent").innerHTML="<div class='grid'>"+[["Reference",x.reference],["Status",x.status],["District",x.district],["Assembly",x.assembly],["Taluka",x.taluka],["Operator",x.name],["DOB / Age",x.dob+" / "+x.age],["PIN",x.pin],["Email",x.email],["Mobile",x.mobile],["WhatsApp",x.whatsapp]].map(v=>"<div><b>"+v[0]+":</b> "+esc(v[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(x.address)+"</p>"+(x.status==="Rejected"&&x.rejectRemark?"<p style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff1f2;color:#991b1b'><b>Reject Remark:</b><br>"+esc(x.rejectRemark)+"</p>":"")+media;$("modal").classList.remove("hidden")
+}
+function viewFile(data,type){
+ let w=window.open("","_blank");if(!w){alert("View करण्यासाठी नवीन window उघडण्याची परवानगी द्या.");return}
+ if(type==="pdf")w.document.write("<!doctype html><html><head><meta charset='UTF-8'><title>Identity Proof</title></head><body style='margin:0'><iframe src='"+data+"' style='width:100vw;height:100vh;border:0'></iframe></body></html>");
+ else w.document.write("<!doctype html><html><head><meta charset='UTF-8'><title>Identity Proof</title></head><body style='margin:0;display:flex;justify-content:center;align-items:center;background:#f5f5f5'><img src='"+data+"' style='max-width:100%;max-height:100vh;object-fit:contain'></body></html>");
+ w.document.close();
+}
+
+function edit(id){let x=forms().find(z=>z.id===id);if(!x||session.type!=="admin"&&x.district!==session.district)return;$("editId").value=x.id;loadAssemblies();$("assembly").value=x.assembly;loadTalukas();setTimeout(()=>$("taluka").value=x.taluka,0);$("name").value=x.name;$("dob").value=x.dob;$("age").value=x.age;$("address").value=x.address;$("pin").value=x.pin;$("email").value=x.email;$("mobile").value=x.mobile;$("whatsapp").value=x.whatsapp;photoData=x.photo||"";proofData=x.proof||"";if(photoData){$("photoPreview").src=photoData;$("photoPreview").classList.remove("hidden")}$("closeEditBtn").classList.remove("hidden");tab("entry")} 
+
+
+function loadAdminApprovedDistricts(){
+ let ds=[...new Set(forms().filter(x=>x.status==="Approved").map(x=>x.district))].sort((a,b)=>a.localeCompare(b,"mr"));
+ let cur=$("adminApprovedDistrict").value;
+ $("adminApprovedDistrict").innerHTML='<option value="">-- सर्व जिल्हे --</option>'+ds.map(d=>"<option>"+esc(d)+"</option>").join("");
+ if(ds.includes(cur))$("adminApprovedDistrict").value=cur;
+}
+function assemblyNo(v){
+ let s=String(v||"").trim().split("-")[0].trim();
+ const md={"०":"0","१":"1","२":"2","३":"3","४":"4","५":"5","६":"6","७":"7","८":"8","९":"9"};
+ s=s.replace(/[०-९]/g,c=>md[c]||c);
+ return parseInt(s,10)||9999;
+}
+function sortByAssembly(a){return a.slice().sort((x,y)=>assemblyNo(x.assembly)-assemblyNo(y.assembly)||String(x.assembly||"").localeCompare(String(y.assembly||""),"mr"));}
+
+function loadSummaryDistricts(){
+ let sel=$("summaryDistrict"); if(!sel)return;
+ let ds=session.type==="admin"?Object.keys(DATA):[session.district];
+ sel.innerHTML='<option value="">-- सर्व जिल्हे --</option>'+ds.map(d=>'<option>'+esc(d)+'</option>').join("");
+ if(session.type!=="admin") sel.value=session.district;
+}
+function getSummaryRows(){
+ let ds=session.type==="admin"?Object.keys(DATA):[session.district];
+ let selected=$("summaryDistrict")?.value||""; if(selected)ds=ds.filter(d=>d===selected);
+ let a=forms().filter(x=>ds.includes(x.district));
+ let map={};
+ let deleted=getDeletedForms().filter(x=>ds.includes(x.district));
+ ds.forEach(d=>(DATA[d]?.assemblies||[]).forEach(ac=>{let key=d+"|"+ac;map[key]={district:d,assembly:ac,total:0,pending:0,approved:0,rejected:0,correction:0,deleted:0}}));
+ a.forEach(x=>{let key=x.district+"|"+x.assembly;if(!map[key])map[key]={district:x.district,assembly:x.assembly,total:0,pending:0,approved:0,rejected:0,correction:0,deleted:0};map[key].total++;if(x.status==="Approved")map[key].approved++;else if(x.status==="Rejected")map[key].rejected++;else if(x.status==="Sent for Approval"||x.status==="Approval Pending")map[key].pending++;if(x.correctionRequestedAt)map[key].correction++;});
+ deleted.forEach(x=>{let key=x.district+"|"+x.assembly;if(!map[key])map[key]={district:x.district,assembly:x.assembly,total:0,pending:0,approved:0,rejected:0,correction:0,deleted:0};map[key].deleted++;});
+ return Object.values(map).sort((x,y)=>assemblyNo(x.assembly)-assemblyNo(y.assembly)||x.assembly.localeCompare(y.assembly,"mr")||x.district.localeCompare(y.district,"mr"));
+}
+function renderSummary(){
+ if(!$("summaryBody"))return;let a=getSummaryRows();
+ if(!a.length){$("summaryBody").innerHTML="<tr><td colspan='9'>आकडेवारी उपलब्ध नाही.</td></tr>";return}
+ let totals=a.reduce((t,x)=>{t.total+=x.total;t.pending+=x.pending;t.approved+=x.approved;t.rejected+=x.rejected;t.correction+=x.correction;t.deleted+=x.deleted;return t},{total:0,pending:0,approved:0,rejected:0,correction:0,deleted:0});
+ $("summaryBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.assembly)+"</td><td>"+x.total+"</td><td>"+x.pending+"</td><td>"+x.approved+"</td><td>"+x.rejected+"</td><td>"+x.correction+"</td><td>"+x.deleted+"</td></tr>").join("")+"<tr><th colspan='3'>Total</th><th>"+totals.total+"</th><th>"+totals.pending+"</th><th>"+totals.approved+"</th><th>"+totals.rejected+"</th><th>"+totals.correction+"</th><th>"+totals.deleted+"</th></tr>";
+}
+function downloadSummaryExcel(){
+ let a=getSummaryRows();if(!a.length){alert("Download करण्यासाठी आकडेवारी उपलब्ध नाही.");return}
+ const headers=["Sr.No.","District","Assembly Constituency","Total Forms","Approval Pending","Approved","Rejected","Correction","Deleted"];
+ const rows=a.map((x,i)=>[i+1,x.district,x.assembly,x.total,x.pending,x.approved,x.rejected,x.correction,x.deleted]);
+ const totals=rows.reduce((t,r)=>{t[3]+=Number(r[3])||0;t[4]+=Number(r[4])||0;t[5]+=Number(r[5])||0;t[6]+=Number(r[6])||0;t[7]+=Number(r[7])||0;t[8]+=Number(r[8])||0;return t;},["","","Total",0,0,0,0,0,0]);
+ const escX=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+ const html="<html><head><meta charset='UTF-8'></head><body><table border='1'><tr>"+headers.map(h=>"<th>"+escX(h)+"</th>").join("")+"</tr>"+rows.map(r=>"<tr>"+r.map(v=>"<td>"+escX(v)+"</td>").join("")+"</tr>").join("")+"<tr>"+totals.map((v,i)=>"<th>"+escX(i===0?"":v)+"</th>").join("")+"</tr></table></body></html>";
+ const blob=new Blob(["\ufeff"+html],{type:"application/vnd.ms-excel"}),url=URL.createObjectURL(blob),aEl=document.createElement("a");aEl.href=url;aEl.download="AC_Wise_Summary.xls";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
+}
+function downloadSummaryPDF(){
+ let a=getSummaryRows();if(!a.length){alert("Download करण्यासाठी आकडेवारी उपलब्ध नाही.");return}
+ let rows=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.assembly)+"</td><td>"+x.total+"</td><td>"+x.pending+"</td><td>"+x.approved+"</td><td>"+x.rejected+"</td><td>"+x.correction+"</td><td>"+x.deleted+"</td></tr>").join("");
+ let totals=a.reduce((t,x)=>{t.total+=x.total;t.pending+=x.pending;t.approved+=x.approved;t.rejected+=x.rejected;t.correction+=x.correction;t.deleted+=x.deleted;return t},{total:0,pending:0,approved:0,rejected:0,correction:0,deleted:0});
+ rows+="<tr><th colspan='3'>Total</th><th>"+totals.total+"</th><th>"+totals.pending+"</th><th>"+totals.approved+"</th><th>"+totals.rejected+"</th><th>"+totals.correction+"</th><th>"+totals.deleted+"</th></tr>";
+ let w=window.open("","_blank");if(!w){alert("PDF Preview उघडता आले नाही. Browser popup allow करा.");return}w.document.write("<html><head><meta charset='UTF-8'><title>AC-wise Summary</title><style>body{font-family:Arial,sans-serif;padding:20px}h2{text-align:center}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #333;padding:6px;text-align:center}th{font-weight:bold}</style></head><body><h2>विधानसभा मतदारसंघानुसार आकडेवारीचा घोषवारा</h2><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Total Forms</th><th>Approval Pending</th><th>Approved</th><th>Rejected</th><th>Correction</th><th>Deleted</th></tr></thead><tbody>"+rows+"</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>");w.document.close();
+}
+function renderAdminApproved(){
+ if(session.type!=="admin")return;
+ let district=$("adminApprovedDistrict").value;
+ let q=($("adminApprovedSearch").value||"").toLowerCase();
+ let a=forms().filter(x=>x.status==="Approved");
+ if(district)a=a.filter(x=>x.district===district);
+ if(q)a=a.filter(x=>JSON.stringify(x).toLowerCase().includes(q));
+ a=sortByAssembly(a);
+ $("adminApprovedBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"<br>"+(x.photo?"<img src='"+x.photo+"' style=\"width:55px;height:68px;object-fit:cover;border:1px solid #aaa;border-radius:5px;margin-top:4px;cursor:pointer\" title=\"Photo पाहण्यासाठी क्लिक करा\" onclick=\"view('"+x.id+"')\">":"-")+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+(x.approvedAt?new Date(x.approvedAt).toLocaleString("en-IN"):"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button></td></tr>").join("")||"<tr><td colspan='7'>Approved Forms उपलब्ध नाहीत.</td></tr>";
+}
+function getApprovedDownloadRows(){
+ let district=session.type==="admin"?$("adminApprovedDistrict").value:session.district;
+ let q=(session.type==="admin"?$("adminApprovedSearch").value:$("approvedSearch").value||"").toLowerCase();
+ let a=forms().filter(x=>x.status==="Approved");
+ if(district)a=a.filter(x=>x.district===district);
+ if(q)a=a.filter(x=>JSON.stringify(x).toLowerCase().includes(q));
+ return sortByAssembly(a);
+}
+function downloadApprovedCSV(){
+ let a=getApprovedDownloadRows();
+ if(!a.length){alert("Download करण्यासाठी Approved Forms उपलब्ध नाहीत.");return}
+ const headers=["District","Assembly Constituency","Taluka","Operator Name","DOB","Age","Address","PIN","Mobile","WhatsApp"];
+ const rows=a.map(x=>[x.district,x.assembly,x.taluka,x.name,x.dob,x.age,x.address,x.pin,x.mobile,x.whatsapp]);
+ const csv=[headers,...rows].map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");
+ const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
+ const url=URL.createObjectURL(blob),aEl=document.createElement("a");
+ aEl.href=url;aEl.download="Approved_Forms.csv";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
+}
+function downloadApprovedExcel(){
+ let a=getApprovedDownloadRows();
+ if(!a.length){alert("Download करण्यासाठी Approved Forms उपलब्ध नाहीत.");return}
+ const headers=["District","Assembly Constituency","Taluka","Operator Name","DOB","Age","Address","PIN","Mobile","WhatsApp"];
+ const rows=a.map(x=>[x.district,x.assembly,x.taluka,x.name,x.dob,x.age,x.address,x.pin,x.mobile,x.whatsapp]);
+ const escX=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+ const html="<html><head><meta charset='UTF-8'></head><body><table border='1'><thead><tr>"+headers.map(h=>"<th>"+escX(h)+"</th>").join("")+"</tr></thead><tbody>"+rows.map(r=>"<tr>"+r.map(v=>"<td>"+escX(v)+"</td>").join("")+"</tr>").join("")+"</tbody></table></body></html>";
+ const blob=new Blob([html],{type:"application/vnd.ms-excel;charset=utf-8"});
+ const url=URL.createObjectURL(blob),aEl=document.createElement("a");aEl.href=url;aEl.download="Approved_Forms.xls";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
+}
+function downloadApprovedPDF(){
+ let a=getApprovedDownloadRows();
+ if(!a.length){alert("PDF तयार करण्यासाठी Approved Forms उपलब्ध नाहीत.");return}
+ const rows=a.map(x=>"<tr><td>"+esc(x.district)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.dob)+"</td><td>"+esc(x.age)+"</td><td>"+esc(x.address)+"</td><td>"+esc(x.pin)+"</td><td>"+esc(x.mobile)+"</td><td>"+esc(x.whatsapp)+"</td></tr>").join("");
+ const w=window.open("","_blank");if(!w){alert("PDF साठी नवीन window उघडण्याची परवानगी द्या.");return}
+ w.document.write("<!doctype html><html><head><meta charset='UTF-8'><title>Approved Forms</title><style>body{font-family:Arial,sans-serif;padding:15px}h2{text-align:center}table{width:100%;border-collapse:collapse;font-size:9px}th,td{border:1px solid #777;padding:5px;text-align:left;vertical-align:top}th{font-weight:700}@media print{body{padding:0}@page{size:A4 landscape;margin:8mm}}</style></head><body><h2>Approved Forms</h2><table><thead><tr><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>DOB</th><th>Age</th><th>Address</th><th>PIN</th><th>Mobile</th><th>WhatsApp</th></tr></thead><tbody>"+rows+"</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>");w.document.close();
+}
+function closeModal(){$("modal").classList.add("hidden")}
+init();
+</script></body></html>
