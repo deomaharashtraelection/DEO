@@ -18,6 +18,7 @@ table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8p
 .badge{padding:4px 8px;border-radius:12px;background:#fff3cd}.ok{background:#dcfce7}.rej{background:#fee2e2}
 .modal{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;padding:15px;z-index:5}.modalbox{background:#fff;max-width:850px;width:100%;max-height:90vh;overflow:auto;padding:18px;border-radius:12px}
 .stat{font-size:24px;font-weight:800;color:#123b68}
+.cropArea{position:relative;display:inline-block;max-width:100%;user-select:none;touch-action:none}.cropArea img{display:block;max-width:100%;max-height:60vh}.cropBox{position:absolute;border:2px solid #1261a0;box-shadow:0 0 0 9999px #0007;cursor:move;touch-action:none}.cropHandle{position:absolute;width:14px;height:14px;background:#fff;border:2px solid #1261a0;right:-8px;bottom:-8px;border-radius:50%;cursor:nwse-resize}
 </style>
 </head>
 <body>
@@ -48,8 +49,8 @@ table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8p
 <button class="p" onclick="tab('entry')">Data Entry</button>
 <button class="m" onclick="tab('forms')">Entered Forms</button>
 <button class="w" onclick="tab('pending')">Approval Pending</button>
-<button class="s" onclick="tab('approved')">Approved List</button>
-<button id="adminApprovedBtn" class="s hidden" onclick="tab('adminApproved')">Approved Forms</button>
+<button id="districtAcceptedBtn" class="s" onclick="tab('approved')">Accepted List</button>
+<button id="adminAcceptedBtn" class="s hidden" onclick="tab('adminAccepted')">Accepted Forms</button>
 <button id="adminCorrectionBtn" class="w hidden" onclick="tab('adminCorrection')">Correction Requests</button><button id="adminDeleteBtn" class="d hidden" onclick="tab('adminDelete')">Delete Requests</button>
 <button class="w" onclick="tab('summary')">AC-wise Summary</button>
 </div>
@@ -75,26 +76,26 @@ table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8p
 <div><label>Passport Size Photo *</label><input id="photo" type="file" accept="image/*" required onchange="readFile(this)"></div>
 <div><label>Identity Proof *</label><input id="proof" type="file" accept=".pdf,.jpg,.jpeg,.png" required onchange="readFile(this)"></div>
 </div>
-<img id="photoPreview" class="photo hidden"><div id="proofName" class="small"></div>
+<div><img id="photoPreview" class="photo hidden"><button id="cropPhotoBtn" class="p hidden" type="button" onclick="openPhotoCrop()">Crop Photo</button></div><div id="proofName" class="small"></div>
 <button class="p" type="submit">Preview & Submit</button><button class="m" type="button" onclick="clearForm()">Clear</button><button class="m" type="button" onclick="closeEntry()">Close</button><button id="closeEditBtn" class="m hidden" type="button" onclick="closeEdit()">Close Edit</button>
 </form>
 </section>
 
 <section id="forms" class="card hidden"><h2>Entered Forms</h2><input id="formSearch" placeholder="Reference / नाव / मोबाईल" oninput="renderForms()"><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Status</th><th>Reject Remark</th><th>Action</th></tr></thead><tbody id="formsBody"></tbody></table></div></section>
-<section id="pending" class="card hidden"><h2>Approval Pending</h2><div class="grid"><div class="card">Total Forms<br><span class="stat" id="total">0</span></div><div class="card">Approval Pending<br><span class="stat" id="pend">0</span></div><div class="card">Approved<br><span class="stat" id="appv">0</span></div><div class="card">Delete Requests<br><span class="stat" id="delReqTotal">0</span></div><div class="card">Correction Requests<br><span class="stat" id="adminCorrectionTotal">0</span></div></div><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Status</th><th>Action</th></tr></thead><tbody id="pendingBody"></tbody></table></div></section>
-<section id="approved" class="card hidden"><h2>Approved List</h2><input id="approvedSearch" placeholder="Reference / जिल्हा / नाव" oninput="renderApproved()"><div style="margin:10px 0"><button class="s" onclick="downloadApprovedExcel()">Excel Download</button> <button class="m" onclick="downloadApprovedPDF()">PDF Download</button></div><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Action</th></tr></thead><tbody id="approvedBody"></tbody></table></div></section>
+<section id="pending" class="card hidden"><h2>Approval Pending</h2><div class="grid"><div class="card">Total Forms<br><span class="stat" id="total">0</span></div><div class="card">Approval Pending<br><span class="stat" id="pend">0</span></div><div class="card">Accepted<br><span class="stat" id="appv">0</span></div><div class="card">Delete Requests<br><span class="stat" id="delReqTotal">0</span></div><div class="card">Correction Requests<br><span class="stat" id="adminCorrectionTotal">0</span></div></div><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Status</th><th>Action</th></tr></thead><tbody id="pendingBody"></tbody></table></div></section>
+<section id="approved" class="card hidden"><h2>Accepted List</h2><input id="approvedSearch" placeholder="Reference / जिल्हा / नाव" oninput="renderAccepted()"><div style="margin:10px 0"><button class="s" onclick="downloadAcceptedExcel()">Excel Download</button> <button class="m" onclick="downloadAcceptedPDF()">PDF Download</button></div><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Action</th></tr></thead><tbody id="approvedBody"></tbody></table></div></section>
 <section id="admin" class="card hidden"><h2>Admin Approval Panel</h2><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Action</th></tr></thead><tbody id="adminBody"></tbody></table></div></section>
 
-<section id="adminApproved" class="card hidden">
-<h2>Admin → Approved Forms</h2>
+<section id="adminAccepted" class="card hidden">
+<h2>Admin → Accepted Forms</h2>
 <div class="grid">
-<div><label>जिल्हानुसार Filter</label><select id="adminApprovedDistrict" onchange="renderAdminApproved()"><option value="">-- सर्व जिल्हे --</option></select></div>
-<div><label>Search</label><input id="adminApprovedSearch" placeholder="Reference / नाव / Assembly / Taluka" oninput="renderAdminApproved()"></div>
+<div><label>जिल्हानुसार Filter</label><select id="adminAcceptedDistrict" onchange="renderAdminAccepted()"><option value="">-- सर्व जिल्हे --</option></select></div>
+<div><label>Search</label><input id="adminAcceptedSearch" placeholder="Reference / नाव / Assembly / Taluka" oninput="renderAdminAccepted()"></div>
 </div>
 <div style="margin:10px 0">
-<button class="s" onclick="downloadApprovedExcel()">Approved Forms Excel Download</button> <button class="m" onclick="downloadApprovedPDF()">Approved Forms PDF Download</button>
+<button class="s" onclick="downloadAcceptedExcel()">Accepted Forms Excel Download</button> <button class="m" onclick="downloadAcceptedPDF()">Accepted Forms PDF Download</button>
 </div>
-<div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator + Photo</th><th>Assembly</th><th>Taluka</th><th>Approved Date</th><th>Action</th></tr></thead><tbody id="adminApprovedBody"></tbody></table></div>
+<div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference</th><th>District</th><th>Operator + Photo</th><th>Assembly</th><th>Taluka</th><th>Accepted Date</th><th>Action</th></tr></thead><tbody id="adminAcceptedBody"></tbody></table></div>
 </section>
 
 <section id="adminDelete" class="card hidden"><h2>Admin → Delete Requests</h2><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Delete Remark</th><th>Action</th></tr></thead><tbody id="adminDeleteBody"></tbody></table></div></section>
@@ -112,10 +113,11 @@ table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8p
 <div style="margin:10px 0">
 <button class="s" onclick="downloadSummaryExcel()">Summary Excel Download</button> <button class="m" onclick="downloadSummaryPDF()">Summary PDF Download</button>
 </div>
-<div class="wrap"><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Total Forms</th><th>Approval Pending</th><th>Approved</th><th>Rejected</th><th>Correction</th><th>Deleted</th></tr></thead><tbody id="summaryBody"></tbody></table></div>
+<div class="wrap"><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Total Forms</th><th>Approval Pending</th><th>Accepted</th><th>Rejected</th><th>Correction</th><th>Deleted</th></tr></thead><tbody id="summaryBody"></tbody></table></div>
 </section>
 </div></div>
 
+<div id="cropModal" class="modal hidden"><div class="modalbox" style="max-width:900px"><h2 style="margin-top:0">Photo Crop</h2><div class="small" style="margin-bottom:10px">फोटोतील योग्य भाग निवडा. Crop Box हलवून/खालील उजव्या कोपऱ्यातून आकार बदलून Save / Use करा.</div><div id="cropArea" class="cropArea"><img id="cropImage"></div><div style="margin-top:12px"><button class="s" type="button" onclick="savePhotoCrop()">Save / Use Photo</button><button class="m" type="button" onclick="closePhotoCrop()">Cancel</button></div></div></div>
 <div id="modal" class="modal hidden"><div class="modalbox"><div class="top"><h2>Form View / Preview</h2><button class="m" onclick="closeModal()">Close</button></div><div id="modalContent"></div></div></div>
 
 <script>
@@ -153,12 +155,12 @@ function enter(){
  $("loginPage").classList.add("hidden");$("app").classList.remove("hidden");
  $("currentDistrict").textContent=session.type==="admin"?"सर्व 36 जिल्हे":session.district;
  $("session").textContent=(session.type==="admin"?"Admin Login":"District Login")+" • "+session.username;
- $("adminApprovedBtn").classList.toggle("hidden",session.type!=="admin");$("adminCorrectionBtn").classList.toggle("hidden",session.type!=="admin");$("adminDeleteBtn").classList.toggle("hidden",session.type!=="admin");
+ $("districtAcceptedBtn").classList.toggle("hidden",session.type==="admin");$("adminAcceptedBtn").classList.toggle("hidden",session.type!=="admin");$("adminCorrectionBtn").classList.toggle("hidden",session.type!=="admin");$("adminDeleteBtn").classList.toggle("hidden",session.type!=="admin");
  $("district").value=session.type==="admin"?"Admin":session.district;
  loadAssemblies();tab(session.type==="admin"?"admin":"entry");
 }
 function logout(){location.reload()}
-function tab(t){["entry","forms","pending","approved","admin","adminApproved","adminCorrection","adminDelete","summary"].forEach(x=>$(x).classList.add("hidden"));$(t).classList.remove("hidden");if(t==="forms")renderForms();if(t==="pending")renderPending();if(t==="approved")renderApproved();if(t==="admin")renderAdmin();if(t==="adminApproved"){loadAdminApprovedDistricts();renderAdminApproved()}if(t==="adminCorrection"){renderAdminCorrection()}if(t==="adminDelete"){renderAdminDelete()}if(t==="summary"){loadSummaryDistricts();renderSummary()}}
+function tab(t){["entry","forms","pending","approved","admin","adminAccepted","adminCorrection","adminDelete","summary"].forEach(x=>$(x).classList.add("hidden"));$(t).classList.remove("hidden");if(t==="forms")renderForms();if(t==="pending")renderPending();if(t==="approved")renderAccepted();if(t==="admin")renderAdmin();if(t==="adminAccepted"){loadAdminAcceptedDistricts();renderAdminAccepted()}if(t==="adminCorrection"){renderAdminCorrection()}if(t==="adminDelete"){renderAdminDelete()}if(t==="summary"){loadSummaryDistricts();renderSummary()}}
 function loadAssemblies(){
  let ds=session.type==="admin"?Object.keys(DATA):[session.district],a=[];
  ds.forEach(d=>(DATA[d]?.assemblies||[]).forEach(v=>a.push({d:d,a:v})));
@@ -168,19 +170,34 @@ function loadAssemblies(){
 }
 function loadTalukas(){
  let a=$("assembly").value,ds=session.type==="admin"?Object.keys(DATA):[session.district],t=[];
+ let selectedDistrict=session.type==="admin"?($("assembly").selectedOptions[0]?.dataset.d||""):session.district;
  ds.forEach(d=>{if((DATA[d]?.assemblies||[]).includes(a))t=t.concat(DATA[d]?.talukas||[])});
  t=[...new Set(t)].sort((x,y)=>x.localeCompare(y,"mr"));
  $("taluka").innerHTML='<option value="">-- निवडा --</option>'+t.map(x=>"<option>"+esc(x)+"</option>").join("");
+ $("taluka").required=selectedDistrict!=="मुंबई शहर";
+ $("taluka").previousElementSibling.textContent=selectedDistrict==="मुंबई शहर"?"Taluka":"Taluka *";
 }
 function ageCalc(){
  let b=new Date($("dob").value),n=new Date(),a=n.getFullYear()-b.getFullYear(),m=n.getMonth()-b.getMonth();
  if(m<0||(m===0&&n.getDate()<b.getDate()))a--; $("age").value=a>=0?a:"";
 }
+let cropState={img:null,x:0,y:0,w:0,h:0,drag:false,resize:false,sx:0,sy:0,ox:0,oy:0,ow:0,oh:0};
 function readFile(i){
  let f=i.files[0];if(!f)return;
  if(f.size>5*1024*1024){alert("फाईल 5 MB पेक्षा जास्त नसावी.");i.value="";return}
- let r=new FileReader();r.onload=()=>{if(i.id==="photo"){photoData=r.result;$("photoPreview").src=photoData;$("photoPreview").classList.remove("hidden")}else{proofData=r.result;$("proofName").textContent="Selected: "+f.name}};r.readAsDataURL(f)
+ let r=new FileReader();r.onload=()=>{if(i.id==="photo"){photoData=r.result;$("photoPreview").src=photoData;$("photoPreview").classList.remove("hidden");$("cropPhotoBtn").classList.remove("hidden")}else{proofData=r.result;$("proofName").textContent="Selected: "+f.name}};r.readAsDataURL(f)
 }
+function openPhotoCrop(){
+ if(!photoData)return;
+ let im=new Image();im.onload=()=>{cropState.img=im;$("cropImage").src=photoData;requestAnimationFrame(()=>{let el=$("cropImage"),w=el.clientWidth,h=el.clientHeight,ratio=4/5,cw=w,ch=cw/ratio;if(ch>h){ch=h;cw=ch*ratio}cropState.x=(w-cw)/2;cropState.y=(h-ch)/2;cropState.w=cw;cropState.h=ch;drawCropBox();bindCropEvents();$("cropModal").classList.remove("hidden")})};im.src=photoData
+}
+function drawCropBox(){let area=$("cropArea"),box=$("cropBox");if(!box){box=document.createElement("div");box.id="cropBox";box.className="cropBox";box.innerHTML='<span class="cropHandle"></span>';area.appendChild(box)}box.style.left=cropState.x+"px";box.style.top=cropState.y+"px";box.style.width=cropState.w+"px";box.style.height=cropState.h+"px"}
+function bindCropEvents(){let box=$("cropBox"),area=$("cropArea"),handle=box.querySelector(".cropHandle");box.onpointerdown=e=>{if(e.target===handle)return;cropState.drag=true;startCropPointer(e)};handle.onpointerdown=e=>{e.stopPropagation();cropState.resize=true;startCropPointer(e)};area.onpointermove=e=>moveCropPointer(e);area.onpointerup=area.onpointercancel=()=>{cropState.drag=false;cropState.resize=false}}
+function startCropPointer(e){cropState.sx=e.clientX;cropState.sy=e.clientY;cropState.ox=cropState.x;cropState.oy=cropState.y;cropState.ow=cropState.w;cropState.oh=cropState.h}
+function moveCropPointer(e){if(!cropState.drag&&!cropState.resize)return;let area=$("cropArea"),maxW=area.clientWidth,maxH=$("cropImage").clientHeight,dx=e.clientX-cropState.sx,dy=e.clientY-cropState.sy,ratio=4/5;if(cropState.drag){cropState.x=Math.max(0,Math.min(maxW-cropState.w,cropState.ox+dx));cropState.y=Math.max(0,Math.min(maxH-cropState.h,cropState.oy+dy))}else{let nw=Math.max(60,Math.min(maxW-cropState.x,cropState.ow+dx)),nh=nw/ratio;if(cropState.y+nh>maxH){nh=maxH-cropState.y;nw=nh*ratio}cropState.w=nw;cropState.h=nh}drawCropBox()}
+function closePhotoCrop(){$("cropModal").classList.add("hidden")}
+function savePhotoCrop(){let im=cropState.img,el=$("cropImage"),sx=cropState.x*(im.naturalWidth/el.clientWidth),sy=cropState.y*(im.naturalHeight/el.clientHeight),sw=cropState.w*(im.naturalWidth/el.clientWidth),sh=cropState.h*(im.naturalHeight/el.clientHeight),canvas=document.createElement("canvas"),scale=Math.min(800/sw,1000/sh);canvas.width=Math.max(1,Math.round(sw*scale));canvas.height=Math.max(1,Math.round(sh*scale));canvas.getContext("2d").drawImage(im,sx,sy,sw,sh,0,0,canvas.width,canvas.height);photoData=canvas.toDataURL("image/jpeg",0.9);$("photoPreview").src=photoData;$("photoPreview").classList.remove("hidden");closePhotoCrop()}
+
 function collect(){
  let o=$("assembly").selectedOptions[0];
  return {id:$("editId").value||crypto.randomUUID(),reference:"",district:session.type==="admin"?(o?.dataset.d||""):session.district,
@@ -191,7 +208,7 @@ function collect(){
 function preview(){
  if(!$("form").reportValidity())return;
  let d=collect(),old=$("editId").value?forms().find(x=>x.id===$("editId").value):null;
- if(old){d.reference=old.reference;d.status=old.status==="Correction Approved"?"Sent for Approval":old.status;d.createdAt=old.createdAt}
+ if(old){d.reference=old.reference;d.status=old.status==="Correction Accepted"?"Sent for Approval":old.status;d.createdAt=old.createdAt}
  previewData=d;
  $("modalContent").innerHTML="<div class='grid'>"+[["Reference",d.reference||"Submit नंतर"],["District",d.district],["Assembly",d.assembly],["Taluka",d.taluka],["Operator",d.name],["DOB / Age",d.dob+" / "+d.age],["PIN",d.pin],["Email",d.email],["Mobile",d.mobile],["WhatsApp",d.whatsapp]].map(x=>"<div><b>"+x[0]+":</b> "+esc(x[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(d.address)+"</p>"+(d.photo?"<img class='photo' src='"+d.photo+"'>":"")+"<br><button class='s' onclick='saveEntry()'>Confirm & Submit</button><button class='m' onclick='closeModal()'>Back</button>";
  $("modal").classList.remove("hidden")
@@ -202,39 +219,39 @@ function saveEntry(){
  if(!d.id){d.id="F"+Date.now()+Math.random().toString(36).slice(2,8);d.status="Approval Pending";d.createdAt=new Date().toISOString()}
  let i=a.findIndex(x=>x.id===d.id);if(i>=0)a[i]=d;else a.push(d);save(a);closeModal();clearForm();alert("Form Submit झाला. Reference Number: "+d.reference);tab("forms");renderForms()
 }
-function clearForm(){$("form").reset();$("closeEditBtn").classList.add("hidden");$("editId").value="";$("age").value="";photoData="";proofData="";$("photoPreview").classList.add("hidden");$("proofName").textContent="";$("district").value=session.type==="admin"?"Admin":session.district;loadAssemblies()}
+function clearForm(){$("form").reset();$("closeEditBtn").classList.add("hidden");$("editId").value="";$("age").value="";photoData="";proofData="";$("photoPreview").classList.add("hidden");$("cropPhotoBtn").classList.add("hidden");$("proofName").textContent="";$("district").value=session.type==="admin"?"Admin":session.district;loadAssemblies()}
 function closeEntry(){clearForm();tab("forms")}
 function closeEdit(){$("editId").value="";clearForm();tab("forms")}
 function scoped(){let a=forms();return session.type==="admin"?a:a.filter(x=>x.district===session.district)}
-function badge(s){return "<span class='badge "+(s==="Approved"?"ok":s==="Rejected"?"rej":"")+"'>"+esc(s)+"</span>"}
+function badge(s){return "<span class='badge "+(s==="Accepted"?"ok":s==="Rejected"?"rej":"")+"'>"+esc(s)+"</span>"}
 function renderForms(){
  let all=scoped();
  let q=$("formSearch").value.toLowerCase(),a=all.filter(x=>JSON.stringify(x).toLowerCase().includes(q));
- $("formsBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.reference)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+badge(x.status)+"</td><td>"+(x.status==="Rejected"&&x.rejectRemark?"<span style='color:#b91c1c;font-weight:700'>"+esc(x.rejectRemark)+"</span>":"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+(x.status!=="Approved"&&x.status!=="Sent for Approval"&&x.status!=="Delete Requested"?"<button class='w' onclick=\"edit('"+x.id+"')\">Edit</button><button class='s' onclick=\"send('"+x.id+"')\">Send Approval</button>":x.status==="Correction Approved"?"<button class='w' onclick=\"edit('"+x.id+"')\">Edit for Correction</button>":"")+(session.type==="district"&&x.status!=="Delete Requested"?"<button class='d' onclick=\"requestDelete('"+x.id+"')\">Delete Request</button>":"")+"</td></tr>").join("")||"<tr><td colspan='8'>माहिती उपलब्ध नाही.</td></tr>"
+ $("formsBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.reference)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+badge(x.status)+"</td><td>"+(x.status==="Rejected"&&x.rejectRemark?"<span style='color:#b91c1c;font-weight:700'>"+esc(x.rejectRemark)+"</span>":"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+(x.status!=="Accepted"&&x.status!=="Sent for Approval"&&x.status!=="Delete Requested"?"<button class='w' onclick=\"edit('"+x.id+"')\">Edit</button><button class='s' onclick=\"send('"+x.id+"')\">Send Approval</button>":x.status==="Correction Accepted"?"<button class='w' onclick=\"edit('"+x.id+"')\">Edit for Correction</button>":"")+(session.type==="district"&&x.status!=="Delete Requested"?"<button class='d' onclick=\"requestDelete('"+x.id+"')\">Delete Request</button>":"")+"</td></tr>").join("")||"<tr><td colspan='8'>माहिती उपलब्ध नाही.</td></tr>"
 }
 function renderPending(){
  let a=forms();if(session.type!=="admin")a=a.filter(x=>x.district===session.district);
  $("total").textContent=a.length;
  $("pend").textContent=a.filter(x=>x.status==="Sent for Approval"||x.status==="Approval Pending").length;
- $("appv").textContent=a.filter(x=>x.status==="Approved").length;
+ $("appv").textContent=a.filter(x=>x.status==="Accepted").length;
  $("delReqTotal").textContent=a.filter(x=>x.status==="Delete Requested").length;
  $("adminCorrectionTotal").textContent=a.filter(x=>x.status==="Correction Requested").length;
  let p=a.filter(x=>x.status==="Sent for Approval"||x.status==="Approval Pending");
  $("pendingBody").innerHTML=p.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+badge(x.status)+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+(session.type==="admin"&&x.status==="Sent for Approval"?("<button class='s' onclick=\"approve('"+x.id+"')\">Approve</button><button class='d' onclick=\"rejectForm('"+x.id+"')\">Reject</button>"):"")+"</td></tr>").join("")||"<tr><td colspan='5'>Approval Pending नाही.</td></tr>"
 }
 function send(id){let a=forms(),x=a.find(z=>z.id===id);if(x&&(session.type==="admin"||x.district===session.district)){x.status="Sent for Approval";save(a);renderForms();alert("Admin Approval साठी पाठवले.")}}
-function approve(id){let a=forms(),x=a.find(z=>z.id===id);if(x){x.status="Approved";x.approvedAt=new Date().toISOString();x.approvedBy=session.username;save(a);renderAdmin();renderApproved();renderPending();renderAdminApproved();renderAdminCorrection();renderForms();renderSummary()}}
+function approve(id){let a=forms(),x=a.find(z=>z.id===id);if(x){x.status="Accepted";x.approvedAt=new Date().toISOString();x.approvedBy=session.username;save(a);renderAdmin();renderAccepted();renderPending();renderAdminAccepted();renderAdminCorrection();renderForms();renderSummary()}}
 function rejectForm(id){let a=forms(),x=a.find(z=>z.id===id);if(!x)return;let remark=prompt("Reject Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Reject Remark लिहिणे आवश्यक आहे.");return}x.status="Rejected";x.rejectRemark=remark;x.rejectedAt=new Date().toISOString();x.rejectedBy=session.username;save(a);renderAdmin();renderAdminCorrection();renderPending();renderForms();renderSummary();alert("Form Reject करण्यात आला. Remark सेव्ह करण्यात आला.")}
-function renderApproved(){let q=$("approvedSearch").value.toLowerCase(),a=scoped().filter(x=>x.status==="Approved"&&JSON.stringify(x).toLowerCase().includes(q));$("approvedBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View Form</button>"+(session.type!=="admin"?"<button class='w' onclick=\"requestCorrection('"+x.id+"')\">Correction Request</button>":"")+"</td></tr>").join("")||"<tr><td colspan='7'>Approved List मध्ये माहिती नाही.</td></tr>"}
-function requestCorrection(id){if(session.type!=="district")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.status!=="Approved"||x.district!==session.district)return;let remark=prompt("Correction Request चे कारण / Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Correction Remark लिहिणे आवश्यक आहे.");return}x.status="Correction Requested";x.correctionRemark=remark;x.correctionRequestedAt=new Date().toISOString();x.correctionRequestedBy=session.username;save(a);renderApproved();renderForms();renderPending();renderAdminCorrection();renderSummary();alert("Correction Request Admin कडे पाठवण्यात आली.")}
+function renderAccepted(){let q=$("approvedSearch").value.toLowerCase(),a=scoped().filter(x=>x.status==="Accepted"&&JSON.stringify(x).toLowerCase().includes(q));$("approvedBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View Form</button>"+(session.type!=="admin"?"<button class='w' onclick=\"requestCorrection('"+x.id+"')\">Correction Request</button>":"")+"</td></tr>").join("")||"<tr><td colspan='7'>Accepted List मध्ये माहिती नाही.</td></tr>"}
+function requestCorrection(id){if(session.type!=="district")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.status!=="Accepted"||x.district!==session.district)return;let remark=prompt("Correction Request चे कारण / Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Correction Remark लिहिणे आवश्यक आहे.");return}x.status="Correction Requested";x.correctionRemark=remark;x.correctionRequestedAt=new Date().toISOString();x.correctionRequestedBy=session.username;save(a);renderAccepted();renderForms();renderPending();renderAdminCorrection();renderSummary();alert("Correction Request Admin कडे पाठवण्यात आली.")}
 function renderAdminCorrection(){if(session.type!=="admin")return;let a=forms().filter(x=>x.status==="Correction Requested");$("adminCorrectionBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.correctionRemark||"-")+"</td><td><button class='s' onclick=\"acceptCorrection('"+x.id+"')\">Accept</button><button class='p' onclick=\"view('"+x.id+"')\">View</button></td></tr>").join("")||"<tr><td colspan='7'>Correction Request उपलब्ध नाही.</td></tr>"}
-function acceptCorrection(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.status!=="Correction Requested")return;x.status="Correction Approved";x.correctionAcceptedAt=new Date().toISOString();x.correctionAcceptedBy=session.username;save(a);renderAdminCorrection();renderApproved();renderForms();renderPending();alert("Correction Request Accept झाली. District Login मध्ये फॉर्म दुरुस्तीसाठी उपलब्ध आहे.")}
+function acceptCorrection(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.status!=="Correction Requested")return;x.status="Correction Accepted";x.correctionAcceptedAt=new Date().toISOString();x.correctionAcceptedBy=session.username;save(a);renderAdminCorrection();renderAccepted();renderForms();renderPending();alert("Correction Request Accept झाली. District Login मध्ये फॉर्म दुरुस्तीसाठी उपलब्ध आहे.")}
 function requestDelete(id){if(session.type!=="district")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.district!==session.district)return;let remark=prompt("Entry Delete करण्याचे कारण / Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Delete Remark लिहिणे अनिवार्य आहे.");return}x.previousStatusBeforeDelete=x.status;x.status="Delete Requested";x.deleteRemark=remark;x.deleteRequestedAt=new Date().toISOString();x.deleteRequestedBy=session.username;save(a);renderForms();renderPending();alert("Delete Request Admin कडे पाठवण्यात आली.")}
 function renderAdminDelete(){if(session.type!=="admin")return;let a=forms().filter(x=>x.status==="Delete Requested");$("adminDeleteBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.deleteRemark||"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button><button class='s' onclick=\"approveDelete('"+x.id+"')\">Accept</button><button class='d' onclick=\"rejectDelete('"+x.id+"')\">Reject</button></td></tr>").join("")||"<tr><td colspan='7'>Delete Request उपलब्ध नाही.</td></tr>"}
 function getDeletedForms(){try{const v=JSON.parse(localStorage.getItem("deletedForms")||"[]");return Array.isArray(v)?v:[]}catch(e){return []}}
 function saveDeletedForms(a){localStorage.setItem("deletedForms",JSON.stringify(a))}
-function approveDelete(id){if(session.type!=="admin")return;let a=forms(),i=a.findIndex(x=>x.id===id);if(i<0||a[i].status!=="Delete Requested")return;if(!confirm("ही Delete Request Approve करून Entry कायमची Delete करायची आहे का?"))return;let x=a[i],now=new Date().toISOString(),da=getDeletedForms();let deletedEntry={id:x.id,reference:x.reference,district:x.district,assembly:x.assembly,taluka:x.taluka,name:x.name,status:"Deleted",deletedAt:now,deletedBy:session.username};try{da.push(deletedEntry);saveDeletedForms(da)}catch(e){alert("Delete Archive सेव्ह करता आले नाही. Entry Delete करण्यात आलेली नाही.");return}a.splice(i,1);save(a);renderAdminDelete();renderAdmin();renderForms();renderApproved();renderPending();renderAdminApproved();renderAdminCorrection();renderSummary();alert("Delete Request Accept झाली आणि Entry Delete करण्यात आली.")}
-function rejectDelete(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.status!=="Delete Requested")return;let remark=prompt("Delete Request Reject करण्याचे कारण / Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Reject Remark लिहिणे अनिवार्य आहे.");return}x.status=x.previousStatusBeforeDelete||"Approved";x.deleteRejectRemark=remark;x.deleteRejectedAt=new Date().toISOString();x.deleteRejectedBy=session.username;save(a);renderAdminDelete();renderAdmin();renderForms();renderApproved();renderPending();renderAdminApproved();renderAdminCorrection();renderSummary();alert("Delete Request Reject करण्यात आली. Entry कायम ठेवण्यात आली.")}
+function approveDelete(id){if(session.type!=="admin")return;let a=forms(),i=a.findIndex(x=>x.id===id);if(i<0||a[i].status!=="Delete Requested")return;if(!confirm("ही Delete Request Approve करून Entry कायमची Delete करायची आहे का?"))return;let x=a[i],now=new Date().toISOString(),da=getDeletedForms();let deletedEntry={id:x.id,reference:x.reference,district:x.district,assembly:x.assembly,taluka:x.taluka,name:x.name,status:"Deleted",deletedAt:now,deletedBy:session.username};try{da.push(deletedEntry);saveDeletedForms(da)}catch(e){alert("Delete Archive सेव्ह करता आले नाही. Entry Delete करण्यात आलेली नाही.");return}a.splice(i,1);save(a);renderAdminDelete();renderAdmin();renderForms();renderAccepted();renderPending();renderAdminAccepted();renderAdminCorrection();renderSummary();alert("Delete Request Accept झाली आणि Entry Delete करण्यात आली.")}
+function rejectDelete(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.status!=="Delete Requested")return;let remark=prompt("Delete Request Reject करण्याचे कारण / Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Reject Remark लिहिणे अनिवार्य आहे.");return}x.status=x.previousStatusBeforeDelete||"Accepted";x.deleteRejectRemark=remark;x.deleteRejectedAt=new Date().toISOString();x.deleteRejectedBy=session.username;save(a);renderAdminDelete();renderAdmin();renderForms();renderAccepted();renderPending();renderAdminAccepted();renderAdminCorrection();renderSummary();alert("Delete Request Reject करण्यात आली. Entry कायम ठेवण्यात आली.")}
 function renderAdmin(){let a=forms(),p=a.filter(x=>x.status==="Sent for Approval");$("adminBody").innerHTML=p.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button><button class='s' onclick=\"approve('"+x.id+"')\">Approve</button><button class='d' onclick=\"rejectForm('"+x.id+"')\">Reject</button></td></tr>").join("")||"<tr><td colspan='6'>Approval साठी Form नाही.</td></tr>"}
 function view(id){
  let x=forms().find(z=>z.id===id);if(!x)return;
@@ -253,14 +270,14 @@ function viewFile(data,type){
  w.document.close();
 }
 
-function edit(id){let x=forms().find(z=>z.id===id);if(!x||session.type!=="admin"&&x.district!==session.district)return;$("editId").value=x.id;loadAssemblies();$("assembly").value=x.assembly;loadTalukas();setTimeout(()=>$("taluka").value=x.taluka,0);$("name").value=x.name;$("dob").value=x.dob;$("age").value=x.age;$("address").value=x.address;$("pin").value=x.pin;$("email").value=x.email;$("mobile").value=x.mobile;$("whatsapp").value=x.whatsapp;photoData=x.photo||"";proofData=x.proof||"";if(photoData){$("photoPreview").src=photoData;$("photoPreview").classList.remove("hidden")}$("closeEditBtn").classList.remove("hidden");tab("entry")} 
+function edit(id){let x=forms().find(z=>z.id===id);if(!x||session.type!=="admin"&&x.district!==session.district)return;$("editId").value=x.id;loadAssemblies();$("assembly").value=x.assembly;loadTalukas();setTimeout(()=>$("taluka").value=x.taluka,0);$("name").value=x.name;$("dob").value=x.dob;$("age").value=x.age;$("address").value=x.address;$("pin").value=x.pin;$("email").value=x.email;$("mobile").value=x.mobile;$("whatsapp").value=x.whatsapp;photoData=x.photo||"";proofData=x.proof||"";if(photoData){$("photoPreview").src=photoData;$("photoPreview").classList.remove("hidden");$("cropPhotoBtn").classList.remove("hidden")}$("closeEditBtn").classList.remove("hidden");tab("entry")} 
 
 
-function loadAdminApprovedDistricts(){
- let ds=[...new Set(forms().filter(x=>x.status==="Approved").map(x=>x.district))].sort((a,b)=>a.localeCompare(b,"mr"));
- let cur=$("adminApprovedDistrict").value;
- $("adminApprovedDistrict").innerHTML='<option value="">-- सर्व जिल्हे --</option>'+ds.map(d=>"<option>"+esc(d)+"</option>").join("");
- if(ds.includes(cur))$("adminApprovedDistrict").value=cur;
+function loadAdminAcceptedDistricts(){
+ let ds=[...new Set(forms().filter(x=>x.status==="Accepted").map(x=>x.district))].sort((a,b)=>a.localeCompare(b,"mr"));
+ let cur=$("adminAcceptedDistrict").value;
+ $("adminAcceptedDistrict").innerHTML='<option value="">-- सर्व जिल्हे --</option>'+ds.map(d=>"<option>"+esc(d)+"</option>").join("");
+ if(ds.includes(cur))$("adminAcceptedDistrict").value=cur;
 }
 function assemblyNo(v){
  let s=String(v||"").trim().split("-")[0].trim();
@@ -283,7 +300,7 @@ function getSummaryRows(){
  let map={};
  let deleted=getDeletedForms().filter(x=>ds.includes(x.district));
  ds.forEach(d=>(DATA[d]?.assemblies||[]).forEach(ac=>{let key=d+"|"+ac;map[key]={district:d,assembly:ac,total:0,pending:0,approved:0,rejected:0,correction:0,deleted:0}}));
- a.forEach(x=>{let key=x.district+"|"+x.assembly;if(!map[key])map[key]={district:x.district,assembly:x.assembly,total:0,pending:0,approved:0,rejected:0,correction:0,deleted:0};map[key].total++;if(x.status==="Approved")map[key].approved++;else if(x.status==="Rejected")map[key].rejected++;else if(x.status==="Sent for Approval"||x.status==="Approval Pending")map[key].pending++;if(x.correctionRequestedAt)map[key].correction++;});
+ a.forEach(x=>{let key=x.district+"|"+x.assembly;if(!map[key])map[key]={district:x.district,assembly:x.assembly,total:0,pending:0,approved:0,rejected:0,correction:0,deleted:0};map[key].total++;if(x.status==="Accepted")map[key].approved++;else if(x.status==="Rejected")map[key].rejected++;else if(x.status==="Sent for Approval"||x.status==="Approval Pending")map[key].pending++;if(x.correctionRequestedAt)map[key].correction++;});
  deleted.forEach(x=>{let key=x.district+"|"+x.assembly;if(!map[key])map[key]={district:x.district,assembly:x.assembly,total:0,pending:0,approved:0,rejected:0,correction:0,deleted:0};map[key].deleted++;});
  return Object.values(map).sort((x,y)=>assemblyNo(x.assembly)-assemblyNo(y.assembly)||x.assembly.localeCompare(y.assembly,"mr")||x.district.localeCompare(y.district,"mr"));
 }
@@ -295,7 +312,7 @@ function renderSummary(){
 }
 function downloadSummaryExcel(){
  let a=getSummaryRows();if(!a.length){alert("Download करण्यासाठी आकडेवारी उपलब्ध नाही.");return}
- const headers=["Sr.No.","District","Assembly Constituency","Total Forms","Approval Pending","Approved","Rejected","Correction","Deleted"];
+ const headers=["Sr.No.","District","Assembly Constituency","Total Forms","Approval Pending","Accepted","Rejected","Correction","Deleted"];
  const rows=a.map((x,i)=>[i+1,x.district,x.assembly,x.total,x.pending,x.approved,x.rejected,x.correction,x.deleted]);
  const totals=rows.reduce((t,r)=>{t[3]+=Number(r[3])||0;t[4]+=Number(r[4])||0;t[5]+=Number(r[5])||0;t[6]+=Number(r[6])||0;t[7]+=Number(r[7])||0;t[8]+=Number(r[8])||0;return t;},["","","Total",0,0,0,0,0,0]);
  const escX=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
@@ -307,52 +324,52 @@ function downloadSummaryPDF(){
  let rows=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.assembly)+"</td><td>"+x.total+"</td><td>"+x.pending+"</td><td>"+x.approved+"</td><td>"+x.rejected+"</td><td>"+x.correction+"</td><td>"+x.deleted+"</td></tr>").join("");
  let totals=a.reduce((t,x)=>{t.total+=x.total;t.pending+=x.pending;t.approved+=x.approved;t.rejected+=x.rejected;t.correction+=x.correction;t.deleted+=x.deleted;return t},{total:0,pending:0,approved:0,rejected:0,correction:0,deleted:0});
  rows+="<tr><th colspan='3'>Total</th><th>"+totals.total+"</th><th>"+totals.pending+"</th><th>"+totals.approved+"</th><th>"+totals.rejected+"</th><th>"+totals.correction+"</th><th>"+totals.deleted+"</th></tr>";
- let w=window.open("","_blank");if(!w){alert("PDF Preview उघडता आले नाही. Browser popup allow करा.");return}w.document.write("<html><head><meta charset='UTF-8'><title>AC-wise Summary</title><style>body{font-family:Arial,sans-serif;padding:20px}h2{text-align:center}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #333;padding:6px;text-align:center}th{font-weight:bold}</style></head><body><h2>विधानसभा मतदारसंघानुसार आकडेवारीचा घोषवारा</h2><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Total Forms</th><th>Approval Pending</th><th>Approved</th><th>Rejected</th><th>Correction</th><th>Deleted</th></tr></thead><tbody>"+rows+"</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>");w.document.close();
+ let w=window.open("","_blank");if(!w){alert("PDF Preview उघडता आले नाही. Browser popup allow करा.");return}w.document.write("<html><head><meta charset='UTF-8'><title>AC-wise Summary</title><style>body{font-family:Arial,sans-serif;padding:20px}h2{text-align:center}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #333;padding:6px;text-align:center}th{font-weight:bold}</style></head><body><h2>विधानसभा मतदारसंघानुसार आकडेवारीचा घोषवारा</h2><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Total Forms</th><th>Approval Pending</th><th>Accepted</th><th>Rejected</th><th>Correction</th><th>Deleted</th></tr></thead><tbody>"+rows+"</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>");w.document.close();
 }
-function renderAdminApproved(){
+function renderAdminAccepted(){
  if(session.type!=="admin")return;
- let district=$("adminApprovedDistrict").value;
- let q=($("adminApprovedSearch").value||"").toLowerCase();
- let a=forms().filter(x=>x.status==="Approved");
+ let district=$("adminAcceptedDistrict").value;
+ let q=($("adminAcceptedSearch").value||"").toLowerCase();
+ let a=forms().filter(x=>x.status==="Accepted");
  if(district)a=a.filter(x=>x.district===district);
  if(q)a=a.filter(x=>JSON.stringify(x).toLowerCase().includes(q));
  a=sortByAssembly(a);
- $("adminApprovedBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"<br>"+(x.photo?"<img src='"+x.photo+"' style=\"width:55px;height:68px;object-fit:cover;border:1px solid #aaa;border-radius:5px;margin-top:4px;cursor:pointer\" title=\"Photo पाहण्यासाठी क्लिक करा\" onclick=\"view('"+x.id+"')\">":"-")+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+(x.approvedAt?new Date(x.approvedAt).toLocaleString("en-IN"):"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button></td></tr>").join("")||"<tr><td colspan='7'>Approved Forms उपलब्ध नाहीत.</td></tr>";
+ $("adminAcceptedBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"<br>"+(x.photo?"<img src='"+x.photo+"' style=\"width:55px;height:68px;object-fit:cover;border:1px solid #aaa;border-radius:5px;margin-top:4px;cursor:pointer\" title=\"Photo पाहण्यासाठी क्लिक करा\" onclick=\"view('"+x.id+"')\">":"-")+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+(x.approvedAt?new Date(x.approvedAt).toLocaleString("en-IN"):"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button></td></tr>").join("")||"<tr><td colspan='8'>Accepted Forms उपलब्ध नाहीत.</td></tr>";
 }
-function getApprovedDownloadRows(){
- let district=session.type==="admin"?$("adminApprovedDistrict").value:session.district;
- let q=(session.type==="admin"?$("adminApprovedSearch").value:$("approvedSearch").value||"").toLowerCase();
- let a=forms().filter(x=>x.status==="Approved");
+function getAcceptedDownloadRows(){
+ let district=session.type==="admin"?$("adminAcceptedDistrict").value:session.district;
+ let q=(session.type==="admin"?$("adminAcceptedSearch").value:$("approvedSearch").value||"").toLowerCase();
+ let a=forms().filter(x=>x.status==="Accepted");
  if(district)a=a.filter(x=>x.district===district);
  if(q)a=a.filter(x=>JSON.stringify(x).toLowerCase().includes(q));
  return sortByAssembly(a);
 }
-function downloadApprovedCSV(){
- let a=getApprovedDownloadRows();
- if(!a.length){alert("Download करण्यासाठी Approved Forms उपलब्ध नाहीत.");return}
+function downloadAcceptedCSV(){
+ let a=getAcceptedDownloadRows();
+ if(!a.length){alert("Download करण्यासाठी Accepted Forms उपलब्ध नाहीत.");return}
  const headers=["District","Assembly Constituency","Taluka","Operator Name","DOB","Age","Address","PIN","Mobile","WhatsApp"];
  const rows=a.map(x=>[x.district,x.assembly,x.taluka,x.name,x.dob,x.age,x.address,x.pin,x.mobile,x.whatsapp]);
  const csv=[headers,...rows].map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");
  const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
  const url=URL.createObjectURL(blob),aEl=document.createElement("a");
- aEl.href=url;aEl.download="Approved_Forms.csv";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
+ aEl.href=url;aEl.download="Accepted_Forms.csv";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
 }
-function downloadApprovedExcel(){
- let a=getApprovedDownloadRows();
- if(!a.length){alert("Download करण्यासाठी Approved Forms उपलब्ध नाहीत.");return}
+function downloadAcceptedExcel(){
+ let a=getAcceptedDownloadRows();
+ if(!a.length){alert("Download करण्यासाठी Accepted Forms उपलब्ध नाहीत.");return}
  const headers=["District","Assembly Constituency","Taluka","Operator Name","DOB","Age","Address","PIN","Mobile","WhatsApp"];
  const rows=a.map(x=>[x.district,x.assembly,x.taluka,x.name,x.dob,x.age,x.address,x.pin,x.mobile,x.whatsapp]);
  const escX=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
  const html="<html><head><meta charset='UTF-8'></head><body><table border='1'><thead><tr>"+headers.map(h=>"<th>"+escX(h)+"</th>").join("")+"</tr></thead><tbody>"+rows.map(r=>"<tr>"+r.map(v=>"<td>"+escX(v)+"</td>").join("")+"</tr>").join("")+"</tbody></table></body></html>";
  const blob=new Blob([html],{type:"application/vnd.ms-excel;charset=utf-8"});
- const url=URL.createObjectURL(blob),aEl=document.createElement("a");aEl.href=url;aEl.download="Approved_Forms.xls";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
+ const url=URL.createObjectURL(blob),aEl=document.createElement("a");aEl.href=url;aEl.download="Accepted_Forms.xls";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
 }
-function downloadApprovedPDF(){
- let a=getApprovedDownloadRows();
- if(!a.length){alert("PDF तयार करण्यासाठी Approved Forms उपलब्ध नाहीत.");return}
+function downloadAcceptedPDF(){
+ let a=getAcceptedDownloadRows();
+ if(!a.length){alert("PDF तयार करण्यासाठी Accepted Forms उपलब्ध नाहीत.");return}
  const rows=a.map(x=>"<tr><td>"+esc(x.district)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.dob)+"</td><td>"+esc(x.age)+"</td><td>"+esc(x.address)+"</td><td>"+esc(x.pin)+"</td><td>"+esc(x.mobile)+"</td><td>"+esc(x.whatsapp)+"</td></tr>").join("");
  const w=window.open("","_blank");if(!w){alert("PDF साठी नवीन window उघडण्याची परवानगी द्या.");return}
- w.document.write("<!doctype html><html><head><meta charset='UTF-8'><title>Approved Forms</title><style>body{font-family:Arial,sans-serif;padding:15px}h2{text-align:center}table{width:100%;border-collapse:collapse;font-size:9px}th,td{border:1px solid #777;padding:5px;text-align:left;vertical-align:top}th{font-weight:700}@media print{body{padding:0}@page{size:A4 landscape;margin:8mm}}</style></head><body><h2>Approved Forms</h2><table><thead><tr><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>DOB</th><th>Age</th><th>Address</th><th>PIN</th><th>Mobile</th><th>WhatsApp</th></tr></thead><tbody>"+rows+"</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>");w.document.close();
+ w.document.write("<!doctype html><html><head><meta charset='UTF-8'><title>Accepted Forms</title><style>body{font-family:Arial,sans-serif;padding:15px}h2{text-align:center}table{width:100%;border-collapse:collapse;font-size:9px}th,td{border:1px solid #777;padding:5px;text-align:left;vertical-align:top}th{font-weight:700}@media print{body{padding:0}@page{size:A4 landscape;margin:8mm}}</style></head><body><h2>Accepted Forms</h2><table><thead><tr><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>DOB</th><th>Age</th><th>Address</th><th>PIN</th><th>Mobile</th><th>WhatsApp</th></tr></thead><tbody>"+rows+"</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>");w.document.close();
 }
 function closeModal(){$("modal").classList.add("hidden")}
 init();
