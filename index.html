@@ -118,6 +118,99 @@ table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8p
 
 #loginPage .login > img{width:90px;height:90px;object-fit:contain;}
 </style>
+
+<style id="attractive-dashboard-buttons">
+/* Post-login dashboard buttons: visual styling only */
+#app > .container > .card.top > div:nth-child(2){
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:18px;
+  margin-top:16px;
+}
+#app > .container > .card.top > div:nth-child(2) > button{
+  position:relative;
+  width:100%;
+  min-height:78px;
+  margin:0 !important;
+  padding:10px 18px 10px 64px;
+  border:1px solid rgba(255,255,255,.85);
+  border-radius:10px;
+  box-shadow:0 3px 7px rgba(0,0,0,.18);
+  font-size:15px;
+  font-weight:700;
+  letter-spacing:.1px;
+  color:#374151;
+  text-align:left;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  transition:transform .18s ease,box-shadow .18s ease,filter .18s ease;
+  overflow:hidden;
+}
+#app > .container > .card.top > div:nth-child(2) > button::before{
+  position:absolute;
+  left:16px;
+  top:50%;
+  transform:translateY(-50%);
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  background:rgba(255,255,255,.78);
+  box-shadow:0 1px 3px rgba(0,0,0,.16);
+  font-size:22px;
+  line-height:38px;
+  text-align:center;
+  font-weight:400;
+}
+#app > .container > .card.top > div:nth-child(2) > button:hover{
+  transform:translateY(-3px);
+  box-shadow:0 7px 14px rgba(0,0,0,.22);
+  filter:brightness(1.03);
+}
+#app > .container > .card.top > div:nth-child(2) > button:active{
+  transform:translateY(0);
+  box-shadow:0 2px 5px rgba(0,0,0,.18);
+}
+
+/* Attractive soft card backgrounds */
+#app > .container > .card.top > div:nth-child(2) > .p{background:#b9dce9;color:#26364a;}
+#app > .container > .card.top > div:nth-child(2) > .m{background:#d9cdef;color:#3f3654;}
+#app > .container > .card.top > div:nth-child(2) > .s{background:#e5f7a7;color:#3f4d28;}
+#app > .container > .card.top > div:nth-child(2) > .w{background:#c8efcf;color:#31513a;}
+#app > .container > .card.top > div:nth-child(2) > .d{background:#f5caca;color:#5b3030;}
+
+/* Individual dashboard logos/icons */
+#app > .container > .card.top > div:nth-child(2) > button:nth-child(1)::before{content:"▦";}
+#app > .container > .card.top > div:nth-child(2) > button:nth-child(2)::before{content:"☑";}
+#app > .container > .card.top > div:nth-child(2) > button:nth-child(3)::before{content:"✉";}
+#app > .container > .card.top > div:nth-child(2) > button:nth-child(4)::before{content:"⌂";}
+#app > .container > .card.top > div:nth-child(2) > button:nth-child(5)::before{content:"♟";}
+#app > .container > .card.top > div:nth-child(2) > button:nth-child(6)::before{content:"☎";}
+#app > .container > .card.top > div:nth-child(2) > button:nth-child(7)::before{content:"▣";}
+#app > .container > .card.top > div:nth-child(2) > button:nth-child(8)::before{content:"♟";}
+#app > .container > .card.top > div:nth-child(2) > button:nth-child(9)::before{content:"☷";}
+
+/* Small accent line gives each button a polished dashboard look */
+#app > .container > .card.top > div:nth-child(2) > button::after{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:5px;
+  background:rgba(255,255,255,.85);
+}
+
+@media (max-width:700px){
+  #app > .container > .card.top > div:nth-child(2){
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+  #app > .container > .card.top > div:nth-child(2) > button{
+    min-height:70px;
+  }
+}
+</style>
 </head>
 <body>
 
@@ -185,7 +278,7 @@ table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8p
 <button id="entryBtn" class="p hidden" onclick="tab('entry')">Data Entry</button>
 <button class="m" onclick="tab('forms')">Entered Forms</button>
 
-<button id="districtAcceptedBtn" class="s" onclick="tab('approved')">Accepted List</button><button id="districtOperatorRegBtn" class="w hidden" onclick="tab('districtOperatorReg')">Operator Registration Requests</button><button id="districtCorrectionBtn" class="w hidden" onclick="tab('districtCorrection')">Correction Requests</button>
+<button id="districtAcceptedBtn" class="s" onclick="tab('approved')">Accepted List</button><button id="districtOperatorRegBtn" class="w hidden" onclick="tab('districtOperatorReg')">Registration Forms</button><button id="districtCorrectionBtn" class="w hidden" onclick="tab('districtCorrection')">Correction Requests</button>
 <button id="adminAcceptedBtn" class="s hidden" onclick="tab('adminAccepted')">Accepted Forms</button><button id="adminPresidentBtn" class="p hidden" onclick="tab('adminPresidentList')">अध्यक्ष यादी</button><button id="operatorPresidentBtn" class="p hidden" onclick="tab('operatorPresidentList')">अध्यक्ष यादी</button><button id="districtPresidentBtn" class="p hidden" onclick="tab('districtPresidentList')">अध्यक्ष यादी</button>
 <button id="adminSentByDistrictBtn" class="w hidden" onclick="tab('adminSentByDistrict')">Sent by District</button>
 <button id="adminCorrectionBtn" class="w hidden" onclick="tab('adminCorrection')">Correction Requests</button><button id="adminDeleteBtn" class="d hidden" onclick="tab('adminDelete')">Delete Requests</button><button id="adminPasswordBtn" class="p hidden" onclick="openAdminPasswordMenu()">Password</button>
@@ -222,7 +315,7 @@ table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8p
 <section id="forms" class="card hidden"><h2>Entered Forms</h2><input id="formSearch" placeholder="Reference / नाव / मोबाईल" oninput="renderForms()"><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Status</th><th>Reject Remark</th><th>Action</th></tr></thead><tbody id="formsBody"></tbody></table></div></section>
 <section id="pending" class="card hidden"><h2>Approval Pending</h2><div class="grid"><div class="card">Total Forms<br><span class="stat" id="total">0</span></div><div class="card">Approval Pending<br><span class="stat" id="pend">0</span></div><div class="card">Accepted<br><span class="stat" id="appv">0</span></div><div class="card">Delete Requests<br><span class="stat" id="delReqTotal">0</span></div><div class="card">Correction Requests<br><span class="stat" id="adminCorrectionTotal">0</span></div></div><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Status</th><th>Action</th></tr></thead><tbody id="pendingBody"></tbody></table></div></section>
 <section id="approved" class="card hidden"><h2>Accepted List</h2><div class="grid"><div><label>Form Type Filter</label><select id="approvedFormType" onchange="renderAccepted()"><option value="">-- सर्व Forms --</option><option value="electionBranch">जिल्हा निवडणूक शाखा Forms</option><option value="assembly">Assembly Constituency Forms</option></select></div><div><label>जिल्हानुसार Filter</label><select id="approvedDistrict" onchange="renderAccepted()"><option value="">-- सर्व 36 जिल्हे --</option></select></div><div><label>Search</label><input id="approvedSearch" placeholder="Reference / नाव / Assembly / Taluka" oninput="renderAccepted()"></div></div><div style="margin:10px 0"><button class="s" onclick="downloadApprovedExcel()">Excel Download</button> <button class="m" onclick="downloadApprovedPDF()">PDF Download</button></div><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>Mobile Number</th></tr></thead><tbody id="approvedBody"></tbody></table></div></section>
-<section id="districtOperatorReg" class="card hidden"><h2>Operator Registration Requests</h2><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference</th><th>Operator</th><th>Mobile / User ID</th><th>Assembly</th><th>Taluka</th><th>Status</th><th>Action</th></tr></thead><tbody id="districtOperatorRegBody"></tbody></table></div></section>
+<section id="districtOperatorReg" class="card hidden"><h2>Registration Forms</h2><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference</th><th>Operator</th><th>Mobile / User ID</th><th>Assembly</th><th>Taluka</th><th>Status</th><th>Action</th></tr></thead><tbody id="districtOperatorRegBody"></tbody></table></div></section>
 <section id="districtCorrection" class="card hidden"><h2>Correction Requests</h2><div class="wrap"><table><thead><tr><th>Reference</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Request Remark</th><th>Action</th></tr></thead><tbody id="districtCorrectionBody"></tbody></table></div></section>
 <section id="adminSentByDistrict" class="card hidden">
 <h2>Admin → Sent by District</h2>
@@ -247,16 +340,16 @@ table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8p
 <h2>Admin → अध्यक्ष यादी</h2>
 <div class="grid"><div><label>जिल्हानुसार Filter</label><select id="adminPresidentDistrict" onchange="renderAdminPresidentList()"><option value="">-- सर्व 36 जिल्हे --</option></select></div>
 <div><label>Search</label><input id="adminPresidentSearch" placeholder="District / नाव / Assembly / Taluka / Mobile" oninput="renderAdminPresidentList()"></div></div>
-<div class="wrap"><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>Mobile Number</th></tr></thead><tbody id="adminPresidentBody"></tbody></table></div>
+<div class="wrap"><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Photo</th><th>Operator Name</th><th>Mobile Number</th></tr></thead><tbody id="adminPresidentBody"></tbody></table></div>
 </section>
 
 <section id="operatorPresidentList" class="card hidden">
 <h2>अध्यक्ष यादी</h2>
-<div class="wrap"><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>Mobile Number</th></tr></thead><tbody id="operatorPresidentBody"></tbody></table></div>
+<div class="wrap"><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Photo</th><th>Operator Name</th><th>Mobile Number</th></tr></thead><tbody id="operatorPresidentBody"></tbody></table></div>
 </section>
 <section id="districtPresidentList" class="card hidden">
 <h2>अध्यक्ष यादी</h2>
-<div class="wrap"><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>Mobile Number</th></tr></thead><tbody id="districtPresidentBody"></tbody></table></div>
+<div class="wrap"><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Photo</th><th>Operator Name</th><th>Mobile Number</th></tr></thead><tbody id="districtPresidentBody"></tbody></table></div>
 </section>
 
 <section id="adminDelete" class="card hidden"><h2>Admin → Delete Requests</h2><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Delete Remark</th><th>Action</th></tr></thead><tbody id="adminDeleteBody"></tbody></table></div></section>
@@ -960,12 +1053,12 @@ function downloadSummaryPDF(){
 function renderOperatorPresidentList(){
  if(session.type!=="operator")return;
  let a=forms().filter(x=>x.status==="Accepted"&&x.isPresident);
- $("operatorPresidentBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district||"-")+"</td><td>"+esc(x.assembly||"-")+"</td><td>"+esc(x.taluka||"-")+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.mobile||"-")+"</td></tr>").join("")||"<tr><td colspan='6'>अध्यक्ष यादीमध्ये माहिती उपलब्ध नाही.</td></tr>";
+ $("operatorPresidentBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district||"-")+"</td><td>"+esc(x.assembly||"-")+"</td><td>"+esc(x.taluka||"-")+"</td><td>"+(x.photo?"<img src='"+x.photo+"' style=\"width:55px;height:68px;object-fit:cover;border:1px solid #aaa;border-radius:5px\">":"-")+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.mobile||"-")+"</td></tr>").join("")||"<tr><td colspan='7'>अध्यक्ष यादीमध्ये माहिती उपलब्ध नाही.</td></tr>";
 }
 function renderDistrictPresidentList(){
  if(session.type!=="district")return;
  let a=forms().filter(x=>x.status==="Accepted"&&x.isPresident);
- $("districtPresidentBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district||"-")+"</td><td>"+esc(x.assembly||"-")+"</td><td>"+esc(x.taluka||"-")+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.mobile||"-")+"</td></tr>").join("")||"<tr><td colspan='6'>अध्यक्ष यादीमध्ये माहिती उपलब्ध नाही.</td></tr>";
+ $("districtPresidentBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district||"-")+"</td><td>"+esc(x.assembly||"-")+"</td><td>"+esc(x.taluka||"-")+"</td><td>"+(x.photo?"<img src='"+x.photo+"' style=\"width:55px;height:68px;object-fit:cover;border:1px solid #aaa;border-radius:5px\">":"-")+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.mobile||"-")+"</td></tr>").join("")||"<tr><td colspan='7'>अध्यक्ष यादीमध्ये माहिती उपलब्ध नाही.</td></tr>";
 }
 function togglePresidentMark(id){
  if(session.type!=="admin")return;
@@ -984,7 +1077,7 @@ function renderAdminPresidentList(){
  let district=$("adminPresidentDistrict").value,q=($("adminPresidentSearch").value||"").toLowerCase();
  let a=forms().filter(x=>x.status==="Accepted"&&x.isPresident);if(district)a=a.filter(x=>x.district===district);if(q)a=a.filter(x=>JSON.stringify(x).toLowerCase().includes(q));
  a=a.slice().sort((x,y)=>{let dx=Number(LOGINS.find(d=>d.district===x.district)?.district_code||999),dy=Number(LOGINS.find(d=>d.district===y.district)?.district_code||999);return dx-dy||assemblyNo(x.assembly)-assemblyNo(y.assembly)||String(x.assembly||"").localeCompare(String(y.assembly||""),"mr");});
- $("adminPresidentBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district||"-")+"</td><td>"+esc(x.assembly||"-")+"</td><td>"+esc(x.taluka||"-")+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.mobile||"-")+"</td></tr>").join("")||"<tr><td colspan='6'>अध्यक्ष यादीमध्ये माहिती उपलब्ध नाही.</td></tr>";
+ $("adminPresidentBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district||"-")+"</td><td>"+esc(x.assembly||"-")+"</td><td>"+esc(x.taluka||"-")+"</td><td>"+(x.photo?"<img src='"+x.photo+"' style=\"width:55px;height:68px;object-fit:cover;border:1px solid #aaa;border-radius:5px\">":"-")+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.mobile||"-")+"</td></tr>").join("")||"<tr><td colspan='7'>अध्यक्ष यादीमध्ये माहिती उपलब्ध नाही.</td></tr>";
 }
 function renderAdminAccepted(){
  if(session.type!=="admin")return;
@@ -1065,4 +1158,12 @@ function downloadAcceptedPDF(){
 function closeModal(){$("modal").classList.add("hidden")}
 renderRegistrationFormStatus();
 init();
-</script></body></html>
+</script>
+<script>
+(function () {
+  // Keep the browser's native Back, Forward and Refresh controls working.
+  // Do not intercept or prevent the browser history/navigation events.
+  window.addEventListener('pageshow', function () {});
+})();
+</script>
+</body></html>
