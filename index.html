@@ -851,6 +851,7 @@ function logout(){
  document.body.classList.remove("operator-login");
   if(!session.type)return;
   clearPersistedSession();
+  try{localStorage.removeItem("maharashtraCurrentRouteV1")}catch(e){}
   session={type:"",district:"",username:""};
   try{history.replaceState({route:"login"},"",location.pathname+location.search+"#/login");}catch(e){}
   $("app").classList.add("hidden");
@@ -863,6 +864,7 @@ const APP_ROUTES=["home","dashboard","entry","forms","pending","approved","distr
 
 function tab(t,options){
   if(!APP_ROUTES.includes(t))return;
+  try{localStorage.setItem("maharashtraCurrentRouteV1",t)}catch(e){}
   if(t==="entry" && (session.type==="admin"||session.type==="district")){
     t="dashboard";
   }
@@ -945,9 +947,26 @@ function restoreRoute(){
   
   $("district").value=session.type==="admin"?"Admin":session.district;
   loadAssemblies();
+  document.body.classList.toggle("district-login",session.type==="district");
+  document.body.classList.toggle("operator-login",session.type==="operator");
+  updatePresidentButtons();
+  const acceptedWrap=$("dashWrap_approved");
+  if(acceptedWrap){acceptedWrap.classList.add("hidden");acceptedWrap.style.setProperty("display","none","important");}
+  const adminAcceptedWrap=$("dashWrap_adminAccepted");
+  if(adminAcceptedWrap){
+    adminAcceptedWrap.classList.remove("hidden");
+    adminAcceptedWrap.style.removeProperty("display");
+  }
+  const entryWrap=$("dashWrap_entry");
+  if(entryWrap){
+    entryWrap.classList.add("hidden");
+    entryWrap.style.setProperty("display","none","important");
+  }
   
   const route=currentRoute();
-  const defaultRoute="dashboard";
+  let savedRoute="";
+  try{savedRoute=localStorage.getItem("maharashtraCurrentRouteV1")||""}catch(e){}
+  const defaultRoute=APP_ROUTES.includes(savedRoute)?savedRoute:"dashboard";
   tab(route||defaultRoute,{fromHistory:true});
   if(!route){
     try{history.replaceState({route:defaultRoute},"",location.pathname+location.search+"#/"+defaultRoute);}catch(e){}
@@ -1183,14 +1202,14 @@ function renderAdminOperatorPassword(){if(session.type!=="admin")return;let sel=
 function setOperatorPassword(mobile){if(session.type!=="admin")return;let input=$("opPass_"+mobile);if(!input)return;let p=input.value.trim();if(!isStrongPassword(p)){alert("Strong Password आवश्यक आहे: किमान 8 characters, 1 uppercase, 1 lowercase, 1 number आणि 1 special character.");return}let a=getOperatorAccounts(),x=a.find(z=>z.mobile===mobile);if(!x)return;x.password=p;saveOperatorAccounts(a);alert("Operator Password यशस्वीरीत्या सेट केला. Password: "+p);renderAdminOperatorPassword()}
 function renderAdminSentByDistrict(){
   if(session.type!=="admin")return;
-  let a=forms().filter(x=>x.source==="Operator Registration"&&(x.status==="Forwarded to Admin"||(x.status==="Rejected"&&x.districtRejectedAt)));
+  let a=forms().filter(x=>x.source==="Operator Registration"&&x.status==="Forwarded to Admin");
   a.sort((x,y)=>new Date(x.districtReviewedAt||0)-new Date(y.districtReviewedAt||0));
-  $("adminSentByDistrictBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.districtRemark||x.districtRejectRemark||"-")+"</td><td>"+(x.districtReviewedAt||x.districtRejectedAt?new Date(x.districtReviewedAt||x.districtRejectedAt).toLocaleString("en-IN"):"-")+"</td><td>"+esc(x.districtReviewedBy||x.districtRejectedBy||"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+(x.districtRejectedAt?"<button class='d' onclick=\"adminFinalRejectOperatorRegistration('"+x.id+"')\">Reject</button>":"<button class='s' onclick=\"adminFinalApproveOperatorRegistration('"+x.id+"')\">Approve</button><button class='d' onclick=\"adminFinalRejectOperatorRegistration('"+x.id+"')\">Reject</button>")+"</td></tr>").join("")||"<tr><td colspan='9'>Sent by District Forms उपलब्ध नाहीत.</td></tr>";
+  $("adminSentByDistrictBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.districtRemark||x.districtRejectRemark||"-")+"</td><td>"+(x.districtReviewedAt||x.districtRejectedAt?new Date(x.districtReviewedAt||x.districtRejectedAt).toLocaleString("en-IN"):"-")+"</td><td>"+esc(x.districtReviewedBy||x.districtRejectedBy||"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+("<button class='s' onclick=\"adminFinalApproveOperatorRegistration('"+x.id+"')\">Approve</button><button class='d' onclick=\"adminFinalRejectOperatorRegistration('"+x.id+"')\">Reject</button>")+"</td></tr>").join("")||"<tr><td colspan='9'>Sent by District Forms उपलब्ध नाहीत.</td></tr>";
 }
 function adminFinalApproveOperatorRegistration(id){
   if(session.type!=="admin")return;
   let a=forms(),x=a.find(z=>z.id===id);
-  if(!x||x.source!=="Operator Registration"||!((x.status==="Forwarded to Admin")||(x.status==="Rejected"&&x.districtRejectedAt)))return;
+  if(!x||x.source!=="Operator Registration"||x.status!=="Forwarded to Admin")return;
   let remark=prompt("Admin Final Decision Remark लिहा:");
   if(remark===null)return;
   remark=remark.trim();
@@ -1202,7 +1221,7 @@ function adminFinalApproveOperatorRegistration(id){
 function adminFinalRejectOperatorRegistration(id){
   if(session.type!=="admin")return;
   let a=forms(),x=a.find(z=>z.id===id);
-  if(!x||x.source!=="Operator Registration"||!((x.status==="Forwarded to Admin")||(x.status==="Rejected"&&x.districtRejectedAt)))return;
+  if(!x||x.source!=="Operator Registration"||x.status!=="Forwarded to Admin")return;
   let remark=prompt("Admin Final Reject Remark लिहा:");
   if(remark===null)return;
   remark=remark.trim();
