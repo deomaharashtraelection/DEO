@@ -1311,4 +1311,41 @@ restoreRoute();
   window.addEventListener('pageshow', function () {});
 })();
 </script>
+
+<script>
+/* Button icons only — existing design, layout and features remain unchanged. */
+(function(){
+  const icons = [
+    ['Logout','🚪'],['Login','🔐'],['Password विसरले','🔑'],['Registration Form','📝'],['Back to Login','↩️'],
+    ['Data Entry','📝'],['Entered Forms','📋'],['Pending','⏳'],['Accepted List','✅'],['Accepted Forms','✅'],
+    ['Registration Forms','📝'],['Correction Requests','✏️'],['Sent by District','📤'],['अध्यक्ष यादी','👤'],
+    ['Password','🔒'],['Summary','📊'],['District Summary','📊'],['Election Branch','🏢'],
+    ['Operator','👨‍💻'],['District','🏢'],['Admin','👑'],['View','👁️'],['Edit','✏️'],['Delete','🗑️'],
+    ['Clear','🧹'],['Submit','📤'],['Save','💾'],['Update','🔄'],['Accept','✅'],['Approve','✔️'],
+    ['Reject','❌'],['Send','📨'],['Download','⬇️'],['Print','🖨️'],['Back','⬅️'],['Next','➡️'],
+    ['Search','🔎'],['Filter','🔽'],['Crop Photo','✂️'],['Preview','👁️'],['Close','✖️'],['Cancel','❌'],
+    ['Change Password','🔑'],['Password Change','🔑'],['Report','📊'],['Refresh','🔄'],['PDF','📄']
+  ];
+  function addIcons(root){
+    (root||document).querySelectorAll('button').forEach(function(btn){
+      if(btn.dataset.iconized==='1') return;
+      const text=(btn.textContent||'').trim();
+      if(!text) return;
+      for(const pair of icons){
+        if(text===pair[0] || text.startsWith(pair[0]+' ') || text.includes(pair[0])){
+          btn.insertBefore(document.createTextNode(pair[1]+' '),btn.firstChild);
+          btn.dataset.iconized='1';
+          break;
+        }
+      }
+    });
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    addIcons(document);
+    new MutationObserver(function(mutations){
+      mutations.forEach(function(m){m.addedNodes.forEach(function(n){if(n.nodeType===1)addIcons(n);});});
+    }).observe(document.body,{childList:true,subtree:true});
+  });
+})();
+</script>
 </body></html>
