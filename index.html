@@ -708,7 +708,24 @@ function login(){
   if(!x){$("loginMsg").textContent="District / Username / Password चुकीचे आहे.";return}
   session={type:"district",district:d,username:u};enter();
 }
+function persistSession(){
+  try{localStorage.setItem("maharashtraSessionV1",JSON.stringify(session));}catch(e){console.warn("Session persist failed",e)}
+}
+function clearPersistedSession(){
+  try{localStorage.removeItem("maharashtraSessionV1");}catch(e){}
+}
+function restoreSession(){
+  try{
+    const raw=localStorage.getItem("maharashtraSessionV1");
+    if(!raw)return false;
+    const saved=JSON.parse(raw);
+    if(!saved||!["admin","district","operator"].includes(saved.type)||!saved.username)return false;
+    session=saved;
+    return true;
+  }catch(e){clearPersistedSession();return false}
+}
 function enter(){
+ persistSession();
  $("loginPage").classList.add("hidden");$("app").classList.remove("hidden");
  $("currentDistrict").textContent=session.type==="admin"?"सर्व 36 जिल्हे":session.district;
  $("session").textContent=(session.type==="admin"?"Admin Login":session.type==="operator"?"Operator Login":"District Login")+" • "+session.username;
@@ -716,8 +733,104 @@ function enter(){
  $("district").value=session.type==="admin"?"Admin":session.district;
  loadAssemblies();$("entryBtn").classList.toggle("hidden",session.type==="admin"||session.type==="district"||session.type==="operator");tab(session.type==="admin"?"admin":"forms");
 }
-function logout(){location.reload()}
-function tab(t){["entry","forms","pending","approved","districtOperatorReg","districtCorrection","admin","adminAccepted","adminPresidentList","operatorPresidentList","districtPresidentList","adminSentByDistrict","adminCorrection","adminDelete","adminPasswordMenu","adminPasswordRequests","adminOperatorPassword","adminDistrictPassword","adminElectionBranchPassword","adminSummaryMenu","adminDistrictSummary","summary"].forEach(x=>$(x).classList.add("hidden"));$(t).classList.remove("hidden");if(t==="forms")renderForms();if(t==="pending")renderPending();if(t==="approved"){loadAcceptedDistricts();renderAccepted();}if(t==="districtOperatorReg")renderDistrictOperatorRegistrations();if(t==="districtCorrection")renderDistrictCorrection();if(t==="admin")renderAdmin();if(t==="adminAccepted"){loadAdminAcceptedDistricts();renderAdminAccepted()}if(t==="adminPresidentList"){loadAdminPresidentDistricts();renderAdminPresidentList()}if(t==="operatorPresidentList"){renderOperatorPresidentList()}if(t==="districtPresidentList"){renderDistrictPresidentList()}if(t==="adminSentByDistrict"){renderAdminSentByDistrict()}if(t==="adminCorrection"){renderAdminCorrection()}if(t==="adminDelete"){renderAdminDelete()}if(t==="adminPasswordRequests"){renderAdminPasswordRequests()}if(t==="adminOperatorPassword"){renderAdminOperatorPassword()}if(t==="adminDistrictPassword"){renderAdminDistrictPassword()}if(t==="adminElectionBranchPassword"){renderAdminElectionBranchPassword()}if(t==="adminDistrictSummary"){renderAdminDistrictSummary()}if(t==="summary"){loadSummaryDistricts();renderSummary()}}
+function logout(){
+  if(!session.type)return;
+  clearPersistedSession();
+  session={type:"",district:"",username:""};
+  try{history.replaceState({route:"login"},"",location.pathname+location.search+"#/login");}catch(e){}
+  $("app").classList.add("hidden");
+  $("operatorRegistrationPage").classList.add("hidden");
+  $("loginPage").classList.remove("hidden");
+  $("loginMsg").textContent="";
+  $("password").value="";
+}
+const APP_ROUTES=["entry","forms","pending","approved","districtOperatorReg","districtCorrection","admin","adminAccepted","adminPresidentList","operatorPresidentList","districtPresidentList","adminSentByDistrict","adminCorrection","adminDelete","adminPasswordMenu","adminPasswordRequests","adminOperatorPassword","adminDistrictPassword","adminElectionBranchPassword","adminSummaryMenu","adminDistrictSummary","summary"];
+
+function tab(t,options){
+  if(!APP_ROUTES.includes(t))return;
+  if(!session.type)return;
+  const fromHistory=options&&options.fromHistory;
+  if(!fromHistory){
+    const encoded=encodeURIComponent(t);
+    try{if(location.hash!=="#/"+encoded)history.pushState({route:t},"",location.pathname+location.search+"#/"+encoded);}catch(e){}
+  }
+  APP_ROUTES.forEach(x=>$(x).classList.add("hidden"));
+  const el=$(t);if(el)el.classList.remove("hidden");
+  if(t==="forms")renderForms();
+  if(t==="pending")renderPending();
+  if(t==="approved"){loadAcceptedDistricts();renderAccepted();}
+  if(t==="districtOperatorReg")renderDistrictOperatorRegistrations();
+  if(t==="districtCorrection")renderDistrictCorrection();
+  if(t==="admin")renderAdmin();
+  if(t==="adminAccepted"){loadAdminAcceptedDistricts();renderAdminAccepted()}
+  if(t==="adminPresidentList"){loadAdminPresidentDistricts();renderAdminPresidentList()}
+  if(t==="operatorPresidentList"){renderOperatorPresidentList()}
+  if(t==="districtPresidentList"){renderDistrictPresidentList()}
+  if(t==="adminSentByDistrict"){renderAdminSentByDistrict()}
+  if(t==="adminCorrection"){renderAdminCorrection()}
+  if(t==="adminDelete"){renderAdminDelete()}
+  if(t==="adminPasswordRequests"){renderAdminPasswordRequests()}
+  if(t==="adminOperatorPassword"){renderAdminOperatorPassword()}
+  if(t==="adminDistrictPassword"){renderAdminDistrictPassword()}
+  if(t==="adminElectionBranchPassword"){renderAdminElectionBranchPassword()}
+  if(t==="adminDistrictSummary"){renderAdminDistrictSummary()}
+  if(t==="summary"){loadSummaryDistricts();renderSummary()}
+}
+function currentRoute(){
+  const h=location.hash||"";
+  if(h.startsWith("#/")){
+    let r="";
+    try{r=decodeURIComponent(h.slice(2));}catch(e){r="";}
+    return APP_ROUTES.includes(r)?r:"";
+  }
+  return "";
+}
+function showLoginRoute(){
+  $("app").classList.add("hidden");
+  $("operatorRegistrationPage").classList.add("hidden");
+  $("loginPage").classList.remove("hidden");
+}
+function restoreRoute(){
+  if(!restoreSession()){
+    showLoginRoute();
+    if(location.hash!=="#/login"){
+      try{history.replaceState({route:"login"},"",location.pathname+location.search+"#/login");}catch(e){}
+    }
+    return;
+  }
+  $("loginPage").classList.add("hidden");
+  $("operatorRegistrationPage").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("currentDistrict").textContent=session.type==="admin"?"सर्व 36 जिल्हे":session.district;
+  $("session").textContent=(session.type==="admin"?"Admin Login":session.type==="operator"?"Operator Login":"District Login")+" • "+session.username;
+  $("districtAcceptedBtn").classList.toggle("hidden",session.type==="admin");
+  $("districtOperatorRegBtn").classList.toggle("hidden",session.type!=="district");
+  $("districtCorrectionBtn").classList.toggle("hidden",session.type!=="district");
+  $("adminAcceptedBtn").classList.toggle("hidden",session.type!=="admin");
+  $("adminPresidentBtn").classList.toggle("hidden",session.type!=="admin");
+  $("operatorPresidentBtn").classList.toggle("hidden",session.type!=="operator");
+  $("districtPresidentBtn").classList.toggle("hidden",session.type!=="district");
+  $("adminSentByDistrictBtn").classList.toggle("hidden",session.type!=="admin");
+  $("adminCorrectionBtn").classList.toggle("hidden",session.type!=="admin");
+  $("adminDeleteBtn").classList.toggle("hidden",session.type!=="admin");
+  $("adminPasswordBtn").classList.toggle("hidden",session.type!=="admin");
+  $("adminSummaryBtn").classList.toggle("hidden",session.type!=="admin");
+  $("regularSummaryBtn").classList.toggle("hidden",session.type==="admin");
+  $("district").value=session.type==="admin"?"Admin":session.district;
+  loadAssemblies();
+  $("entryBtn").classList.toggle("hidden",session.type==="admin"||session.type==="district"||session.type==="operator");
+  const route=currentRoute();
+  const defaultRoute=session.type==="admin"?"admin":"forms";
+  tab(route||defaultRoute,{fromHistory:true});
+  if(!route){
+    try{history.replaceState({route:defaultRoute},"",location.pathname+location.search+"#/"+defaultRoute);}catch(e){}
+  }
+}
+window.addEventListener("popstate",function(){
+  if(!restoreSession()){showLoginRoute();return;}
+  const route=currentRoute()||(session.type==="admin"?"admin":"forms");
+  tab(route,{fromHistory:true});
+});
 function loadAssemblies(){
  let ds=session.type==="admin"?Object.keys(DATA):[session.district],a=[];
  ds.forEach(d=>{(DATA[d]?.assemblies||[]).forEach(v=>a.push({d:d,a:v}));a.push({d:d,a:"जिल्हा निवडणूक शाखा"});});
@@ -1189,6 +1302,7 @@ function downloadAcceptedPDF(){
 function closeModal(){$("modal").classList.add("hidden")}
 renderRegistrationFormStatus();
 init();
+restoreRoute();
 </script>
 <script>
 (function () {
