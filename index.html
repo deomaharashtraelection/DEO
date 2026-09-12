@@ -364,6 +364,11 @@ body.operator-login #dashboardButtons > .dash-action:not(#dashWrap_operatorPresi
 body{font-size:18px!important}
 </style>
 
+
+<style id="system-lock-security">
+#systemLockBtn{position:relative;}
+#systemLockStatus{font-size:12px;margin-left:6px;white-space:nowrap;}
+</style>
 </head>
 <body>
 
@@ -517,7 +522,7 @@ body{font-size:18px!important}
 </section>
 
 <section id="adminDelete" class="card hidden"><h2>→ Delete Requests</h2><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Delete Remark</th><th>Action</th></tr></thead><tbody id="adminDeleteBody"></tbody></table></div></section>
-<section id="adminPasswordMenu" class="card hidden"><h2>→ Password</h2><div style="margin:10px 0"><button class="p" onclick="tab('adminDistrictPassword')">District Login</button> <button class="p" onclick="tab('adminOperatorPassword')">Operator Login</button> <button class="p" onclick="tab('adminElectionBranchPassword')">जिल्हा निवडणूक शाखा</button> <button class="p" onclick="toggleRegistrationFormStatus()">Registration Form: <span id="registrationFormStatus">Enabled</span></button> <button class="p" onclick="tab('adminPasswordRequests')">Password Change Requests</button></div></section>
+<section id="adminPasswordMenu" class="card hidden"><h2>→ Password / System</h2><div class="notice"><b>🔒 System Lock:</b> System Settings मध्ये कोणताही बदल करण्यासाठी Admin Username + Password आवश्यक आहे. परवानगीशिवाय बदल करता येणार नाही.</div><div style="margin:10px 0"><button class="p" onclick="tab('adminDistrictPassword')">District Login</button> <button class="p" onclick="tab('adminOperatorPassword')">Operator Login</button> <button class="p" onclick="tab('adminElectionBranchPassword')">जिल्हा निवडणूक शाखा</button> <button id="systemLockBtn" class="p" onclick="openSystemSettings()">⚙️ System <span id="systemLockStatus">🔒 Locked</span></button> <button class="p" onclick="tab('adminPasswordRequests')">Password Change Requests</button></div></section>
 <section id="adminPasswordRequests" class="card hidden"><h2>→ Password Change Requests</h2><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Login Type</th><th>District</th><th>Username</th><th>New Password</th><th>Requested Date</th><th>Status</th><th>Action</th></tr></thead><tbody id="adminPasswordRequestsBody"></tbody></table></div></section>
 <section id="adminOperatorPassword" class="card hidden"><h2>→ Operator Login</h2><div style="margin:10px 0"><label>District</label> <select id="adminOperatorPasswordDistrict" onchange="renderAdminOperatorPassword()"><option value="">-- सर्व जिल्हे --</option></select></div><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Username</th><th>Operator</th><th>District</th><th>Assembly Constituency Name</th><th>Password</th><th>Status</th><th>Action</th></tr></thead><tbody id="adminOperatorPasswordBody"></tbody></table></div></section>
 
@@ -624,8 +629,31 @@ function forgotAdminPasswordPin(){
   setAdminPasswordPin(np);
   alert("Forgot PIN प्रक्रिया पूर्ण. नवीन PIN सेट झाला आहे.");
 }
-function toggleRegistrationFormStatus(){if(session.type!=="admin")return;let a=getLoginStatuses();a.registrationForm=a.registrationForm===false;saveLoginStatuses(a);renderRegistrationFormStatus()}
-function renderRegistrationFormStatus(){let el=$("registrationFormStatus");if(el)el.textContent=loginEnabled("registrationForm")?"Enabled":"Disabled";let b=document.querySelector("button[onclick=\"showOperatorRegistration()\"]");if(b)b.style.display=loginEnabled("registrationForm")?"":"none"}
+const SYSTEM_AUTH_KEY="maharashtraSystemAuthV1";
+function systemAuthorized(){return session.type==="admin" && sessionStorage.getItem(SYSTEM_AUTH_KEY)==="1"}
+function openSystemSettings(){
+  if(session.type!=="admin"){alert("System Settings फक्त Admin साठी उपलब्ध आहे.");return}
+  const u=prompt("System Lock उघडण्यासाठी Admin Username प्रविष्ट करा:");
+  if(u===null)return;
+  const p=prompt("Admin Password प्रविष्ट करा:");
+  if(p===null)return;
+  if(String(u).trim()!==ADMIN.username || p!==ADMIN.password){alert("परवानगी नाकारली. Admin Username किंवा Password चुकीचे आहे.");return}
+  sessionStorage.setItem(SYSTEM_AUTH_KEY,"1");
+  const current=loginEnabled("registrationForm")?"Enabled":"Disabled";
+  const change=confirm("System Settings Unlock झाले.\n\nRegistration Form सध्या: "+current+"\n\nRegistration Form ची स्थिती बदलायची आहे का?");
+  if(change) toggleRegistrationFormStatus(true);
+  setTimeout(lockSystemSettings, 1000);
+}
+function lockSystemSettings(){sessionStorage.removeItem(SYSTEM_AUTH_KEY);renderSystemLockStatus()}
+function renderSystemLockStatus(){const el=$("systemLockStatus");if(el)el.textContent=systemAuthorized()?"🔓 Unlocked":"🔒 Locked"}
+function toggleRegistrationFormStatus(fromSystem){
+  if(session.type!=="admin")return;
+  if(!fromSystem && !systemAuthorized()){alert("System Lock सक्रिय आहे. बदल करण्यासाठी System बटणातून Admin परवानगी आवश्यक आहे.");return}
+  if(!systemAuthorized()){alert("System Lock सक्रिय आहे. परवानगी आवश्यक आहे.");return}
+  let a=getLoginStatuses();a.registrationForm=a.registrationForm===false;saveLoginStatuses(a);renderRegistrationFormStatus();
+}
+
+function renderRegistrationFormStatus(){let el=$("registrationFormStatus");if(el)el.textContent=loginEnabled("registrationForm")?"Enabled":"Disabled";let b=document.querySelector("button[onclick=\"showOperatorRegistration()\"]");if(b)b.style.display=loginEnabled("registrationForm")?"":"none";renderSystemLockStatus()}
 function getDistrictPasswords(){try{const v=JSON.parse(localStorage.getItem(DISTRICT_PASSWORD_KEY)||"{}");return v&&typeof v==="object"?v:{}}catch(e){return {}}}function getDistrictPassword(d){const a=getDistrictPasswords();return a[d]||LOGINS.find(x=>x.district===d)?.password||""}function saveDistrictPasswords(a){localStorage.setItem(DISTRICT_PASSWORD_KEY,JSON.stringify(a))}
 
 
@@ -908,7 +936,7 @@ function enter(){
  }
  tab("dashboard");
 }
-function logout(){
+function logout(){sessionStorage.removeItem(SYSTEM_AUTH_KEY);
  document.body.classList.remove("district-login");
  document.body.classList.remove("operator-login");
  document.body.classList.remove("admin-login");
