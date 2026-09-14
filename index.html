@@ -1300,7 +1300,7 @@ async function saveEntry(){
 function clearForm(){$("form").reset();$("closeEditBtn").classList.add("hidden");$("editId").value="";$("age").value="";photoData="";proofData="";$("photoPreview").classList.add("hidden");$("cropPhotoBtn").classList.add("hidden");$("proofName").textContent="";$("district").value=session.type==="admin"?"Admin":session.district;loadAssemblies()}
 function closeEntry(){clearForm();tab("forms")}
 function closeEdit(){$("editId").value="";clearForm();tab("forms")}
-function scoped(){let a=forms();if(session.type==="admin")return a;if(session.type==="operator")return a.filter(x=>x.district===session.district&&x.mobile===session.operatorMobile);return a.filter(x=>x.district===session.district)}
+function scoped(){let a=forms();if(session.type==="admin")return a;if(session.type==="operator")return a.filter(x=>x.district===session.district&&x.mobile===session.operatorMobile);if(session.type==="district")return a.filter(x=>x.district===session.district);return []}
 function badge(s){return "<span class='badge "+(s==="Accepted"?"ok":s==="Rejected"?"rej":"")+"'>"+esc(s)+"</span>"}
 function renderForms(){
  let all=scoped();
@@ -1309,8 +1309,8 @@ function renderForms(){
    let actions="<button class='p' onclick=\"view('"+x.id+"')\">View</button>";
    if(session.type==="operator" && x.status==="Accepted"){actions+="<button class='w' onclick=\"edit('"+x.id+"')\">Edit</button>"}
    if(session.type==="operator" && x.status==="Correction Requested"){actions+="<button class='s' onclick=\"send('"+x.id+"')\">Send Approval</button>"}
-   else if(session.type==="district"){
-     // District Entered Forms are view-only; no decision/action is allowed here.
+   if(session.type==="district" && x.district===session.district && x.status!=="Delete Requested"){
+     actions+="<button class='d' onclick=\"requestDelete('"+x.id+"')\">Delete Request</button>";
    }
    return "<tr><td>"+(i+1)+"</td><td>"+esc(x.reference)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+badge(x.status)+"</td><td>"+(x.status==="Rejected"&&x.rejectRemark?"<span style='color:#b91c1c;font-weight:700'>"+esc(x.rejectRemark)+"</span>":"-")+"</td><td>"+actions+"</td></tr>";
  }).join("")||"<tr><td colspan='8'>माहिती उपलब्ध नाही.</td></tr>";
@@ -1342,21 +1342,41 @@ function loadAcceptedDistricts(){
 }
 function renderAccepted(){
  let q=($("approvedSearch").value||"").toLowerCase(),formType=$("approvedFormType")?.value||"",district=$("approvedDistrict")?.value||"";
+ if(session.type==="district") district=session.district;
+ if(session.type==="operator") district=session.district;
  const districtSelect=$("approvedDistrict");
  if(districtSelect){
    const current=districtSelect.value;
    const districts=Object.keys(DATA).sort((a,b)=>a.localeCompare(b,"mr"));
-   districtSelect.innerHTML='<option value="">-- सर्व जिल्हे --</option>'+districts.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join("");
-   districtSelect.value=districts.includes(current)?current:"";
-   district=districtSelect.value||"";
+   if(session.type==="admin") {
+     districtSelect.innerHTML='<option value="">-- सर्व जिल्हे --</option>'+districts.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join("");
+     districtSelect.disabled=false;
+     districtSelect.value=districts.includes(current)?current:"";
+     district=districtSelect.value||"";
+   } else {
+     districtSelect.innerHTML='<option value="'+esc(session.district)+'">'+esc(session.district)+'</option>';
+     districtSelect.value=session.district;
+     districtSelect.disabled=true;
+     district=session.district;
+   }
  }
  let a=forms().filter(x=>x.status==="Accepted");
+ if(session.type==="district") a=a.filter(x=>x.district===session.district);
+ if(session.type==="operator") a=a.filter(x=>x.district===session.district&&x.mobile===session.operatorMobile);
  if(formType==="electionBranch")a=a.filter(x=>x.assembly==="जिल्हा निवडणूक शाखा");
  if(formType==="assembly")a=a.filter(x=>x.assembly!=="जिल्हा निवडणूक शाखा");
  if(district)a=a.filter(x=>x.district===district);
  if(q)a=a.filter(x=>JSON.stringify(x).toLowerCase().includes(q));
  a=a.slice().sort((x,y)=>{let dx=Number(LOGINS.find(d=>d.district===x.district)?.district_code||999),dy=Number(LOGINS.find(d=>d.district===y.district)?.district_code||999);return dx-dy||assemblyNo(x.assembly)-assemblyNo(y.assembly)||String(x.assembly||"").localeCompare(String(y.assembly||""),"mr")});
- $("approvedBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district||"-")+"</td><td>"+esc(x.assembly||"-")+"</td><td>"+esc(x.taluka||"-")+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.mobile||"-")+"</td></tr>").join("")||"<tr><td colspan='6'>Accepted List मध्ये माहिती नाही.</td></tr>";
+ $("approvedBody").innerHTML=a.map((x,i)=>{
+   let actions="<button class='p' onclick=\"view('"+x.id+"')\">View</button>";
+   if(session.type==="district" && x.district===session.district && x.status==="Accepted"){
+     actions+=" <button class='d' onclick=\"requestDelete('"+x.id+"')\">Delete Request</button>";
+   }
+   return "<tr><td>"+(i+1)+"</td><td>"+esc(x.district||"-")+"</td><td>"+esc(x.assembly||"-")+"</td><td>"+esc(x.taluka||"-")+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.mobile||"-")+"</td><td>"+actions+"</td></tr>";
+ }).join("")||"<tr><td colspan='7'>Accepted List मध्ये माहिती नाही.</td></tr>";
+ let ath=$("approvedBody")?.closest("table")?.querySelector("thead tr");
+ if(ath)ath.innerHTML="<th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>Mobile Number</th><th>Action</th>";
 }
 function requestCorrection(id){if(session.type!=="district"&&session.type!=="operator")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.status!=="Accepted"||x.district!==session.district||(session.type==="operator"&&x.mobile!==session.operatorMobile))return;let remark=prompt("Correction Request चे कारण / Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Correction Remark लिहिणे आवश्यक आहे.");return}x.status="Correction Requested";x.correctionRemark=remark;x.correctionRequestedAt=new Date().toISOString();x.correctionRequestedBy=session.username;save(a);renderAccepted();renderForms();renderPending();renderAdminCorrection();renderSummary();alert("Correction Request Admin कडे पाठवण्यात आली.")}
 function renderDistrictOperatorRegistrations(){
@@ -1410,11 +1430,28 @@ function renderDistrictCorrection(){if(session.type!=="district")return;let a=fo
 function sendCorrectionToAdmin(id){if(session.type!=="district")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.district!==session.district||x.status!=="Correction Approval Pending")return;x.status="Correction Sent for Approval";x.correctionSentAt=new Date().toISOString();x.correctionSentBy=session.username;save(a);renderDistrictCorrection();renderAdminCorrection();renderPending();renderForms();renderSummary();alert("Correction Request Admin कडे approval साठी पाठवण्यात आली.")}
 function renderAdminCorrection(){if(session.type!=="admin")return;let a=forms().filter(x=>x.status==="Correction Sent for Approval");$("adminCorrectionBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.correctionRemark||"-")+"</td><td><button class='s' onclick=\"acceptCorrection('"+x.id+"')\">Accept</button><button class='p' onclick=\"view('"+x.id+"')\">View</button></td></tr>").join("")||"<tr><td colspan='7'>Correction Request उपलब्ध नाही.</td></tr>"}
 function acceptCorrection(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.status!=="Correction Sent for Approval")return;x.status="Accepted";x.correctionAcceptedAt=new Date().toISOString();x.correctionAcceptedBy=session.username;save(a);renderAdminCorrection();renderAccepted();renderForms();renderPending();alert("Correction Request Admin कडून Accept झाली.")}
-function requestDelete(id){if(session.type!=="district"&&session.type!=="operator")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.district!==session.district||(session.type==="operator"&&x.mobile!==session.operatorMobile))return;let remark=prompt("Entry Delete करण्याचे कारण / Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Delete Remark लिहिणे अनिवार्य आहे.");return}x.previousStatusBeforeDelete=x.status;x.status="Delete Requested";x.deleteRemark=remark;x.deleteRequestedAt=new Date().toISOString();x.deleteRequestedBy=session.username;save(a);renderForms();renderPending();alert("Delete Request Admin कडे पाठवण्यात आली.")}
+function requestDelete(id){
+ if(session.type!=="district")return;
+ let a=forms(),x=a.find(z=>z.id===id);
+ if(!x||x.district!==session.district||x.status==="Delete Requested")return;
+ let remark=prompt("Entry Delete करण्याचे कारण / Remark लिहा:");
+ if(remark===null)return;
+ remark=remark.trim();
+ if(!remark){alert("Delete Remark लिहिणे अनिवार्य आहे.");return}
+ if(!confirm("ही Delete Request Remark सह Admin कडे पाठवायची आहे का?"))return;
+ x.previousStatusBeforeDelete=x.status;
+ x.status="Delete Requested";
+ x.deleteRemark=remark;
+ x.deleteRequestedAt=new Date().toISOString();
+ x.deleteRequestedBy=session.username;
+ save(a);
+ renderForms();renderAccepted();renderAdminAccepted();renderPending();renderSummary();
+ alert("Delete Request Admin कडे पाठवण्यात आली. Admin तपासून Accept किंवा Reject करेल.");
+}
 function renderAdminDelete(){if(session.type!=="admin")return;let a=forms().filter(x=>x.status==="Delete Requested");$("adminDeleteBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.deleteRemark||"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button><button class='s' onclick=\"approveDelete('"+x.id+"')\">Accept</button><button class='d' onclick=\"rejectDelete('"+x.id+"')\">Reject</button></td></tr>").join("")||"<tr><td colspan='7'>Delete Request उपलब्ध नाही.</td></tr>"}
 function getDeletedForms(){try{const v=JSON.parse(localStorage.getItem("deletedForms")||"[]");return Array.isArray(v)?v:[]}catch(e){return []}}
 function saveDeletedForms(a){localStorage.setItem("deletedForms",JSON.stringify(a))}
-function approveDelete(id){if(session.type!=="admin")return;let a=forms(),i=a.findIndex(x=>x.id===id);if(i<0||a[i].status!=="Delete Requested")return;if(!confirm("ही Delete Request Approve करून Entry कायमची Delete करायची आहे का?"))return;let x=a[i],now=new Date().toISOString(),da=getDeletedForms();let deletedEntry={id:x.id,reference:x.reference,district:x.district,assembly:x.assembly,taluka:x.taluka,name:x.name,status:"Deleted",deletedAt:now,deletedBy:session.username};try{da.push(deletedEntry);saveDeletedForms(da)}catch(e){alert("Delete Archive सेव्ह करता आले नाही. Entry Delete करण्यात आलेली नाही.");return}a.splice(i,1);save(a);if(x.source==="Operator Registration"&&x.mobile){saveOperatorAccounts(getOperatorAccounts().filter(op=>op.mobile!==x.mobile));}renderAdminDelete();renderAdmin();renderForms();renderAccepted();renderPending();renderAdminAccepted();renderAdminCorrection();renderSummary();alert("Delete Request Accept झाली आणि Entry Delete करण्यात आली.")}
+function approveDelete(id){if(session.type!=="admin")return;let a=forms(),i=a.findIndex(x=>x.id===id);if(i<0||a[i].status!=="Delete Requested")return;if(!confirm("ही Delete Request Approve करून Entry कायमची Delete करायची आहे का?"))return;let x=a[i],now=new Date().toISOString(),da=getDeletedForms();let deletedEntry={id:x.id,reference:x.reference,district:x.district,assembly:x.assembly,taluka:x.taluka,name:x.name,mobile:x.mobile,status:"Deleted",deleteRemark:x.deleteRemark||"",deleteRequestedAt:x.deleteRequestedAt||"",deleteRequestedBy:x.deleteRequestedBy||"",deletedAt:now,deletedBy:session.username};try{da.push(deletedEntry);saveDeletedForms(da)}catch(e){alert("Delete Archive सेव्ह करता आले नाही. Entry Delete करण्यात आलेली नाही.");return}a.splice(i,1);save(a);if(x.source==="Operator Registration"&&x.mobile){saveOperatorAccounts(getOperatorAccounts().filter(op=>op.mobile!==x.mobile));}renderAdminDelete();renderAdmin();renderForms();renderAccepted();renderPending();renderAdminAccepted();renderAdminCorrection();renderSummary();alert("Delete Request Accept झाली आणि Entry Delete करण्यात आली.")}
 function rejectDelete(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.status!=="Delete Requested")return;let remark=prompt("Delete Request Reject करण्याचे कारण / Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Reject Remark लिहिणे अनिवार्य आहे.");return}x.status=x.previousStatusBeforeDelete||"Accepted";x.deleteRejectRemark=remark;x.deleteRejectedAt=new Date().toISOString();x.deleteRejectedBy=session.username;save(a);renderAdminDelete();renderAdmin();renderForms();renderAccepted();renderPending();renderAdminAccepted();renderAdminCorrection();renderSummary();alert("Delete Request Reject करण्यात आली. Entry कायम ठेवण्यात आली.")}
 
 function getElectionBranchPasswords(){try{const v=JSON.parse(localStorage.getItem(ELECTION_BRANCH_PASSWORD_KEY)||"{}");return v&&typeof v==="object"?v:{}}catch(e){return {}}}
@@ -1465,6 +1502,10 @@ function renderAdmin(){
 
 function view(id){
  let x=forms().find(z=>z.id===id);if(!x)return;
+ // Strict view access: Admin can view all; District only own district; Operator only own form.
+ if(session.type==="operator" && !(x.district===session.district && x.mobile===session.operatorMobile)){alert("आपल्याला फक्त स्वतःचा Form View करता येईल.");return;}
+ if(session.type==="district" && x.district!==session.district){alert("आपल्याला फक्त आपल्या जिल्ह्यातील Form View करता येईल.");return;}
+ if(session.type!=="admin"&&session.type!=="district"&&session.type!=="operator")return;
  let media="";
  if(x.photo)media+="<div style='margin-top:12px'><b>Photo:</b><br><img class='photo' src='"+x.photo+"'></div>";
  if(x.proof){
@@ -1614,9 +1655,15 @@ function renderAdminAccepted(){
    return dx-dy||assemblyNo(x.assembly)-assemblyNo(y.assembly)||String(x.assembly||"").localeCompare(String(y.assembly||""),"mr");
  });
  if(session.type!=="admin"){
-   $("adminAcceptedBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district||"-")+"</td><td>"+esc(x.assembly||"-")+"</td><td>"+esc(x.taluka||"-")+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.mobile||"-")+"</td></tr>").join("")||"<tr><td colspan='6'>Accepted Forms उपलब्ध नाहीत.</td></tr>";
+   $("adminAcceptedBody").innerHTML=a.map((x,i)=>{
+     let actions="<button class='p' onclick=\"view('"+x.id+"')\">View</button>";
+     if(session.type==="district" && x.district===session.district && x.status==="Accepted"){
+       actions+=" <button class='d' onclick=\"requestDelete('"+x.id+"')\">Delete Request</button>";
+     }
+     return "<tr><td>"+(i+1)+"</td><td>"+esc(x.district||"-")+"</td><td>"+esc(x.assembly||"-")+"</td><td>"+esc(x.taluka||"-")+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.mobile||"-")+"</td><td>"+actions+"</td></tr>";
+   }).join("")||"<tr><td colspan='7'>Accepted Forms उपलब्ध नाहीत.</td></tr>";
    let th=$("adminAcceptedBody")?.closest("table")?.querySelector("thead tr");
-   if(th)th.innerHTML="<th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>Mobile Number</th>";
+   if(th)th.innerHTML="<th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>Mobile Number</th><th>Action</th>";
    return;
  }
  let th=$("adminAcceptedBody")?.closest("table")?.querySelector("thead tr");
