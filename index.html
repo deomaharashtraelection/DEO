@@ -1512,7 +1512,18 @@ function view(id){
    let isPdf=/^data:application\/pdf/i.test(x.proof);
    media+="<div style='margin-top:12px'><b>Identity Proof:</b><br><button class='p' type='button' onclick=\"viewFile('"+x.proof+"','"+(isPdf?"pdf":"image")+"')\">View Identity Proof</button></div>";
  }
- $("modalContent").innerHTML="<div class='grid'>"+[["Reference",x.reference],["Status",x.status],["District",x.district],["Assembly",x.assembly],["Taluka",x.taluka],["Operator",x.name],["Gender",x.gender], ["DOB / Age",x.dob+" / "+x.age],["Joining Date",x.joiningDate||"-"],["Experience (Years)",x.experience??"-"],["PIN",x.pin],["Email",x.email],["Mobile",x.mobile],["WhatsApp",x.whatsapp]].map(v=>"<div><b>"+v[0]+":</b> "+esc(v[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(x.address)+"</p>"+(x.status==="Rejected"&&x.rejectRemark?"<p style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff1f2;color:#991b1b'><b>Reject Remark:</b><br>"+esc(x.rejectRemark)+"</p>":"")+media;$("modal").classList.remove("hidden")
+ let summary="";
+ if(session.type==="admin"){
+   summary="<div style='margin-top:18px;padding:16px;border:2px solid #2563eb;border-radius:10px;background:#eff6ff'><h3 style='margin:0 0 12px'>📋 Form Summary</h3><div class='grid'>"+
+   [["Reference",x.reference||"-"],["Status",x.status||"-"],["District",x.district||"-"],["Assembly Constituency",x.assembly||"-"],["Taluka",x.taluka||"-"],["Operator Name",x.name||"-"],["Mobile Number",x.mobile||"-"],["Gender",x.gender||"-"],["DOB / Age",(x.dob||"-")+" / "+(x.age||"-")],["Joining Date",x.joiningDate||"-"],["Experience (Years)",x.experience??"-"],["PIN",x.pin||"-"],["Email",x.email||"-"],["WhatsApp",x.whatsapp||"-"]].map(v=>"<div><b>"+v[0]+":</b> "+esc(v[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(x.address||"-")+"</p>"+
+   (x.districtRemark?"<p><b>District Remark:</b><br>"+esc(x.districtRemark)+"</p>":"")+
+   (x.adminRemark?"<p><b>Admin Remark:</b><br>"+esc(x.adminRemark)+"</p>":"")+
+   (x.deleteRemark?"<p><b>Delete Request Remark:</b><br>"+esc(x.deleteRemark)+"</p>":"")+
+   (x.deleteRejectRemark?"<p><b>Delete Reject Remark:</b><br>"+esc(x.deleteRejectRemark)+"</p>":"")+"</div>";
+ }
+ $("modalContent").innerHTML="<div class='grid'>"+[["Reference",x.reference], ["Status",x.status], ["District",x.district], ["Assembly",x.assembly], ["Taluka",x.taluka], ["Operator",x.name], ["Gender",x.gender], ["DOB / Age",(x.dob||"-")+" / "+(x.age||"-")], ["Joining Date",x.joiningDate||"-"], ["Experience (Years)",x.experience??"-"], ["PIN",x.pin], ["Email",x.email], ["Mobile",x.mobile], ["WhatsApp",x.whatsapp]].map(v=>"<div><b>"+v[0]+":</b> "+esc(v[1]||"-")+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(x.address||"-")+"</p>"+
+ (x.status==="Rejected"&&x.rejectRemark?"<p style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff1f2;color:#991b1b'><b>Reject Remark:</b><br>"+esc(x.rejectRemark)+"</p>":"")+summary+media;
+ $("modal").classList.remove("hidden");
 }
 function viewFile(data,type){
  let w=window.open("","_blank");if(!w){alert("View करण्यासाठी नवीन window उघडण्याची परवानगी द्या.");return}
