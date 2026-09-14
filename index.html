@@ -364,6 +364,16 @@ body.operator-login #dashboardButtons > .dash-action:not(#dashWrap_operatorPresi
 body{font-size:18px!important}
 </style>
 
+<style id="accepted-forms-all-logins">
+body.admin-login #dashWrap_adminAccepted,
+body.district-login #dashWrap_adminAccepted,
+body.operator-login #dashWrap_adminAccepted{display:block!important}
+</style>
+<style id="accepted-forms-visible-all-logins-final">
+body.admin-login #dashWrap_adminAccepted,
+body.district-login #dashWrap_adminAccepted,
+body.operator-login #dashWrap_adminAccepted{display:block!important}
+</style>
 </head>
 <body>
 
@@ -392,7 +402,7 @@ body{font-size:18px!important}
       <h2 style="margin:0">Registration Form</h2>
       <button class="m" type="button" onclick="closeOperatorRegistration()">Back to Login</button>
     </div>
-    <div class="notice">Operator Registration फॉर्ममधील माहिती District Login मधील Data Entry Form प्रमाणेच आहे. Registration पूर्ण झाल्यानंतर Mobile Number हा Operator User ID आणि Registration वेळी सेट केलेला Password वापरून Operator Login करता येईल.</div>
+    <div class="notice">Registration पूर्ण झाल्यानंतर Mobile Number हा Operator User ID आणि Registration वेळी सेट केलेला Password वापरून Operator Login करता येईल.</div>
     <form id="operatorRegistrationForm" onsubmit="event.preventDefault();previewOperatorRegistration()">
       <div class="grid">
         <div><label>District *</label><select id="regDistrict" required onchange="loadRegistrationAssemblies()"></select></div>
@@ -403,6 +413,8 @@ body{font-size:18px!important}
         <div><label>Education *</label><select id="regEducation" required><option value="">Select</option><option value="10वी">10वी</option><option value="12वी">12वी</option><option value="पदवी">पदवी</option><option value="पदव्युत्तर">पदव्युत्तर</option><option value="डिप्लोमा">डिप्लोमा</option><option value="ITI">ITI</option><option value="इतर">इतर</option></select></div>
         <div><label>Date of Birth *</label><input id="regDob" type="date" required onchange="regAgeCalc()"></div>
         <div><label>Age</label><input id="regAge" readonly></div>
+        <div><label>Joining Date *</label><input id="regJoiningDate" type="date" required onchange="regExperienceCalc()"></div>
+        <div><label>Experience (Years)</label><input id="regExperience" readonly placeholder="0 ते 40 वर्षे"></div>
         <div><label>Home Address (Marathi) *</label><textarea id="regAddress" required></textarea></div>
         <div><label>PIN Code (6 digit) *</label><input id="regPin" maxlength="6" pattern="[0-9]{6}" required></div>
         <div><label>Email *</label><input id="regEmail" type="email" required></div>
@@ -482,7 +494,7 @@ body{font-size:18px!important}
 <section id="districtOperatorReg" class="card hidden"><h2>Registration Forms</h2><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference</th><th>Operator</th><th>Mobile / User ID</th><th>Assembly</th><th>Taluka</th><th>Status</th><th>Action</th></tr></thead><tbody id="districtOperatorRegBody"></tbody></table></div></section>
 <section id="districtCorrection" class="card hidden"><h2>Correction Requests</h2><div class="wrap"><table><thead><tr><th>Reference</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Request Remark</th><th>Action</th></tr></thead><tbody id="districtCorrectionBody"></tbody></table></div></section>
 <section id="adminSentByDistrict" class="card hidden">
-<h2>→ Sent by District</h2>
+<h2>→ Forwarded to Admin by District</h2>
 <div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>District Remark</th><th>Forward Date & Time</th><th>Forwarded By</th><th>Action</th></tr></thead><tbody id="adminSentByDistrictBody"></tbody></table></div>
 </section>
 <section id="admin" class="card hidden"><h2>Admin Approval Panel</h2><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Action</th></tr></thead><tbody id="adminBody"></tbody></table></div></section>
@@ -795,6 +807,19 @@ function regAgeCalc(){
   if(m<0||(m===0&&n.getDate()<b.getDate()))a--;
   $("regAge").value=a>=0?a:"";
 }
+function regExperienceCalc(){
+  const el=$("regJoiningDate"),out=$("regExperience");
+  if(!el||!out)return;
+  if(!el.value){out.value="";return;}
+  const j=new Date(el.value+"T00:00:00"),today=new Date();
+  today.setHours(0,0,0,0);
+  if(isNaN(j.getTime())||j>today){out.value="";return;}
+  let y=today.getFullYear()-j.getFullYear();
+  const ann=new Date(today.getFullYear(),j.getMonth(),j.getDate());
+  if(today<ann)y--;
+  if(y<0){out.value="";return;}
+  out.value=y;
+}
 function validateRegistrationAge(){
   const dob=$("regDob").value;
   if(!dob)return false;
@@ -828,7 +853,7 @@ function openRegistrationPhotoCrop(){
 }
 
 function collectOperatorRegistration(){
-  return {district:$("regDistrict").value,assembly:$("regAssembly").value,taluka:$("regTaluka").value,name:$("regName").value.trim(),gender:$("regGender").value,education:$("regEducation").value,dob:$("regDob").value,age:$("regAge").value,address:$("regAddress").value.trim(),pin:$("regPin").value.trim(),email:$("regEmail").value.trim(),mobile:$("regMobile").value.trim(),whatsapp:$("regWhatsapp").value.trim(),photo:regPhotoData,proof:regProofData,password:$("regPassword").value};
+  return {district:$("regDistrict").value,assembly:$("regAssembly").value,taluka:$("regTaluka").value,name:$("regName").value.trim(),gender:$("regGender").value,education:$("regEducation").value,dob:$("regDob").value,age:$("regAge").value,joiningDate:$("regJoiningDate").value,experience:$("regExperience").value,address:$("regAddress").value.trim(),pin:$("regPin").value.trim(),email:$("regEmail").value.trim(),mobile:$("regMobile").value.trim(),whatsapp:$("regWhatsapp").value.trim(),photo:regPhotoData,proof:regProofData,password:$("regPassword").value};
 }
 function getLatestRejectedOperatorRegistration(mobile){
   return forms().filter(x=>x.source==="Operator Registration"&&x.mobile===mobile&&x.status==="Rejected")
@@ -847,7 +872,7 @@ function loadRejectedOperatorRegistration(){
   const attempts=getOperatorRegistrationAttempts(x);
   if(attempts>=3){alert("या Operator साठी Registration च्या 3 संधी पूर्ण झाल्या आहेत. आता District Login / Admin कडून Data Entry करता येईल.");return}
   $("regDistrict").value=x.district;loadRegistrationAssemblies();$("regAssembly").value=x.assembly;loadRegistrationTalukas();$("regTaluka").value=x.taluka;
-  $("regName").value=x.name||"";$("regGender").value=x.gender||"";$("regEducation").value=x.education||"";$("regDob").value=x.dob||"";$("regAge").value=x.age||"";
+  $("regName").value=x.name||"";$("regGender").value=x.gender||"";$("regEducation").value=x.education||"";$("regDob").value=x.dob||"";$("regAge").value=x.age||"";$("regJoiningDate").value=x.joiningDate||"";$("regExperience").value=x.experience??"";
   $("regAddress").value=x.address||"";$("regPin").value=x.pin||"";$("regEmail").value=x.email||"";
   $("regMobile").value=x.mobile||"";$("regWhatsapp").value=x.whatsapp||"";
   regPhotoData=x.photo||"";regProofData=x.proof||"";
@@ -859,6 +884,15 @@ function loadRejectedOperatorRegistration(){
 function previewOperatorRegistration(){
   if(!$("operatorRegistrationForm").reportValidity())return;
   if(!validateRegistrationAge())return;
+  regExperienceCalc();
+  const jd=$("regJoiningDate").value, exp=Number($("regExperience").value);
+  if(!jd){alert("Joining Date प्रविष्ट करणे आवश्यक आहे.");return;}
+  const joining=new Date(jd+"T00:00:00");
+  const today=new Date(); today.setHours(0,0,0,0);
+  if(joining>today){alert("Joining Date भविष्यातील असू शकत नाही.");return;}
+  const dob=$("regDob").value;
+  if(dob && joining<new Date(dob+"T00:00:00")){alert("Joining Date ही Date of Birth नंतरची असणे आवश्यक आहे.");return;}
+  if(!Number.isFinite(exp)||exp<0||exp>40){alert("Experience 0 ते 40 वर्षांच्या दरम्यान असणे आवश्यक आहे.");return;}
   const d=collectOperatorRegistration();
   if(d.password!==$("regPasswordConfirm").value){alert("Password आणि Confirm Password समान असणे आवश्यक आहे.");return}
   const rejected=getLatestRejectedOperatorRegistration(d.mobile);
@@ -869,7 +903,7 @@ function previewOperatorRegistration(){
   d.reRegistrationAttempts=rejected?getOperatorRegistrationAttempts(rejected):0;
   regPreviewData=d;
   const attemptText=rejected?"<p class='notice'><b>Registration Attempt:</b> "+(d.reRegistrationAttempts+1)+" / 3</p>":"<p class='notice'><b>Registration Attempt:</b> 1 / 3</p>";
-  $("modalContent").innerHTML=attemptText+"<div class='grid'>"+[["District",d.district],["Assembly",d.assembly],["Taluka",d.taluka],["Operator",d.name],["Gender",d.gender], ["DOB / Age",d.dob+" / "+d.age],["PIN",d.pin],["Email",d.email],["Mobile / User ID",d.mobile],["WhatsApp",d.whatsapp]].map(x=>"<div><b>"+x[0]+":</b> "+esc(x[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(d.address)+"</p>"+(d.photo?"<img class='photo' src='"+d.photo+"'>":"")+"<br><button class='s' onclick='saveOperatorRegistration()'>Confirm & Register</button><button class='m' onclick='closeModal()'>Back</button>";
+  $("modalContent").innerHTML=attemptText+"<div class='grid'>"+[["District",d.district],["Assembly",d.assembly],["Taluka",d.taluka],["Operator",d.name],["Gender",d.gender], ["DOB / Age",d.dob+" / "+d.age],["Joining Date",d.joiningDate],["Experience (Years)",d.experience],["PIN",d.pin],["Email",d.email],["Mobile / User ID",d.mobile],["WhatsApp",d.whatsapp]].map(x=>"<div><b>"+x[0]+":</b> "+esc(x[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(d.address)+"</p>"+(d.photo?"<img class='photo' src='"+d.photo+"'>":"")+"<br><button class='s' onclick='saveOperatorRegistration()'>Confirm & Register</button><button class='m' onclick='closeModal()'>Back</button>";
   $("modal").classList.remove("hidden");
 }
 async function saveOperatorRegistration(){
@@ -893,7 +927,7 @@ async function saveOperatorRegistration(){
     }else{
       if(accounts.some(x=>x.mobile===d.mobile)){alert("हा Mobile Number आधीच Operator User ID म्हणून नोंदणीकृत आहे.");return}
       const dc=String(DATA[d.district]?.code||"00").padStart(2,"0"),ac=String(assemblyNo(d.assembly)).padStart(3,"0"),dd=String(now.getDate()).padStart(2,"0"),mm=String(now.getMonth()+1).padStart(2,"0"),yyyy=now.getFullYear();
-      const form={id:(window.crypto&&crypto.randomUUID)?crypto.randomUUID():("reg-"+Date.now()+"-"+Math.random().toString(36).slice(2)),reference:"D"+dc+"-"+ac+"-"+dd+"-"+mm+"-"+yyyy,district:d.district,assembly:d.assembly,taluka:d.taluka,name:d.name,gender:d.gender,dob:d.dob,age:d.age,address:d.address,pin:d.pin,email:d.email,mobile:d.mobile,whatsapp:d.whatsapp,photo:d.photo,proof:d.proof,status:"Pending at District",createdAt:createdAt,source:"Operator Registration",registrationAttempts:1};
+      const form={id:(window.crypto&&crypto.randomUUID)?crypto.randomUUID():("reg-"+Date.now()+"-"+Math.random().toString(36).slice(2)),reference:"D"+dc+"-"+ac+"-"+dd+"-"+mm+"-"+yyyy,district:d.district,assembly:d.assembly,taluka:d.taluka,name:d.name,gender:d.gender,dob:d.dob,age:d.age,address:d.address,pin:d.pin,email:d.email,mobile:d.mobile,whatsapp:d.whatsapp,joiningDate:d.joiningDate,experience:d.experience,photo:d.photo,proof:d.proof,status:"Pending at District",createdAt:createdAt,source:"Operator Registration",registrationAttempts:1};
       if(form.photo&&/^data:image\//i.test(form.photo))form.photo=await compressImageData(form.photo,800,1000,0.78);
       if(form.proof&&/^data:image\//i.test(form.proof))form.proof=await compressImageData(form.proof,1000,1200,0.72);
       a.push(form);save(a);
@@ -1300,14 +1334,23 @@ if(x.source==="Operator Registration"){
 }
 save(a);renderAdmin();renderAdminSentByDistrict();renderAdminCorrection();renderPending();renderForms();renderSummary();alert("Form Reject करण्यात आला. Remark सेव्ह करण्यात आला.")}
 function loadAcceptedDistricts(){
- let sel=$("approvedDistrict");if(!sel)return;
- let cur=sel.value,ds=LOGINS.slice().sort((a,b)=>Number(a.district_code)-Number(b.district_code));
- sel.innerHTML='<option value="">-- सर्व 36 जिल्हे --</option>'+ds.map(x=>"<option value=\""+esc(x.district)+"\">"+esc(x.district)+"</option>").join("");
- if(ds.some(x=>x.district===cur))sel.value=cur;
+  let sel=$("approvedDistrict");if(!sel)return;
+  let cur=sel.value;
+  let ds=LOGINS.slice().sort((a,b)=>Number(a.district_code)-Number(b.district_code));
+  sel.innerHTML='<option value="">-- सर्व 36 जिल्हे --</option>'+ds.map(x=>"<option value=\""+esc(x.district)+"\">"+esc(x.district)+"</option>").join("");
+  if(cur && ds.some(x=>x.district===cur))sel.value=cur; else sel.value="";
 }
 function renderAccepted(){
  let q=($("approvedSearch").value||"").toLowerCase(),formType=$("approvedFormType")?.value||"",district=$("approvedDistrict")?.value||"";
- let a=scoped().filter(x=>x.status==="Accepted");
+ const districtSelect=$("approvedDistrict");
+ if(districtSelect){
+   const current=districtSelect.value;
+   const districts=Object.keys(DATA).sort((a,b)=>a.localeCompare(b,"mr"));
+   districtSelect.innerHTML='<option value="">-- सर्व जिल्हे --</option>'+districts.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join("");
+   districtSelect.value=districts.includes(current)?current:"";
+   district=districtSelect.value||"";
+ }
+ let a=forms().filter(x=>x.status==="Accepted");
  if(formType==="electionBranch")a=a.filter(x=>x.assembly==="जिल्हा निवडणूक शाखा");
  if(formType==="assembly")a=a.filter(x=>x.assembly!=="जिल्हा निवडणूक शाखा");
  if(district)a=a.filter(x=>x.district===district);
@@ -1332,12 +1375,17 @@ function forwardOperatorRegistration(id){
   if(session.type!=="district")return;
   let a=forms(),x=a.find(z=>z.id===id);
   if(!x||x.source!=="Operator Registration"||x.district!==session.district||x.status!=="Pending at District")return;
-  let remark=prompt("District Login Remark लिहा:");
-  if(remark===null)return; remark=remark.trim();
-  if(!remark){alert("District Login Remark लिहिणे आवश्यक आहे.");return}
-  x.districtRemark=remark; x.districtReviewedAt=new Date().toISOString(); x.districtReviewedBy=session.username; x.status="Forwarded to Admin";
-  save(a); renderDistrictOperatorRegistrations(); renderAdmin(); renderAdminSentByDistrict(); renderForms(); renderPending(); renderSummary();
-  alert("Operator Registration Admin कडे Approval साठी Forward करण्यात आले.");
+  if(!confirm("हा Registration Form योग्य आहे. Admin कडे Forward करायचा आहे का?"))return;
+  let remark=prompt("District Login Remark (ऐच्छिक) लिहा:");
+  if(remark===null)return;
+  remark=remark.trim();
+  x.districtRemark=remark;
+  x.districtReviewedAt=new Date().toISOString();
+  x.districtReviewedBy=session.username;
+  x.status="Forwarded to Admin";
+  save(a);
+  renderDistrictOperatorRegistrations(); renderAdmin(); renderAdminSentByDistrict(); renderForms(); renderPending(); renderSummary();
+  alert("योग्य Registration Form Admin कडे Approval साठी Forward करण्यात आला.");
 }
 function districtRejectOperatorRegistration(id){
   if(session.type!=="district")return;
@@ -1382,14 +1430,14 @@ function renderAdminOperatorPassword(){if(session.type!=="admin")return;let sel=
 function setOperatorPassword(mobile){if(session.type!=="admin")return;let input=$("opPass_"+mobile);if(!input)return;let p=input.value.trim();if(!isStrongPassword(p)){alert("Strong Password आवश्यक आहे: किमान 8 characters, 1 uppercase, 1 lowercase, 1 number आणि 1 special character.");return}let a=getOperatorAccounts(),x=a.find(z=>z.mobile===mobile);if(!x)return;x.password=p;saveOperatorAccounts(a);alert("Operator Password यशस्वीरीत्या सेट केला. Password: "+p);renderAdminOperatorPassword()}
 function renderAdminSentByDistrict(){
   if(session.type!=="admin")return;
-  let a=forms().filter(x=>x.source==="Operator Registration"&&(x.status==="Forwarded to Admin"||(x.status==="Rejected"&&x.districtRejectedAt)));
+  let a=forms().filter(x=>x.source==="Operator Registration"&&x.status==="Forwarded to Admin");
   a.sort((x,y)=>new Date(x.districtReviewedAt||0)-new Date(y.districtReviewedAt||0));
-  $("adminSentByDistrictBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.districtRemark||x.districtRejectRemark||"-")+"</td><td>"+(x.districtReviewedAt||x.districtRejectedAt?new Date(x.districtReviewedAt||x.districtRejectedAt).toLocaleString("en-IN"):"-")+"</td><td>"+esc(x.districtReviewedBy||x.districtRejectedBy||"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+(x.districtRejectedAt?"<button class='d' onclick=\"adminFinalRejectOperatorRegistration('"+x.id+"')\">Reject</button>":"<button class='s' onclick=\"adminFinalApproveOperatorRegistration('"+x.id+"')\">Approve</button><button class='d' onclick=\"adminFinalRejectOperatorRegistration('"+x.id+"')\">Reject</button>")+"</td></tr>").join("")||"<tr><td colspan='9'>Sent by District Forms उपलब्ध नाहीत.</td></tr>";
+  $("adminSentByDistrictBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.districtRemark||x.districtRejectRemark||"-")+"</td><td>"+(x.districtReviewedAt||x.districtRejectedAt?new Date(x.districtReviewedAt||x.districtRejectedAt).toLocaleString("en-IN"):"-")+"</td><td>"+esc(x.districtReviewedBy||x.districtRejectedBy||"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+(x.districtRejectedAt?"<button class='d' onclick=\"adminFinalRejectOperatorRegistration('"+x.id+"')\">Reject</button>":"<button class='s' onclick=\"adminFinalApproveOperatorRegistration('"+x.id+"')\">Approve</button><button class='d' onclick=\"adminFinalRejectOperatorRegistration('"+x.id+"')\">Reject</button>")+"</td></tr>").join("")||"<tr><td colspan='9'>District कडून Admin कडे Forward केलेले Forms उपलब्ध नाहीत.</td></tr>";
 }
 function adminFinalApproveOperatorRegistration(id){
   if(session.type!=="admin")return;
   let a=forms(),x=a.find(z=>z.id===id);
-  if(!x||x.source!=="Operator Registration"||!((x.status==="Forwarded to Admin")||(x.status==="Rejected"&&x.districtRejectedAt)))return;
+  if(!x||x.source!=="Operator Registration"||x.status!=="Forwarded to Admin")return;
   let remark=prompt("Admin Final Decision Remark लिहा:");
   if(remark===null)return;
   remark=remark.trim();
@@ -1401,7 +1449,7 @@ function adminFinalApproveOperatorRegistration(id){
 function adminFinalRejectOperatorRegistration(id){
   if(session.type!=="admin")return;
   let a=forms(),x=a.find(z=>z.id===id);
-  if(!x||x.source!=="Operator Registration"||!((x.status==="Forwarded to Admin")||(x.status==="Rejected"&&x.districtRejectedAt)))return;
+  if(!x||x.source!=="Operator Registration"||x.status!=="Forwarded to Admin")return;
   let remark=prompt("Admin Final Reject Remark लिहा:");
   if(remark===null)return;
   remark=remark.trim();
@@ -1423,7 +1471,7 @@ function view(id){
    let isPdf=/^data:application\/pdf/i.test(x.proof);
    media+="<div style='margin-top:12px'><b>Identity Proof:</b><br><button class='p' type='button' onclick=\"viewFile('"+x.proof+"','"+(isPdf?"pdf":"image")+"')\">View Identity Proof</button></div>";
  }
- $("modalContent").innerHTML="<div class='grid'>"+[["Reference",x.reference],["Status",x.status],["District",x.district],["Assembly",x.assembly],["Taluka",x.taluka],["Operator",x.name],["Gender",x.gender], ["DOB / Age",x.dob+" / "+x.age],["PIN",x.pin],["Email",x.email],["Mobile",x.mobile],["WhatsApp",x.whatsapp]].map(v=>"<div><b>"+v[0]+":</b> "+esc(v[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(x.address)+"</p>"+(x.status==="Rejected"&&x.rejectRemark?"<p style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff1f2;color:#991b1b'><b>Reject Remark:</b><br>"+esc(x.rejectRemark)+"</p>":"")+media;$("modal").classList.remove("hidden")
+ $("modalContent").innerHTML="<div class='grid'>"+[["Reference",x.reference],["Status",x.status],["District",x.district],["Assembly",x.assembly],["Taluka",x.taluka],["Operator",x.name],["Gender",x.gender], ["DOB / Age",x.dob+" / "+x.age],["Joining Date",x.joiningDate||"-"],["Experience (Years)",x.experience??"-"],["PIN",x.pin],["Email",x.email],["Mobile",x.mobile],["WhatsApp",x.whatsapp]].map(v=>"<div><b>"+v[0]+":</b> "+esc(v[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(x.address)+"</p>"+(x.status==="Rejected"&&x.rejectRemark?"<p style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff1f2;color:#991b1b'><b>Reject Remark:</b><br>"+esc(x.rejectRemark)+"</p>":"")+media;$("modal").classList.remove("hidden")
 }
 function viewFile(data,type){
  let w=window.open("","_blank");if(!w){alert("View करण्यासाठी नवीन window उघडण्याची परवानगी द्या.");return}
@@ -1437,16 +1485,11 @@ if(x.source==="Operator Registration"&&x.status==="Registration Attempts Exhaust
 
 
 function loadAdminAcceptedDistricts(){
- let sel=$("adminAcceptedDistrict");if(!sel)return;
- if(session.type!=="admin"){
-   sel.innerHTML='<option value="'+esc(session.district)+'">'+esc(session.district)+'</option>';
-   sel.value=session.district;
-   return;
- }
- let ds=LOGINS.slice().sort((a,b)=>Number(a.district_code)-Number(b.district_code));
- let cur=sel.value;
- sel.innerHTML='<option value="">-- सर्व 36 जिल्हे --</option>'+ds.map(x=>"<option value=\""+esc(x.district)+"\">"+esc(x.district)+"</option>").join("");
- if(ds.some(x=>x.district===cur))sel.value=cur;
+  let sel=$("adminAcceptedDistrict");if(!sel)return;
+  let cur=sel.value;
+  let ds=LOGINS.slice().sort((a,b)=>Number(a.district_code)-Number(b.district_code));
+  sel.innerHTML='<option value="">-- सर्व 36 जिल्हे --</option>'+ds.map(x=>"<option value=\""+esc(x.district)+"\">"+esc(x.district)+"</option>").join("");
+  if(cur && ds.some(x=>x.district===cur))sel.value=cur; else sel.value="";
 }
 function assemblyNo(v){
  let s=String(v||"").trim().split("-")[0].trim();
@@ -1557,7 +1600,7 @@ function renderAdminPresidentList(){
 }
 function renderAdminAccepted(){
  if(!["admin","district","operator"].includes(session.type))return;
- let district=session.type==="admin"?$("adminAcceptedDistrict").value:session.district;
+ let district=$("adminAcceptedDistrict")?.value||"";
  let formType=$("adminAcceptedFormType")?.value||"";
  let q=($("adminAcceptedSearch").value||"").toLowerCase();
  let a=forms().filter(x=>x.status==="Accepted");
