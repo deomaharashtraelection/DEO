@@ -701,13 +701,79 @@ const DATA={"अकोला": {"code": "5", "assemblies": ["२८- अको�
 const LOGINS=[{"district": "अकोला", "district_code": "05", "username": "D05", "password": "Maha@0526"}, {"district": "अमरावती", "district_code": "07", "username": "D07", "password": "Maha@0726"}, {"district": "अहमदनगर", "district_code": "27", "username": "D27", "password": "Maha@2726"}, {"district": "उस्मानाबाद", "district_code": "30", "username": "D30", "password": "Maha@3026"}, {"district": "औरंगाबाद", "district_code": "19", "username": "D19", "password": "Maha@1926"}, {"district": "कोल्हापूर", "district_code": "35", "username": "D35", "password": "Maha@3526"}, {"district": "गडचिरोली", "district_code": "12", "username": "D12", "password": "Maha@1226"}, {"district": "गोंदिया", "district_code": "11", "username": "D11", "password": "Maha@1126"}, {"district": "चंद्रपूर", "district_code": "13", "username": "D13", "password": "Maha@1326"}, {"district": "जळगाव", "district_code": "03", "username": "D03", "password": "Maha@0326"}, {"district": "जालना", "district_code": "18", "username": "D18", "password": "Maha@1826"}, {"district": "ठाणे", "district_code": "22", "username": "D22", "password": "Maha@2226"}, {"district": "धुळे", "district_code": "02", "username": "D02", "password": "Maha@0226"}, {"district": "नंदुरबार", "district_code": "01", "username": "D01", "password": "Maha@0126"}, {"district": "नांदेड", "district_code": "15", "username": "D15", "password": "Maha@1526"}, {"district": "नागपूर", "district_code": "09", "username": "D09", "password": "Maha@0926"}, {"district": "नाशिक", "district_code": "20", "username": "D20", "password": "Maha@2026"}, {"district": "परभणी", "district_code": "17", "username": "D17", "password": "Maha@1726"}, {"district": "पालघर", "district_code": "21", "username": "D21", "password": "Maha@2126"}, {"district": "पुणे", "district_code": "26", "username": "D26", "password": "Maha@2626"}, {"district": "बीड", "district_code": "28", "username": "D28", "password": "Maha@2826"}, {"district": "बुलढाणा", "district_code": "04", "username": "D04", "password": "Maha@0426"}, {"district": "भंडारा", "district_code": "10", "username": "D10", "password": "Maha@1026"}, {"district": "मुंबई उपनगर", "district_code": "23", "username": "D23", "password": "Maha@2326"}, {"district": "मुंबई शहर", "district_code": "24", "username": "D24", "password": "Maha@2426"}, {"district": "यवतमाळ", "district_code": "14", "username": "D14", "password": "Maha@1426"}, {"district": "रत्‍नागिरी", "district_code": "33", "username": "D33", "password": "Maha@3326"}, {"district": "रायगड", "district_code": "25", "username": "D25", "password": "Maha@2526"}, {"district": "लातूर", "district_code": "29", "username": "D29", "password": "Maha@2926"}, {"district": "वर्धा", "district_code": "08", "username": "D08", "password": "Maha@0826"}, {"district": "वाशिम", "district_code": "06", "username": "D06", "password": "Maha@0626"}, {"district": "सांगली", "district_code": "36", "username": "D36", "password": "Maha@3626"}, {"district": "सातारा", "district_code": "32", "username": "D32", "password": "Maha@3226"}, {"district": "सिंधुदुर्ग", "district_code": "34", "username": "D34", "password": "Maha@3426"}, {"district": "सोलापूर", "district_code": "31", "username": "D31", "password": "Maha@3126"}, {"district": "हिंगोली", "district_code": "16", "username": "D16", "password": "Maha@1626"}];
 const ADMIN={username:"admin",password:"admin123"};
 const KEY="maharashtraDistrictFormsV1";
+const SUPABASE_URL="https://gkooyusburhispbwgzgr.supabase.co";
+const SUPABASE_KEY="sb_publishable_j_bRcMJ2lSuMD0dTdgBWxw_AQStY-Nx";
 let session={type:"",district:"",username:""},photoData="",proofData="",previewData=null;
+let formsCache=[];
+let supabaseReady=false;
+let supabaseSyncPromise=Promise.resolve();
+
+function localForms(){try{const v=JSON.parse(localStorage.getItem(KEY)||"[]");return Array.isArray(v)?v:[]}catch(e){return []}}
+function forms(){return formsCache.length?formsCache:localForms()}
+function setFormsCache(a){formsCache=Array.isArray(a)?a:[];try{localStorage.setItem(KEY,JSON.stringify(formsCache))}catch(e){}}
+function supabaseHeaders(extra){return Object.assign({"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json"},extra||{})}
+function formRow(x){return {form_id:String(x.id||x.reference||("F"+Date.now()+Math.random().toString(36).slice(2,8))),reference:x.reference||null,district:x.district||null,username:x.username||null,mobile:x.mobile||null,status:x.status||null,source:x.source||null,payload:x,updated_at:new Date().toISOString()}}
+async function fetchRemoteForms(){
+  const r=await fetch(SUPABASE_URL+"/rest/v1/portal_forms?select=form_id,payload,reference,district,username,mobile,status,source&order=updated_at.asc",{headers:supabaseHeaders()});
+  if(!r.ok)throw new Error("Supabase read HTTP "+r.status);
+  const rows=await r.json();
+  return rows.map(r=>r.payload).filter(Boolean);
+}
+async function upsertRemoteForms(items){
+  if(!items.length)return;
+  const rows=items.map(formRow);
+  const r=await fetch(SUPABASE_URL+"/rest/v1/portal_forms?on_conflict=form_id",{method:"POST",headers:supabaseHeaders({"Prefer":"resolution=merge-duplicates,return=minimal"}),body:JSON.stringify(rows)});
+  if(!r.ok)throw new Error("Supabase write HTTP "+r.status+" "+await r.text());
+}
+async function deleteRemoteForms(ids){
+  const clean=[...new Set(ids.map(String))].filter(Boolean); if(!clean.length)return;
+  const q=clean.map(v=>encodeURIComponent(v)).join(",");
+  const r=await fetch(SUPABASE_URL+"/rest/v1/portal_forms?form_id=in.("+q+")",{method:"DELETE",headers:supabaseHeaders({"Prefer":"return=minimal"})});
+  if(!r.ok)throw new Error("Supabase delete HTTP "+r.status+" "+await r.text());
+}
+async function syncFormChanges(oldArr,newArr){
+  const oldMap=new Map(oldArr.map(x=>[String(x.id||x.reference),x]));
+  const newMap=new Map(newArr.map(x=>[String(x.id||x.reference),x]));
+  const changed=[];
+  for(const [id,x] of newMap){const old=oldMap.get(id);if(!old||JSON.stringify(old)!==JSON.stringify(x))changed.push(x)}
+  const deleted=[...oldMap.keys()].filter(id=>!newMap.has(id));
+  await upsertRemoteForms(changed);
+  await deleteRemoteForms(deleted);
+}
+async function loadFormsFromSupabase(){
+  try{
+    const local=localForms();
+    const remote=await fetchRemoteForms();
+    const remoteMap=new Map(remote.map(x=>[String(x.id||x.reference),x]));
+    const merged=remote.slice();
+    const missing=[];
+    for(const x of local){const id=String(x.id||x.reference);if(!remoteMap.has(id)){merged.push(x);missing.push(x)}}
+    if(missing.length)await upsertRemoteForms(missing);
+    setFormsCache(merged);supabaseReady=true;showSupabaseStatus();return merged;
+  }catch(e){
+    console.error("Supabase sync:",e);setFormsCache(localForms());supabaseReady=false;
+    showSupabaseStatus();
+    return formsCache;
+  }
+}
+function showSupabaseStatus(){
+  let el=$("supabaseSyncStatus");
+  if(!el){el=document.createElement("div");el.id="supabaseSyncStatus";el.style.cssText="position:fixed;right:14px;bottom:14px;z-index:9999;padding:8px 12px;border-radius:8px;background:#dcfce7;color:#166534;font-size:12px;font-weight:700;box-shadow:0 2px 8px #0002;display:none";document.body.appendChild(el)}
+  el.textContent=supabaseReady?"✓ Central Database Connected":"⚠ Offline / Local Data";el.style.display="block";setTimeout(()=>{el.style.display="none"},2500);
+}
+
+function save(a){
+  const old=forms();
+  setFormsCache(a);
+  // Keep the UI fast; serialize remote writes so multiple workflow actions cannot race.
+  supabaseSyncPromise=supabaseSyncPromise.then(()=>syncFormChanges(old,formsCache)).catch(e=>console.error("Supabase sync save:",e));
+  return a;
+}
+
 let regPhotoData="",regProofData="",regPreviewData=null,registrationCropMode=false;
 const OPERATOR_KEY="maharashtraOperatorAccountsV1";const DISTRICT_PASSWORD_KEY="maharashtraDistrictPasswordsV1";const ELECTION_BRANCH_PASSWORD_KEY="maharashtraElectionBranchPasswordsV1";
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
-const forms=()=>JSON.parse(localStorage.getItem(KEY)||"[]");
-const save=a=>localStorage.setItem(KEY,JSON.stringify(a));
 const LOGIN_STATUS_KEY="maharashtraLoginStatusV1";
 function getLoginStatuses(){try{const v=JSON.parse(localStorage.getItem(LOGIN_STATUS_KEY)||"{}");return v&&typeof v==="object"?v:{}}catch(e){return {}}}
 function saveLoginStatuses(a){localStorage.setItem(LOGIN_STATUS_KEY,JSON.stringify(a))}
@@ -1050,11 +1116,12 @@ function updatePresidentButtons(){
   const el=$(id);
   if(el){el.classList.remove("hidden");el.style.setProperty("display","block","important")}
 }
-function enter(){
+async function enter(){
  document.body.classList.toggle("district-login",session.type==="district");
  document.body.classList.toggle("operator-login",session.type==="operator");
  document.body.classList.toggle("admin-login",session.type==="admin");
  persistSession();
+ await loadFormsFromSupabase();
  $("loginPage").classList.add("hidden");$("app").classList.remove("hidden");
  $("currentDistrict").textContent=session.type==="admin"?"सर्व 36 जिल्हे":session.district;
  $("session").textContent=(session.type==="admin"?"Login":session.type==="operator"?"Operator Login":"District Login")+" • "+session.username;
@@ -1147,7 +1214,7 @@ function showLoginRoute(){
   $("operatorRegistrationPage").classList.add("hidden");
   $("loginPage").classList.remove("hidden");
 }
-function restoreRoute(){
+async function restoreRoute(){
   if(!restoreSession()){
     showLoginRoute();
     if(location.hash!=="#/login"){
@@ -1178,6 +1245,7 @@ function restoreRoute(){
   
   $("district").value=session.type==="admin"?"Admin":session.district;
   loadAssemblies();
+  await loadFormsFromSupabase();
   
   const route=currentRoute();
   const defaultRoute="dashboard";
