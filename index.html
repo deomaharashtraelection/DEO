@@ -1988,3 +1988,232 @@ window.addEventListener("load", function(){
   }
 });
 </script>
+
+<script>
+/* ============================================================
+   CENTRAL PASSWORD SYNC
+   Password values are stored centrally in the existing Supabase
+   portal_forms table so a password set on one computer is
+   available on other computers. All existing UI/workflow remains
+   unchanged; localStorage is retained as a cache/fallback.
+   ============================================================ */
+(function(){
+  "use strict";
+
+  const AUTH_SOURCE = "auth_passwords_v1";
+  const AUTH_PREFIX = "AUTH-PASS-";
+
+  function authReady(){
+    return !!(window.CENTRAL_DB_READY && window.centralDb && window.SUPABASE_CONFIG);
+  }
+
+  function authRow(key, data){
+    return {
+      reference: AUTH_PREFIX + key,
+      district: "",
+      username: key,
+      payload: { kind:"password_sync", key:key, data:data },
+      updated_at: new Date().toISOString(),
+      mobile: null,
+      status: "active",
+      source: AUTH_SOURCE,
+      form_id: key
+    };
+  }
+
+  async function centralAuthUpsert(key, data){
+    if(!authReady()) return false;
+    try{
+      const db = window.centralDb;
+      const table = window.SUPABASE_CONFIG.table;
+      const {data:found,error:findError} = await db
+        .from(table)
+        .select("id")
+        .eq("source", AUTH_SOURCE)
+        .eq("form_id", key)
+        .limit(1);
+
+      if(findError) throw findError;
+
+      const row = authRow(key,data);
+      if(found && found.length){
+        const {error} = await db.from(table).update(row).eq("id",found[0].id);
+        if(error) throw error;
+      }else{
+        const {error} = await db.from(table).insert(row);
+        if(error) throw error;
+      }
+      return true;
+    }catch(e){
+      console.error("Central password save failed:",e);
+      return false;
+    }
+  }
+
+  async function centralAuthLoad(){
+    if(!authReady()) return;
+    try{
+      const db = window.centralDb;
+      const table = window.SUPABASE_CONFIG.table;
+      const {data,error} = await db
+        .from(table)
+        .select("id,form_id,payload,updated_at")
+        .eq("source", AUTH_SOURCE);
+
+      if(error) throw error;
+
+      const remote = {};
+      (data||[]).forEach(row=>{
+        const p=row && row.payload;
+        if(p && p.kind==="password_sync" && p.key) remote[p.key]=p.data;
+      });
+
+      /* Admin password: central value wins; otherwise migrate local value. */
+      const localAdmin = localStorage.getItem(ADMIN_PASSWORD_KEY);
+      if(Object.prototype.hasOwnProperty.call(remote,"admin")){
+        localStorage.setItem(ADMIN_PASSWORD_KEY,String(remote.admin));
+      }else if(localAdmin!==null){
+        await centralAuthUpsert("admin",localAdmin);
+      }
+
+      /* District passwords: merge central values over local cache. */
+      let localDistrict={};
+      try{ localDistrict=JSON.parse(localStorage.getItem(DISTRICT_PASSWORD_KEY)||"{}")||{}; }catch(e){}
+      if(remote.districts && typeof remote.districts==="object"){
+        localDistrict=Object.assign({},localDistrict,remote.districts);
+        localStorage.setItem(DISTRICT_PASSWORD_KEY,JSON.stringify(localDistrict));
+      }else if(Object.keys(localDistrict).length){
+        await centralAuthUpsert("districts",localDistrict);
+      }
+
+      /* Election branch passwords. */
+      let localBranch={};
+      try{ localBranch=JSON.parse(localStorage.getItem(ELECTION_BRANCH_PASSWORD_KEY)||"{}")||{}; }catch(e){}
+      if(remote.electionBranches && typeof remote.electionBranches==="object"){
+        localBranch=Object.assign({},localBranch,remote.electionBranches);
+        localStorage.setItem(ELECTION_BRANCH_PASSWORD_KEY,JSON.stringify(localBranch));
+      }else if(Object.keys(localBranch).length){
+        await centralAuthUpsert("electionBranches",localBranch);
+      }
+
+      /* Operator accounts: central accounts are merged by mobile number. */
+      let localOps=[];
+      try{ localOps=JSON.parse(localStorage.getItem(OPERATOR_KEY)||"[]"); }catch(e){ localOps=[]; }
+      if(!Array.isArray(localOps)) localOps=[];
+
+      if(Array.isArray(remote.operators)){
+        const byMobile={};
+        localOps.forEach(x=>{if(x && x.mobile)byMobile[String(x.mobile)]=x;});
+        remote.operators.forEach(x=>{
+          if(!x || !x.mobile)return;
+          const k=String(x.mobile);
+          byMobile[k]=Object.assign({},byMobile[k]||{},x);
+        });
+        localOps=Object.keys(byMobile).map(k=>byMobile[k]);
+        localStorage.setItem(OPERATOR_KEY,JSON.stringify(localOps));
+      }else if(localOps.length){
+        await centralAuthUpsert("operators",localOps);
+      }
+
+      /* Refresh visible password/admin lists if the dashboard is already open. */
+      try{
+        if(typeof renderAdminOperatorPassword==="function")renderAdminOperatorPassword();
+        if(typeof renderAdminDistrictPassword==="function")renderAdminDistrictPassword();
+        if(typeof renderAdminElectionBranchPassword==="function")renderAdminElectionBranchPassword();
+      }catch(e){}
+    }catch(e){
+      console.warn("Central password load failed; local cache will be used.",e);
+    }
+  }
+
+  /* Keep existing local functions/UI, but add central persistence. */
+  const originalSetAdminPassword = window.setAdminPassword;
+  window.setAdminPassword = function(p){
+    if(typeof originalSetAdminPassword==="function")originalSetAdminPassword(p);
+    else localStorage.setItem(ADMIN_PASSWORD_KEY,p);
+    centralAuthUpsert("admin",String(p));
+  };
+
+  const originalSaveDistrictPasswords = window.saveDistrictPasswords;
+  window.saveDistrictPasswords = function(a){
+    if(typeof originalSaveDistrictPasswords==="function")originalSaveDistrictPasswords(a);
+    else localStorage.setItem(DISTRICT_PASSWORD_KEY,JSON.stringify(a));
+    centralAuthUpsert("districts",a||{});
+  };
+
+  const originalSaveElectionBranchPasswords = window.saveElectionBranchPasswords;
+  window.saveElectionBranchPasswords = function(a){
+    if(typeof originalSaveElectionBranchPasswords==="function")originalSaveElectionBranchPasswords(a);
+    else localStorage.setItem(ELECTION_BRANCH_PASSWORD_KEY,JSON.stringify(a));
+    centralAuthUpsert("electionBranches",a||{});
+  };
+
+  const originalSaveOperatorAccounts = window.saveOperatorAccounts;
+  window.saveOperatorAccounts = function(a){
+    if(typeof originalSaveOperatorAccounts==="function")originalSaveOperatorAccounts(a);
+    else localStorage.setItem(OPERATOR_KEY,JSON.stringify(a));
+    centralAuthUpsert("operators",Array.isArray(a)?a:[]);
+  };
+
+  /*
+   * The existing set-password functions are overridden only to make
+   * their successful local change central. Their validation, buttons,
+   * messages and workflow remain the same.
+   */
+  window.setDistrictPassword = function(district,code){
+    if(session.type!=="admin")return;
+    let input=$("distPass_"+code);if(!input)return;
+    let p=input.value.trim();
+    if(!isStrongPassword(p)){
+      alert("Strong Password आवश्यक आहे: किमान 8 characters, 1 uppercase, 1 lowercase, 1 number आणि 1 special character.");
+      return;
+    }
+    let a=getDistrictPasswords();
+    a[district]=p;
+    saveDistrictPasswords(a);
+    centralAuthUpsert("districts",a);
+    alert("District Password यशस्वीरीत्या सेट केला. Password: "+p);
+    renderAdminDistrictPassword();
+  };
+
+  window.setElectionBranchPassword = function(district,code){
+    if(session.type!=="admin")return;
+    let input=$("branchPass_"+code);if(!input)return;
+    let p=input.value.trim();
+    if(!isStrongPassword(p)){
+      alert("Strong Password आवश्यक आहे: किमान 8 characters, 1 uppercase, 1 lowercase, 1 number आणि 1 special character.");
+      return;
+    }
+    let a=getElectionBranchPasswords();
+    a[district]=p;
+    saveElectionBranchPasswords(a);
+    centralAuthUpsert("electionBranches",a);
+    alert("जिल्हा निवडणूक शाखेचा Password यशस्वीरीत्या सेट केला. Password: "+p);
+    renderAdminElectionBranchPassword();
+  };
+
+  window.setOperatorPassword = function(mobile){
+    if(session.type!=="admin")return;
+    let input=$("opPass_"+mobile);if(!input)return;
+    let p=input.value.trim();
+    if(!isStrongPassword(p)){
+      alert("Strong Password आवश्यक आहे: किमान 8 characters, 1 uppercase, 1 lowercase, 1 number आणि 1 special character.");
+      return;
+    }
+    let a=getOperatorAccounts(),x=a.find(z=>z.mobile===mobile);
+    if(!x)return;
+    x.password=p;
+    saveOperatorAccounts(a);
+    centralAuthUpsert("operators",a);
+    alert("Operator Password यशस्वीरीत्या सेट केला. Password: "+p);
+    renderAdminOperatorPassword();
+  };
+
+  /* Load central passwords as soon as the page is ready. */
+  if(document.readyState==="loading"){
+    window.addEventListener("load",function(){ centralAuthLoad(); });
+  }else{
+    centralAuthLoad();
+  }
+})();
+</script>
