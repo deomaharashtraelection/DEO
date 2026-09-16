@@ -408,13 +408,14 @@ body.operator-login #dashWrap_adminAccepted{display:block!important}
         <div><label>District *</label><select id="regDistrict" required onchange="loadRegistrationAssemblies()"></select></div>
         <div><label>Assembly Constituency *</label><select id="regAssembly" required onchange="loadRegistrationTalukas()"></select></div>
         <div><label>Taluka *</label><select id="regTaluka" required></select></div>
-        <div><label>Operator Full Name (Marathi) *</label><input id="regName" required></div>
+        <div><label>Operator Full Name (English) *</label><input id="regNameEnglish" required autocomplete="name" oninput="autoFillMarathiName()"></div>
+        <div><label>Operator Full Name (Marathi) *</label><input id="regName" required autocomplete="name"></div>
         <div><label>Gender *</label><select id="regGender" required><option value="">Select</option><option value="पुरुष">पुरुष</option><option value="स्त्री">स्त्री</option></select></div>
         <div><label>Education *</label><select id="regEducation" required><option value="">Select</option><option value="10वी">10वी</option><option value="12वी">12वी</option><option value="पदवी">पदवी</option><option value="पदव्युत्तर">पदव्युत्तर</option><option value="डिप्लोमा">डिप्लोमा</option><option value="ITI">ITI</option><option value="इतर">इतर</option></select></div>
         <div><label>Date of Birth *</label><input id="regDob" type="date" required onchange="regAgeCalc()"></div>
         <div><label>Age</label><input id="regAge" readonly></div>
         <div><label>Joining Date *</label><input id="regJoiningDate" type="date" required onchange="regExperienceCalc()"></div>
-        <div><label>Experience (Years)</label><input id="regExperience" readonly placeholder="0 ते 40 वर्षे"></div>
+        <div><label>Experience (Year, Month, Days)</label><input id="regExperience" readonly placeholder="0 Year, 0 Month, 0 Days"></div>
         <div><label>Home Address (Marathi) *</label><textarea id="regAddress" required></textarea></div>
         <div><label>PIN Code (6 digit) *</label><input id="regPin" maxlength="6" pattern="[0-9]{6}" required></div>
         <div><label>Email *</label><input id="regEmail" type="email" required></div>
@@ -422,11 +423,13 @@ body.operator-login #dashWrap_adminAccepted{display:block!important}
         <div><label>WhatsApp Number (10 digit) *</label><input id="regWhatsapp" maxlength="10" pattern="[0-9]{10}" required></div>
         <div><label>Passport Size Photo *</label><input id="regPhoto" type="file" accept="image/*" required onchange="readRegistrationFile(this)"></div>
         <div><label>Identity Proof *</label><input id="regProof" type="file" accept=".pdf,.jpg,.jpeg,.png" required onchange="readRegistrationFile(this)"></div>
+        <div><label>Upload Signature *</label><input id="regSignature" type="file" accept="image/*" required onchange="readRegistrationFile(this)"></div>
         <div><label>Password *</label><input id="regPassword" type="password" minlength="6" required autocomplete="new-password"></div>
         <div><label>Confirm Password *</label><input id="regPasswordConfirm" type="password" minlength="6" required autocomplete="new-password"></div>
       </div>
       <div><img id="regPhotoPreview" class="photo hidden"><button id="regCropPhotoBtn" class="p hidden" type="button" onclick="openRegistrationPhotoCrop()">Crop Photo</button></div>
       <div id="regProofName" class="small"></div>
+      <div id="regSignatureName" class="small"></div>
       <button class="p" type="submit">Preview & Submit</button>
       <button class="w" type="button" onclick="loadRejectedOperatorRegistration()">Rejected Form / Re-Registration</button>
        <button class="m" type="button" onclick="clearRegistrationForm()">Clear</button>
@@ -746,7 +749,7 @@ const KEY="maharashtraDistrictFormsV1";
 const SESSION_TIMEOUT_MS=30*60*1000;
 let session={type:"",district:"",username:""},photoData="",proofData="",previewData=null;
 let sessionTimeoutTimer=null;
-let regPhotoData="",regProofData="",regPreviewData=null,registrationCropMode=false;
+let regPhotoData="",regProofData="",regSignatureData="",regPreviewData=null,registrationCropMode=false;
 const OPERATOR_KEY="maharashtraOperatorAccountsV1";const DISTRICT_PASSWORD_KEY="maharashtraDistrictPasswordsV1";const ELECTION_BRANCH_PASSWORD_KEY="maharashtraElectionBranchPasswordsV1";
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
@@ -1001,11 +1004,14 @@ function regExperienceCalc(){
   today.setHours(0,0,0,0);
   if(isNaN(j.getTime())||j>today){out.value="";return;}
   let y=today.getFullYear()-j.getFullYear();
-  const ann=new Date(today.getFullYear(),j.getMonth(),j.getDate());
-  if(today<ann)y--;
+  let m=today.getMonth()-j.getMonth();
+  let d=today.getDate()-j.getDate();
+  if(d<0){m--;d+=new Date(today.getFullYear(),today.getMonth(),0).getDate();}
+  if(m<0){y--;m+=12;}
   if(y<0){out.value="";return;}
-  out.value=y;
+  out.value=y+" Year, "+m+" Month, "+d+" Days";
 }
+
 function validateRegistrationAge(){
   const dob=$("regDob").value;
   if(!dob)return false;
@@ -1018,11 +1024,25 @@ function validateRegistrationAge(){
   }
   return true;
 }
+function autoFillMarathiName(){
+  const en=$("regNameEnglish"),mr=$("regName");
+  if(!en||!mr)return;
+  const text=en.value;
+  if(!text.trim()){mr.value="";return;}
+  mr.value=text.trim().split(/\s+/).map(transliterateMarathiWord).join(" ");
+}
+function transliterateMarathiWord(word){
+  const special={"sachin":"सचिन","rahul":"राहुल","rohit":"रोहित","amit":"अमित","anil":"अनिल","sunil":"सुनील","mahesh":"महेश","ramesh":"रमेश","suresh":"सुरेश","pravin":"प्रवीण","swapnil":"स्वप्नील","sanjay":"संजय","vijay":"विजय","ajay":"अजय","akash":"आकाश","vikas":"विकास","nikhil":"निखिल","pankaj":"पंकज","ganesh":"गणेश","dinesh":"दिनेश","shubham":"शुभम","shweta":"श्वेता","pooja":"पूजा","priya":"प्रिया","neha":"नेहा","kavita":"कविता","sunita":"सुनीता","anita":"अनिता","seema":"सीमा","sneha":"स्नेहा","smita":"स्मिता","vaibhav":"वैभव","sandip":"संदीप","sandeep":"संदीप","mangesh":"मंगेश","nilesh":"निलेश","milind":"मिलिंद","madhuri":"माधुरी","manisha":"मनीषा","ravi":"रवि","rajendra":"राजेंद्र","dattatray":"दत्तात्रय","shankar":"शंकर","prakash":"प्रकाश","deepak":"दीपक","yogesh":"योगेश","omkar":"ओंकार","suhas":"सुहास","vishal":"विशाल","vinod":"विनोद","vivek":"विवेक","sameer":"समीर","samir":"समीर","tejas":"तेजस","manoj":"मनोज","mohan":"मोहन","mukesh":"मुकेश","raj":"राज","rakesh":"राकेश","rutuja":"ऋतुजा","vaishnavi":"वैष्णवी","sakshi":"साक्षी","swati":"स्वाती","jyoti":"ज्योती","arti":"आरती","aarti":"आरती","meena":"मीना","rekha":"रेखा","asha":"आशा","usha":"उषा"};
+  const key=word.toLowerCase(); if(special[key])return special[key];
+  const map={"ksha":"क्ष","tra":"त्र","jna":"ज्ञ","shra":"श्र","chh":"छ","kh":"ख","gh":"घ","ch":"च","jh":"झ","th":"थ","dh":"ध","ph":"फ","bh":"भ","sh":"श","aa":"आ","ee":"ई","ii":"ई","oo":"ऊ","uu":"ऊ","ai":"ऐ","au":"औ","a":"अ","i":"इ","u":"उ","e":"ए","o":"ओ","k":"क","g":"ग","c":"क","j":"ज","t":"त","d":"द","n":"न","p":"प","b":"ब","m":"म","y":"य","r":"र","l":"ल","v":"व","w":"व","s":"स","h":"ह","f":"फ","q":"क","x":"क्स","z":"झ"};
+  let out="",i=0; while(i<word.length){let ok=false;for(const n of [4,3,2]){const part=word.slice(i,i+n).toLowerCase();if(map[part]){out+=map[part];i+=n;ok=true;break}}if(!ok){out+=word[i];i++;}} return out;
+}
 function readRegistrationFile(i){
   let f=i.files[0];if(!f)return;
   if(f.size>5*1024*1024){alert("फाईल 5 MB पेक्षा जास्त नसावी.");i.value="";return}
   let r=new FileReader();r.onload=()=>{
     if(i.id==="regPhoto"){regPhotoData=r.result;$("regPhotoPreview").src=regPhotoData;$("regPhotoPreview").classList.remove("hidden");$("regCropPhotoBtn").classList.remove("hidden")}
+    else if(i.id==="regSignature"){regSignatureData=r.result;$("regSignatureName").textContent="Selected: "+f.name}
     else{regProofData=r.result;$("regProofName").textContent="Selected: "+f.name}
   };r.readAsDataURL(f)
 }
@@ -1039,7 +1059,7 @@ function openRegistrationPhotoCrop(){
 }
 
 function collectOperatorRegistration(){
-  return {district:$("regDistrict").value,assembly:$("regAssembly").value,taluka:$("regTaluka").value,name:$("regName").value.trim(),gender:$("regGender").value,education:$("regEducation").value,dob:$("regDob").value,age:$("regAge").value,joiningDate:$("regJoiningDate").value,experience:$("regExperience").value,address:$("regAddress").value.trim(),pin:$("regPin").value.trim(),email:$("regEmail").value.trim(),mobile:$("regMobile").value.trim(),whatsapp:$("regWhatsapp").value.trim(),photo:regPhotoData,proof:regProofData,password:$("regPassword").value};
+  return {district:$("regDistrict").value,assembly:$("regAssembly").value,taluka:$("regTaluka").value,name:$("regName").value.trim(),nameEnglish:$("regNameEnglish").value.trim(),gender:$("regGender").value,education:$("regEducation").value,dob:$("regDob").value,age:$("regAge").value,joiningDate:$("regJoiningDate").value,experience:$("regExperience").value,address:$("regAddress").value.trim(),pin:$("regPin").value.trim(),email:$("regEmail").value.trim(),mobile:$("regMobile").value.trim(),whatsapp:$("regWhatsapp").value.trim(),photo:regPhotoData,proof:regProofData,signature:regSignatureData,password:$("regPassword").value};
 }
 function getLatestRejectedOperatorRegistration(mobile){
   return forms().filter(x=>x.source==="Operator Registration"&&x.mobile===mobile&&x.status==="Rejected")
@@ -1058,12 +1078,13 @@ function loadRejectedOperatorRegistration(){
   const attempts=getOperatorRegistrationAttempts(x);
   if(attempts>=3){alert("या Operator साठी Registration च्या 3 संधी पूर्ण झाल्या आहेत. आता District Login / Admin कडून Data Entry करता येईल.");return}
   $("regDistrict").value=x.district;loadRegistrationAssemblies();$("regAssembly").value=x.assembly;loadRegistrationTalukas();$("regTaluka").value=x.taluka;
-  $("regName").value=x.name||"";$("regGender").value=x.gender||"";$("regEducation").value=x.education||"";$("regDob").value=x.dob||"";$("regAge").value=x.age||"";$("regJoiningDate").value=x.joiningDate||"";$("regExperience").value=x.experience??"";
+  $("regNameEnglish").value=x.nameEnglish||"";$("regName").value=x.name||"";$("regGender").value=x.gender||"";$("regEducation").value=x.education||"";$("regDob").value=x.dob||"";$("regAge").value=x.age||"";$("regJoiningDate").value=x.joiningDate||"";$("regExperience").value=x.experience??"";
   $("regAddress").value=x.address||"";$("regPin").value=x.pin||"";$("regEmail").value=x.email||"";
   $("regMobile").value=x.mobile||"";$("regWhatsapp").value=x.whatsapp||"";
-  regPhotoData=x.photo||"";regProofData=x.proof||"";
+  regPhotoData=x.photo||"";regProofData=x.proof||"";regSignatureData=x.signature||"";
   if(regPhotoData){$("regPhotoPreview").src=regPhotoData;$("regPhotoPreview").classList.remove("hidden");$("regCropPhotoBtn").classList.remove("hidden")}
   if(regProofData)$("regProofName").textContent="Existing Identity Proof";
+  if(regSignatureData)$("regSignatureName").textContent="Existing Signature";
   $("regPassword").value="";$("regPasswordConfirm").value="";
   alert("Reject केलेला Form पुन्हा उपलब्ध झाला आहे. ही "+(attempts+1)+" वी Registration संधी आहे. माहिती दुरुस्त करून Preview & Submit करा.");
 }
@@ -1071,14 +1092,14 @@ function previewOperatorRegistration(){
   if(!$("operatorRegistrationForm").reportValidity())return;
   if(!validateRegistrationAge())return;
   regExperienceCalc();
-  const jd=$("regJoiningDate").value, exp=Number($("regExperience").value);
+  const jd=$("regJoiningDate").value, expText=$("regExperience").value;
   if(!jd){alert("Joining Date प्रविष्ट करणे आवश्यक आहे.");return;}
   const joining=new Date(jd+"T00:00:00");
   const today=new Date(); today.setHours(0,0,0,0);
   if(joining>today){alert("Joining Date भविष्यातील असू शकत नाही.");return;}
   const dob=$("regDob").value;
   if(dob && joining<new Date(dob+"T00:00:00")){alert("Joining Date ही Date of Birth नंतरची असणे आवश्यक आहे.");return;}
-  if(!Number.isFinite(exp)||exp<0||exp>40){alert("Experience 0 ते 40 वर्षांच्या दरम्यान असणे आवश्यक आहे.");return;}
+  if(!expText){alert("Experience calculate होणे आवश्यक आहे.");return;}
   const d=collectOperatorRegistration();
   if(d.password!==$("regPasswordConfirm").value){alert("Password आणि Confirm Password समान असणे आवश्यक आहे.");return}
   const rejected=getLatestRejectedOperatorRegistration(d.mobile);
@@ -1089,7 +1110,7 @@ function previewOperatorRegistration(){
   d.reRegistrationAttempts=rejected?getOperatorRegistrationAttempts(rejected):0;
   regPreviewData=d;
   const attemptText=rejected?"<p class='notice'><b>Registration Attempt:</b> "+(d.reRegistrationAttempts+1)+" / 3</p>":"<p class='notice'><b>Registration Attempt:</b> 1 / 3</p>";
-  $("modalContent").innerHTML=attemptText+"<div class='grid'>"+[["District",d.district],["Assembly",d.assembly],["Taluka",d.taluka],["Operator",d.name],["Gender",d.gender], ["DOB / Age",d.dob+" / "+d.age],["Joining Date",d.joiningDate],["Experience (Years)",d.experience],["PIN",d.pin],["Email",d.email],["Mobile / User ID",d.mobile],["WhatsApp",d.whatsapp]].map(x=>"<div><b>"+x[0]+":</b> "+esc(x[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(d.address)+"</p>"+(d.photo?"<img class='photo' src='"+d.photo+"'>":"")+"<br><button class='s' onclick='saveOperatorRegistration()'>Confirm & Register</button><button class='m' onclick='closeModal()'>Back</button>";
+  $("modalContent").innerHTML=attemptText+"<div class='grid'>"+[["District",d.district],["Assembly",d.assembly],["Taluka",d.taluka],["Operator Full Name (English)",d.nameEnglish],["Operator Full Name (Marathi)",d.name],["Gender",d.gender], ["DOB / Age",d.dob+" / "+d.age],["Joining Date",d.joiningDate],["Experience (Years)",d.experience],["PIN",d.pin],["Email",d.email],["Mobile / User ID",d.mobile],["WhatsApp",d.whatsapp]].map(x=>"<div><b>"+x[0]+":</b> "+esc(x[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(d.address)+"</p>"+(d.photo?"<img class='photo' src='"+d.photo+"'>":"")+"<br><button class='s' onclick='saveOperatorRegistration()'>Confirm & Register</button><button class='m' onclick='closeModal()'>Back</button>";
   $("modal").classList.remove("hidden");
 }
 async function saveOperatorRegistration(){
@@ -1105,6 +1126,7 @@ async function saveOperatorRegistration(){
       delete updated.reRegistrationId;delete updated.reRegistrationAttempts;
       if(updated.photo&&/^data:image\//i.test(updated.photo))updated.photo=await compressImageData(updated.photo,800,1000,0.78);
       if(updated.proof&&/^data:image\//i.test(updated.proof))updated.proof=await compressImageData(updated.proof,1000,1200,0.72);
+       if(updated.signature&&/^data:image\//i.test(updated.signature))updated.signature=await compressImageData(updated.signature,1000,500,0.80);
       a[a.findIndex(x=>x.id===existing.id)]=updated;save(a);
       const ai=accounts.findIndex(x=>x.mobile===d.mobile);
       if(ai>=0){accounts[ai].password=d.password;accounts[ai].district=d.district;accounts[ai].name=d.name;saveOperatorAccounts(accounts)}
@@ -1113,9 +1135,10 @@ async function saveOperatorRegistration(){
     }else{
       if(accounts.some(x=>x.mobile===d.mobile)){alert("हा Mobile Number आधीच Operator User ID म्हणून नोंदणीकृत आहे.");return}
       const dc=String(DATA[d.district]?.code||"00").padStart(2,"0"),ac=String(assemblyNo(d.assembly)).padStart(3,"0"),dd=String(now.getDate()).padStart(2,"0"),mm=String(now.getMonth()+1).padStart(2,"0"),yyyy=now.getFullYear();
-      const form={id:(window.crypto&&crypto.randomUUID)?crypto.randomUUID():("reg-"+Date.now()+"-"+Math.random().toString(36).slice(2)),reference:"D"+dc+"-"+ac+"-"+dd+"-"+mm+"-"+yyyy,district:d.district,assembly:d.assembly,taluka:d.taluka,name:d.name,gender:d.gender,dob:d.dob,age:d.age,address:d.address,pin:d.pin,email:d.email,mobile:d.mobile,whatsapp:d.whatsapp,joiningDate:d.joiningDate,experience:d.experience,photo:d.photo,proof:d.proof,status:"Pending at District",createdAt:createdAt,source:"Operator Registration",registrationAttempts:1};
+      const form={id:(window.crypto&&crypto.randomUUID)?crypto.randomUUID():("reg-"+Date.now()+"-"+Math.random().toString(36).slice(2)),reference:"D"+dc+"-"+ac+"-"+dd+"-"+mm+"-"+yyyy,district:d.district,assembly:d.assembly,taluka:d.taluka,name:d.name,nameEnglish:d.nameEnglish,gender:d.gender,dob:d.dob,age:d.age,address:d.address,pin:d.pin,email:d.email,mobile:d.mobile,whatsapp:d.whatsapp,joiningDate:d.joiningDate,experience:d.experience,photo:d.photo,proof:d.proof,signature:d.signature,status:"Pending at District",createdAt:createdAt,source:"Operator Registration",registrationAttempts:1};
       if(form.photo&&/^data:image\//i.test(form.photo))form.photo=await compressImageData(form.photo,800,1000,0.78);
       if(form.proof&&/^data:image\//i.test(form.proof))form.proof=await compressImageData(form.proof,1000,1200,0.72);
+       if(form.signature&&/^data:image\//i.test(form.signature))form.signature=await compressImageData(form.signature,1000,500,0.80);
       a.push(form);save(a);
       accounts.push({mobile:d.mobile,password:d.password,district:d.district,name:d.name,createdAt:createdAt});saveOperatorAccounts(accounts);
       closeModal();alert("Registration Successful! ✅\n\nUser ID: "+d.mobile+"\nForm Reference: "+form.reference+"\n\nआपला Form District Login User कडे आहे.\nDistrict Login User तपासून Admin कडे Approval साठी Forward करेल.");
@@ -1126,10 +1149,11 @@ async function saveOperatorRegistration(){
 }
 function clearRegistrationForm(){
   const f=$("operatorRegistrationForm");if(f)f.reset();
-  regPhotoData="";regProofData="";regPreviewData=null;
+  regPhotoData="";regProofData="";regSignatureData="";regPreviewData=null;
   if($("regPhotoPreview"))$("regPhotoPreview").classList.add("hidden");
   if($("regCropPhotoBtn"))$("regCropPhotoBtn").classList.add("hidden");
   if($("regProofName"))$("regProofName").textContent="";
+  if($("regSignatureName"))$("regSignatureName").textContent="";
   if($("regDistrict"))loadRegistrationDistricts();
 }
 
@@ -1718,13 +1742,13 @@ function view(id){
  let summary="";
  if(session.type==="admin"){
    summary="<div style='margin-top:18px;padding:16px;border:2px solid #2563eb;border-radius:10px;background:#eff6ff'><h3 style='margin:0 0 12px'>📋 Form Summary</h3><div class='grid'>"+
-   [["Reference",x.reference||"-"],["Status",x.status||"-"],["District",x.district||"-"],["Assembly Constituency",x.assembly||"-"],["Taluka",x.taluka||"-"],["Operator Name",x.name||"-"],["Mobile Number",x.mobile||"-"],["Gender",x.gender||"-"],["DOB / Age",(x.dob||"-")+" / "+(x.age||"-")],["Joining Date",x.joiningDate||"-"],["Experience (Years)",x.experience??"-"],["PIN",x.pin||"-"],["Email",x.email||"-"],["WhatsApp",x.whatsapp||"-"]].map(v=>"<div><b>"+v[0]+":</b> "+esc(v[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(x.address||"-")+"</p>"+
+   [["Reference",x.reference||"-"],["Status",x.status||"-"],["District",x.district||"-"],["Assembly Constituency",x.assembly||"-"],["Taluka",x.taluka||"-"],["Operator Full Name (English)",x.nameEnglish||"-"],["Operator Full Name (Marathi)",x.name||"-"],["Mobile Number",x.mobile||"-"],["Gender",x.gender||"-"],["DOB / Age",(x.dob||"-")+" / "+(x.age||"-")],["Joining Date",x.joiningDate||"-"],["Experience (Years)",x.experience??"-"],["PIN",x.pin||"-"],["Email",x.email||"-"],["WhatsApp",x.whatsapp||"-"]].map(v=>"<div><b>"+v[0]+":</b> "+esc(v[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(x.address||"-")+"</p>"+
    (x.districtRemark?"<p><b>District Remark:</b><br>"+esc(x.districtRemark)+"</p>":"")+
    (x.adminRemark?"<p><b>Admin Remark:</b><br>"+esc(x.adminRemark)+"</p>":"")+
    (x.deleteRemark?"<p><b>Delete Request Remark:</b><br>"+esc(x.deleteRemark)+"</p>":"")+
    (x.deleteRejectRemark?"<p><b>Delete Reject Remark:</b><br>"+esc(x.deleteRejectRemark)+"</p>":"")+"</div>";
  }
- $("modalContent").innerHTML="<div class='grid'>"+[["Reference",x.reference], ["Status",x.status], ["District",x.district], ["Assembly",x.assembly], ["Taluka",x.taluka], ["Operator",x.name], ["Gender",x.gender], ["DOB / Age",(x.dob||"-")+" / "+(x.age||"-")], ["Joining Date",x.joiningDate||"-"], ["Experience (Years)",x.experience??"-"], ["PIN",x.pin], ["Email",x.email], ["Mobile",x.mobile], ["WhatsApp",x.whatsapp]].map(v=>"<div><b>"+v[0]+":</b> "+esc(v[1]||"-")+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(x.address||"-")+"</p>"+
+ $("modalContent").innerHTML="<div class='grid'>"+[["Reference",x.reference], ["Status",x.status], ["District",x.district], ["Assembly",x.assembly], ["Taluka",x.taluka], ["Operator Full Name (English)",x.nameEnglish||"-"], ["Operator Full Name (Marathi)",x.name], ["Gender",x.gender], ["DOB / Age",(x.dob||"-")+" / "+(x.age||"-")], ["Joining Date",x.joiningDate||"-"], ["Experience (Years)",x.experience??"-"], ["PIN",x.pin], ["Email",x.email], ["Mobile",x.mobile], ["WhatsApp",x.whatsapp]].map(v=>"<div><b>"+v[0]+":</b> "+esc(v[1]||"-")+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(x.address||"-")+"</p>"+
  (x.status==="Rejected"&&x.rejectRemark?"<p style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff1f2;color:#991b1b'><b>Reject Remark:</b><br>"+esc(x.rejectRemark)+"</p>":"")+summary+media;
  $("modal").classList.remove("hidden");
 }
