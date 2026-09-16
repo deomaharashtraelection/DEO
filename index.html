@@ -1469,7 +1469,21 @@ function collect(){
 function preview(){
  if(!$("form").reportValidity())return;
  let d=collect(),old=$("editId").value?forms().find(x=>x.id===$("editId").value):null;
- if(old){d.reference=old.reference;if(session.type==="operator"&&old.status==="Accepted"){d.status="Correction Requested";d.operatorEdited=true}else if(session.type==="operator"){d.status="Approval Pending";d.operatorEdited=true}else{d.status=(old.status==="Correction Accepted"||old.status==="Registration Attempts Exhausted"?"Sent for Approval":old.status)}d.createdAt=old.createdAt}
+ if(old){
+   d.reference=old.reference;
+   if(session.type==="operator"&&old.status==="Accepted"){
+     // Operator स्वतःच्या Accepted Registration मध्ये दुरुस्ती केल्यास
+     // तोच Form पुन्हा District Login कडे तपासणीसाठी जाईल.
+     if(old.source==="Operator Registration"){
+       d={...old,...d,source:old.source,status:"Pending at District",operatorEdited:true,operatorEditedAt:new Date().toISOString()};
+     }else{
+       d.status="Approval Pending";
+       d.operatorEdited=true;
+     }
+   }else if(session.type==="operator"){d.status="Approval Pending";d.operatorEdited=true}
+   else{d.status=(old.status==="Correction Accepted"||old.status==="Registration Attempts Exhausted"?"Sent for Approval":old.status)}
+   d.createdAt=old.createdAt;
+ }
  previewData=d;
  $("modalContent").innerHTML="<div class='grid'>"+[["Reference",d.reference||"Submit नंतर"],["District",d.district],["Assembly",d.assembly],["Taluka",d.taluka],["Operator",d.name],["Gender",d.gender], ["DOB / Age",d.dob+" / "+d.age],["PIN",d.pin],["Email",d.email],["Mobile",d.mobile],["WhatsApp",d.whatsapp]].map(x=>"<div><b>"+x[0]+":</b> "+esc(x[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(d.address)+"</p>"+(d.photo?"<img class='photo' src='"+d.photo+"'>":"")+"<br><button class='s' onclick='saveEntry()'>Confirm & Submit</button><button class='m' onclick='closeModal()'>Back</button>";
  $("modal").classList.remove("hidden")
@@ -1597,6 +1611,9 @@ function renderAccepted(){
  a=a.slice().sort((x,y)=>{let dx=Number(LOGINS.find(d=>d.district===x.district)?.district_code||999),dy=Number(LOGINS.find(d=>d.district===y.district)?.district_code||999);return dx-dy||assemblyNo(x.assembly)-assemblyNo(y.assembly)||String(x.assembly||"").localeCompare(String(y.assembly||""),"mr")});
  $("approvedBody").innerHTML=a.map((x,i)=>{
    let actions="<button class='p' onclick=\"view('"+x.id+"')\">View</button>";
+   if(session.type==="operator" && x.district===session.district && x.mobile===session.operatorMobile && x.status==="Accepted"){
+     actions+=" <button class='w' onclick=\"edit('"+x.id+"')\">Edit</button>";
+   }
    if(session.type==="district" && x.district===session.district && x.status==="Accepted"){
      actions+=" <button class='d' onclick=\"requestDelete('"+x.id+"')\">Delete Request</button>";
    }
