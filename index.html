@@ -408,8 +408,8 @@ body.operator-login #dashWrap_adminAccepted{display:block!important}
         <div><label>District *</label><select id="regDistrict" required onchange="loadRegistrationAssemblies()"></select></div>
         <div><label>Assembly Constituency *</label><select id="regAssembly" required onchange="loadRegistrationTalukas()"></select></div>
         <div><label>Taluka *</label><select id="regTaluka" required></select></div>
-        <div><label>Operator Full Name (English) *</label><input id="regNameEnglish" required autocomplete="name" oninput="autoFillMarathiName()"></div>
-        <div><label>Operator Full Name (Marathi) *</label><input id="regName" required autocomplete="name"></div>
+        <div><label>Operator Full Name (English) *</label><input id="regNameEnglish" required autocomplete="name" lang="en" spellcheck="false" oninput="sanitizeEnglishName(this);autoFillMarathiName()"></div>
+        <div><label>Operator Full Name (Marathi) *</label><input id="regName" required autocomplete="name" lang="mr" spellcheck="false" oninput="sanitizeMarathiName(this)"></div>
         <div><label>Gender *</label><select id="regGender" required><option value="">Select</option><option value="पुरुष">पुरुष</option><option value="स्त्री">स्त्री</option></select></div>
         <div><label>Education *</label><select id="regEducation" required><option value="">Select</option><option value="10वी">10वी</option><option value="12वी">12वी</option><option value="पदवी">पदवी</option><option value="पदव्युत्तर">पदव्युत्तर</option><option value="डिप्लोमा">डिप्लोमा</option><option value="ITI">ITI</option><option value="इतर">इतर</option></select></div>
         <div><label>Date of Birth *</label><input id="regDob" type="date" required onchange="regAgeCalc()"></div>
@@ -532,7 +532,25 @@ body.operator-login #dashWrap_adminAccepted{display:block!important}
 </section>
 
 <section id="adminDelete" class="card hidden"><h2>→ Delete Requests</h2><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Delete Remark</th><th>Action</th></tr></thead><tbody id="adminDeleteBody"></tbody></table></div></section>
-<section id="adminPasswordMenu" class="card hidden"><h2>→ Password</h2><div style="margin:10px 0"><button class="p" onclick="tab('adminDistrictPassword')">District Login</button> <button class="p" onclick="tab('adminOperatorPassword')">Operator Login</button> <button class="p" onclick="tab('adminElectionBranchPassword')">जिल्हा निवडणूक शाखा</button> <button class="p" onclick="changeAdminPassword()">Admin Password Change</button> <button class="p" onclick="toggleRegistrationFormStatus()">Registration Form: <span id="registrationFormStatus">Enabled</span></button> <button class="p" onclick="tab('adminPasswordRequests')">Password Change Requests</button></div></section>
+<section id="adminPasswordMenu" class="card hidden">
+<h2>→ Password</h2>
+<div style="margin:10px 0"><button class="p" onclick="changeAdminPassword()">Admin Password Change</button> <button class="p" onclick="toggleRegistrationFormStatus()">Registration Form: <span id="registrationFormStatus">Enabled</span></button> <button class="p" onclick="tab('adminPasswordRequests')">Password Change Requests</button></div>
+
+<div class="wrap" style="margin-top:14px">
+<h3 style="margin:8px 0;color:#123b68">District Login</h3>
+<table><thead><tr><th>Sr.No.</th><th>Username</th><th>Operator</th><th>District</th><th>Assembly Constituency Name</th><th>Password</th><th>Status</th><th>Action</th></tr></thead><tbody id="adminAllDistrictPasswordBody"></tbody></table>
+</div>
+
+<div class="wrap" style="margin-top:18px">
+<h3 style="margin:8px 0;color:#123b68">Operator Login</h3>
+<table><thead><tr><th>Sr.No.</th><th>Username</th><th>Operator</th><th>District</th><th>Assembly Constituency Name</th><th>Password</th><th>Status</th><th>Action</th></tr></thead><tbody id="adminAllOperatorPasswordBody"></tbody></table>
+</div>
+
+<div class="wrap" style="margin-top:18px">
+<h3 style="margin:8px 0;color:#123b68">जिल्हा निवडणूक शाखा</h3>
+<table><thead><tr><th>Sr.No.</th><th>Username</th><th>Operator</th><th>District</th><th>Assembly Constituency Name</th><th>Password</th><th>Status</th><th>Action</th></tr></thead><tbody id="adminAllElectionBranchPasswordBody"></tbody></table>
+</div>
+</section>
 <section id="adminPasswordRequests" class="card hidden"><h2>→ Password Change Requests</h2><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Login Type</th><th>District</th><th>Username</th><th>New Password</th><th>Requested Date</th><th>Status</th><th>Action</th></tr></thead><tbody id="adminPasswordRequestsBody"></tbody></table></div></section>
 <section id="adminOperatorPassword" class="card hidden"><h2>→ Operator Login</h2><div style="margin:10px 0"><label>District</label> <select id="adminOperatorPasswordDistrict" onchange="renderAdminOperatorPassword()"><option value="">-- सर्व जिल्हे --</option></select></div><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Username</th><th>Operator</th><th>District</th><th>Assembly Constituency Name</th><th>Password</th><th>Status</th><th>Action</th></tr></thead><tbody id="adminOperatorPasswordBody"></tbody></table></div></section>
 
@@ -995,6 +1013,16 @@ function regAgeCalc(){
   let b=new Date($("regDob").value),n=new Date(),a=n.getFullYear()-b.getFullYear(),m=n.getMonth()-b.getMonth();
   if(m<0||(m===0&&n.getDate()<b.getDate()))a--;
   $("regAge").value=a>=0?a:"";
+  const joining=$("regJoiningDate");
+  if(joining && !isNaN(b.getTime())){
+    const minDate=new Date(b);
+    minDate.setFullYear(minDate.getFullYear()+18);
+    joining.min=minDate.toISOString().slice(0,10);
+    if(joining.value && new Date(joining.value+"T00:00:00")<minDate){
+      joining.value="";
+      $("regExperience").value="";
+    }
+  }
 }
 function regExperienceCalc(){
   const el=$("regJoiningDate"),out=$("regExperience");
@@ -1024,13 +1052,63 @@ function validateRegistrationAge(){
   }
   return true;
 }
+let marathiTransliterationTimer=null;
+let marathiTransliterationRequest=0;
+
+function sanitizeEnglishName(el){
+  if(!el)return;
+  const old=el.value;
+  const cleaned=old.replace(/[^A-Za-z ]/g, "").replace(/\s{2,}/g, " ");
+  if(old!==cleaned)el.value=cleaned;
+}
+function sanitizeMarathiName(el){
+  if(!el)return;
+  const old=el.value;
+  const cleaned=old.replace(/[^\u0900-\u097F ]/g, "").replace(/\s{2,}/g, " ");
+  if(old!==cleaned)el.value=cleaned;
+}
+
 function autoFillMarathiName(){
   const en=$("regNameEnglish"),mr=$("regName");
   if(!en||!mr)return;
   const text=en.value;
-  if(!text.trim()){mr.value="";return;}
-  mr.value=text.trim().split(/\s+/).map(transliterateMarathiWord).join(" ");
+  if(!text.trim()){
+    mr.value="";
+    return;
+  }
+
+  clearTimeout(marathiTransliterationTimer);
+  const requestId=++marathiTransliterationRequest;
+
+  // Google Input Tools transliteration needs a short pause so that
+  // the complete phonetic word/phrase can be converted correctly.
+  marathiTransliterationTimer=setTimeout(async()=>{
+    const source=en.value.trim();
+    if(!source)return;
+    try{
+      const url="https://inputtools.google.com/request?text="+encodeURIComponent(source)+
+        "&itc=mr-t-i0-und&num=5&cp=0&cs=1&ie=utf-8&oe=utf-8&app=demopage";
+      const response=await fetch(url,{method:"GET",mode:"cors"});
+      if(!response.ok)throw new Error("Google Input Tools request failed");
+      const data=await response.json();
+
+      // Response format: ["SUCCESS", [[source, [candidate1, candidate2, ...], ...]]]
+      const candidates=data?.[1]?.[0]?.[1];
+      if(requestId!==marathiTransliterationRequest)return;
+      if(Array.isArray(candidates)&&candidates.length){
+        mr.value=candidates[0];
+      }else{
+        mr.value=source;
+      }
+    }catch(e){
+      // Fallback to the existing local transliteration if Google
+      // Input Tools is temporarily unavailable or blocked by the browser.
+      if(requestId!==marathiTransliterationRequest)return;
+      mr.value=source.split(/\s+/).map(transliterateMarathiWord).join(" ");
+    }
+  },250);
 }
+
 function transliterateMarathiWord(word){
   const special={"sachin":"सचिन","rahul":"राहुल","rohit":"रोहित","amit":"अमित","anil":"अनिल","sunil":"सुनील","mahesh":"महेश","ramesh":"रमेश","suresh":"सुरेश","pravin":"प्रवीण","swapnil":"स्वप्नील","sanjay":"संजय","vijay":"विजय","ajay":"अजय","akash":"आकाश","vikas":"विकास","nikhil":"निखिल","pankaj":"पंकज","ganesh":"गणेश","dinesh":"दिनेश","shubham":"शुभम","shweta":"श्वेता","pooja":"पूजा","priya":"प्रिया","neha":"नेहा","kavita":"कविता","sunita":"सुनीता","anita":"अनिता","seema":"सीमा","sneha":"स्नेहा","smita":"स्मिता","vaibhav":"वैभव","sandip":"संदीप","sandeep":"संदीप","mangesh":"मंगेश","nilesh":"निलेश","milind":"मिलिंद","madhuri":"माधुरी","manisha":"मनीषा","ravi":"रवि","rajendra":"राजेंद्र","dattatray":"दत्तात्रय","shankar":"शंकर","prakash":"प्रकाश","deepak":"दीपक","yogesh":"योगेश","omkar":"ओंकार","suhas":"सुहास","vishal":"विशाल","vinod":"विनोद","vivek":"विवेक","sameer":"समीर","samir":"समीर","tejas":"तेजस","manoj":"मनोज","mohan":"मोहन","mukesh":"मुकेश","raj":"राज","rakesh":"राकेश","rutuja":"ऋतुजा","vaishnavi":"वैष्णवी","sakshi":"साक्षी","swati":"स्वाती","jyoti":"ज्योती","arti":"आरती","aarti":"आरती","meena":"मीना","rekha":"रेखा","asha":"आशा","usha":"उषा"};
   const key=word.toLowerCase(); if(special[key])return special[key];
@@ -1098,7 +1176,13 @@ function previewOperatorRegistration(){
   const today=new Date(); today.setHours(0,0,0,0);
   if(joining>today){alert("Joining Date भविष्यातील असू शकत नाही.");return;}
   const dob=$("regDob").value;
-  if(dob && joining<new Date(dob+"T00:00:00")){alert("Joining Date ही Date of Birth नंतरची असणे आवश्यक आहे.");return;}
+  if(dob){
+    const dobDate=new Date(dob+"T00:00:00");
+    if(joining<dobDate){alert("Joining Date ही Date of Birth नंतरची असणे आवश्यक आहे.");return;}
+    const eighteenDate=new Date(dobDate);
+    eighteenDate.setFullYear(eighteenDate.getFullYear()+18);
+    if(joining<eighteenDate){alert("Experience साठी Joining Date ही वयाची 18 वर्षे पूर्ण झाल्याच्या दिनांकापासून पुढे असणे आवश्यक आहे.");return;}
+  }
   if(!expText){alert("Experience calculate होणे आवश्यक आहे.");return;}
   const d=collectOperatorRegistration();
   if(d.password!==$("regPasswordConfirm").value){alert("Password आणि Confirm Password समान असणे आवश्यक आहे.");return}
@@ -1110,7 +1194,9 @@ function previewOperatorRegistration(){
   d.reRegistrationAttempts=rejected?getOperatorRegistrationAttempts(rejected):0;
   regPreviewData=d;
   const attemptText=rejected?"<p class='notice'><b>Registration Attempt:</b> "+(d.reRegistrationAttempts+1)+" / 3</p>":"<p class='notice'><b>Registration Attempt:</b> 1 / 3</p>";
-  $("modalContent").innerHTML=attemptText+"<div class='grid'>"+[["District",d.district],["Assembly",d.assembly],["Taluka",d.taluka],["Operator Full Name (English)",d.nameEnglish],["Operator Full Name (Marathi)",d.name],["Gender",d.gender], ["DOB / Age",d.dob+" / "+d.age],["Joining Date",d.joiningDate],["Experience (Years)",d.experience],["PIN",d.pin],["Email",d.email],["Mobile / User ID",d.mobile],["WhatsApp",d.whatsapp]].map(x=>"<div><b>"+x[0]+":</b> "+esc(x[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(d.address)+"</p>"+(d.photo?"<img class='photo' src='"+d.photo+"'>":"")+"<br><button class='s' onclick='saveOperatorRegistration()'>Confirm & Register</button><button class='m' onclick='closeModal()'>Back</button>";
+  const previewIdentityProof=d.proof?(/^data:application\/pdf/i.test(d.proof)?"<div style='margin-top:12px'><b>Identity Proof:</b><br><button class='p' type='button' onclick=\"viewFile('"+d.proof+"','pdf')\">View Identity Proof</button></div>":"<div style='margin-top:12px'><b>Identity Proof:</b><br><img src='"+d.proof+"' style='max-width:100%;max-height:420px;object-fit:contain;border:1px solid #ddd;border-radius:8px'></div>"):"";
+  const previewSignature=d.signature?"<div style='margin-top:12px'><b>Upload Signature:</b><br><img src='"+d.signature+"' style='max-width:420px;max-height:180px;object-fit:contain;border:1px solid #ddd;border-radius:8px;background:#fff;padding:8px'></div>":"";
+  $("modalContent").innerHTML=attemptText+"<div class='grid' style='display:block'>"+[["District",d.district],["Assembly",d.assembly],["Taluka",d.taluka],["Operator Full Name (English)",d.nameEnglish],["Operator Full Name (Marathi)",d.name],["Gender",d.gender], ["DOB / Age",d.dob+" / "+d.age],["Joining Date",d.joiningDate],["Experience (Years)",d.experience],["PIN",d.pin],["Email",d.email],["Mobile / User ID",d.mobile],["WhatsApp",d.whatsapp]].map(x=>"<div><b>"+x[0]+":</b> "+esc(x[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(d.address)+"</p>"+(d.photo?"<img class='photo' src='"+d.photo+"'>":"")+previewIdentityProof+previewSignature+"<br><button class='s' onclick='saveOperatorRegistration()'>Confirm & Register</button><button class='m' onclick='closeModal()'>Back</button>";
   $("modal").classList.remove("hidden");
 }
 async function saveOperatorRegistration(){
@@ -1352,6 +1438,7 @@ function tab(t,options){
   if(t==="adminSentByDistrict"){renderAdminSentByDistrict()}
   if(t==="adminCorrection"){renderAdminCorrection()}
   if(t==="adminDelete"){renderAdminDelete()}
+  if(t==="adminPasswordMenu"){renderAdminPasswordAll()}
   if(t==="adminPasswordRequests"){renderAdminPasswordRequests()}
   if(t==="adminOperatorPassword"){renderAdminOperatorPassword()}
   if(t==="adminDistrictPassword"){renderAdminDistrictPassword()}
@@ -1485,7 +1572,7 @@ function preview(){
    d.createdAt=old.createdAt;
  }
  previewData=d;
- $("modalContent").innerHTML="<div class='grid'>"+[["Reference",d.reference||"Submit नंतर"],["District",d.district],["Assembly",d.assembly],["Taluka",d.taluka],["Operator",d.name],["Gender",d.gender], ["DOB / Age",d.dob+" / "+d.age],["PIN",d.pin],["Email",d.email],["Mobile",d.mobile],["WhatsApp",d.whatsapp]].map(x=>"<div><b>"+x[0]+":</b> "+esc(x[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(d.address)+"</p>"+(d.photo?"<img class='photo' src='"+d.photo+"'>":"")+"<br><button class='s' onclick='saveEntry()'>Confirm & Submit</button><button class='m' onclick='closeModal()'>Back</button>";
+ $("modalContent").innerHTML="<div class='grid' style='display:block'>"+[["Reference",d.reference||"Submit नंतर"],["District",d.district],["Assembly",d.assembly],["Taluka",d.taluka],["Operator",d.name],["Gender",d.gender], ["DOB / Age",d.dob+" / "+d.age],["PIN",d.pin],["Email",d.email],["Mobile",d.mobile],["WhatsApp",d.whatsapp]].map(x=>"<div><b>"+x[0]+":</b> "+esc(x[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(d.address)+"</p>"+(d.photo?"<img class='photo' src='"+d.photo+"'>":"")+"<br><button class='s' onclick='saveEntry()'>Confirm & Submit</button><button class='m' onclick='closeModal()'>Back</button>";
  $("modal").classList.remove("hidden")
 }
 function compressImageData(data,maxW=600,maxH=750,quality=0.78){
@@ -1640,9 +1727,10 @@ function forwardOperatorRegistration(id){
   let a=forms(),x=a.find(z=>z.id===id);
   if(!x||x.source!=="Operator Registration"||x.district!==session.district||x.status!=="Pending at District")return;
   if(!confirm("हा Registration Form योग्य आहे. Admin कडे Forward करायचा आहे का?"))return;
-  let remark=prompt("District Login Remark (ऐच्छिक) लिहा:");
+  let remark=prompt("District Login Remark लिहा (अनिवार्य):");
   if(remark===null)return;
   remark=remark.trim();
+  if(!remark){alert("District Login Remark लिहिणे अनिवार्य आहे.");return;}
   x.districtRemark=remark;
   x.districtReviewedAt=new Date().toISOString();
   x.districtReviewedBy=session.username;
@@ -1700,6 +1788,29 @@ function rejectDelete(id){if(session.type!=="admin")return;let a=forms(),x=a.fin
 
 function getElectionBranchPasswords(){try{const v=JSON.parse(localStorage.getItem(ELECTION_BRANCH_PASSWORD_KEY)||"{}");return v&&typeof v==="object"?v:{}}catch(e){return {}}}
 function saveElectionBranchPasswords(a){localStorage.setItem(ELECTION_BRANCH_PASSWORD_KEY,JSON.stringify(a))}
+function renderAdminPasswordAll(){
+  if(session.type!=="admin")return;
+  let dp=getDistrictPasswords();
+  let districtRows=LOGINS.slice().sort((x,y)=>Number(x.district_code)-Number(y.district_code));
+  $("adminAllDistrictPasswordBody").innerHTML=districtRows.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.username)}</td><td>District Login</td><td>${esc(x.district)}</td><td>-</td><td><input id="allDistPass_${esc(x.district_code)}" value="${esc(dp[x.district]||x.password)}" type="text" style="min-width:180px"></td><td>${loginEnabled("district:"+x.district)?"Enabled":"Disabled"}</td><td><button class="s" onclick="setDistrictPasswordAll('${esc(x.district)}','${esc(x.district_code)}')">Set Password</button> <button class="${loginEnabled("district:"+x.district)?"d":"s"}" onclick="toggleLoginStatus('district:${esc(x.district)}');renderAdminPasswordAll()">${loginEnabled("district:"+x.district)?"Disable":"Enable"}</button></td></tr>`).join("")||'<tr><td colspan="8">District उपलब्ध नाही.</td></tr>';
+
+  let allForms=forms();
+  let operators=getOperatorAccounts().map(x=>{
+    let f=allForms.filter(z=>z.source==="Operator Registration"&&z.mobile===x.mobile).sort((p,q)=>new Date(q.createdAt||0)-new Date(p.createdAt||0))[0];
+    return Object.assign({},x,{assemblyName:x.assembly||f?.assembly||"-"});
+  }).slice().sort((x,y)=>String(x.district||"").localeCompare(String(y.district||""),"mr")||String(x.assemblyName||"").localeCompare(String(y.assemblyName||""),"mr"));
+  $("adminAllOperatorPasswordBody").innerHTML=operators.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.mobile)}</td><td>${esc(x.name||"-")}</td><td>${esc(x.district||"-")}</td><td>${esc(x.assemblyName||"-")}</td><td><input id="allOpPass_${esc(x.mobile)}" value="${esc(x.password||"")}" type="text" style="min-width:180px"></td><td>${loginEnabled("operator:"+x.mobile)?"Enabled":"Disabled"}</td><td><button class="s" onclick="setOperatorPasswordAll('${esc(x.mobile)}')">Set Password</button> <button class="${loginEnabled("operator:"+x.mobile)?"d":"s"}" onclick="toggleLoginStatus('operator:${esc(x.mobile)}');renderAdminPasswordAll()">${loginEnabled("operator:"+x.mobile)?"Disable":"Enable"}</button> <button class="d" onclick="deleteOperatorAccountAll('${esc(x.mobile)}')">Delete User</button></td></tr>`).join("")||'<tr><td colspan="8">Operator Account उपलब्ध नाही.</td></tr>';
+
+  let ep=getElectionBranchPasswords();
+  let branchDistricts=new Set(allForms.filter(x=>x.source==="Operator Registration"&&x.assembly==="जिल्हा निवडणूक शाखा").map(x=>x.district));
+  let branchRows=LOGINS.slice().filter(x=>branchDistricts.has(x.district)).sort((x,y)=>Number(x.district_code)-Number(y.district_code));
+  $("adminAllElectionBranchPasswordBody").innerHTML=branchRows.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.username)}</td><td>जिल्हा निवडणूक शाखा</td><td>${esc(x.district)}</td><td>जिल्हा निवडणूक शाखा</td><td><input id="allBranchPass_${esc(x.district_code)}" value="${esc(ep[x.district]||"")}" type="text" style="min-width:180px"></td><td>${loginEnabled("electionBranch:"+x.district)?"Enabled":"Disabled"}</td><td><button class="s" onclick="setElectionBranchPasswordAll('${esc(x.district)}','${esc(x.district_code)}')">Set Password</button> <button class="${loginEnabled("electionBranch:"+x.district)?"d":"s"}" onclick="toggleLoginStatus('electionBranch:${esc(x.district)}');renderAdminPasswordAll()">${loginEnabled("electionBranch:"+x.district)?"Disable":"Enable"}</button></td></tr>`).join("")||'<tr><td colspan="8">जिल्हा निवडणूक शाखा निवडून Registration केलेले User उपलब्ध नाहीत.</td></tr>';
+}
+function setDistrictPasswordAll(district,code){if(session.type!=="admin")return;let input=$("allDistPass_"+code);if(!input)return;let p=input.value.trim();if(!isStrongPassword(p)){alert("Strong Password आवश्यक आहे: किमान 8 characters, 1 uppercase, 1 lowercase, 1 number आणि 1 special character.");return}let a=getDistrictPasswords();a[district]=p;saveDistrictPasswords(a);alert("District Password यशस्वीरीत्या सेट केला. Password: "+p);renderAdminPasswordAll()}
+function setOperatorPasswordAll(mobile){if(session.type!=="admin")return;let input=$("allOpPass_"+mobile);if(!input)return;let p=input.value.trim();if(!isStrongPassword(p)){alert("Strong Password आवश्यक आहे: किमान 8 characters, 1 uppercase, 1 lowercase, 1 number आणि 1 special character.");return}let a=getOperatorAccounts(),x=a.find(z=>z.mobile===mobile);if(!x)return;x.password=p;saveOperatorAccounts(a);alert("Operator Password यशस्वीरीत्या सेट केला. Password: "+p);renderAdminPasswordAll()}
+function setElectionBranchPasswordAll(district,code){if(session.type!=="admin")return;let input=$("allBranchPass_"+code);if(!input)return;let p=input.value.trim();if(!isStrongPassword(p)){alert("Strong Password आवश्यक आहे: किमान 8 characters, 1 uppercase, 1 lowercase, 1 number आणि 1 special character.");return}let a=getElectionBranchPasswords();a[district]=p;saveElectionBranchPasswords(a);alert("जिल्हा निवडणूक शाखेचा Password यशस्वीरीत्या सेट केला. Password: "+p);renderAdminPasswordAll()}
+function deleteOperatorAccountAll(mobile){if(session.type!=="admin")return;if(!confirm("हा Operator User Delete करायचा आहे का?"))return;let a=getOperatorAccounts(),idx=a.findIndex(x=>x.mobile===mobile);if(idx<0)return;let name=a[idx].name||mobile;a.splice(idx,1);saveOperatorAccounts(a);alert("Operator User "+name+" यशस्वीरीत्या Delete केला.");renderAdminPasswordAll()}
+
 function renderAdminElectionBranchPassword(){if(session.type!=="admin")return;let a=getElectionBranchPasswords();let branchDistricts=new Set(forms().filter(x=>x.source==="Operator Registration"&&x.assembly==="जिल्हा निवडणूक शाखा").map(x=>x.district));let rows=LOGINS.slice().filter(x=>branchDistricts.has(x.district)).sort((x,y)=>Number(x.district_code)-Number(y.district_code));$("adminElectionBranchPasswordBody").innerHTML=rows.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.district)}</td><td>${esc(x.district_code)}</td><td><input id="branchPass_${esc(x.district_code)}" value="${esc(a[x.district]||"")}" type="text" style="min-width:180px"></td><td>${loginEnabled("electionBranch:"+x.district)?"Enabled":"Disabled"}</td><td><button class="s" onclick="setElectionBranchPassword('${esc(x.district)}','${esc(x.district_code)}')">Set Password</button> <button class="${loginEnabled("electionBranch:"+x.district)?"d":"s"}" onclick="toggleLoginStatus('electionBranch:${esc(x.district)}')">${loginEnabled("electionBranch:"+x.district)?"Disable":"Enable"}</button></td></tr>`).join("")||'<tr><td colspan="6">जिल्हा निवडणूक शाखा निवडून Registration केलेले User उपलब्ध नाहीत.</td></tr>'}
 function isStrongPassword(p){return p.length>=8&&/[A-Z]/.test(p)&&/[a-z]/.test(p)&&/[0-9]/.test(p)&&/[^A-Za-z0-9]/.test(p)}
 function setElectionBranchPassword(district,code){if(session.type!=="admin")return;let input=$("branchPass_"+code);if(!input)return;let p=input.value.trim();if(!isStrongPassword(p)){alert("Strong Password आवश्यक आहे: किमान 8 characters, 1 uppercase, 1 lowercase, 1 number आणि 1 special character.");return}let a=getElectionBranchPasswords();a[district]=p;saveElectionBranchPasswords(a);alert("जिल्हा निवडणूक शाखेचा Password यशस्वीरीत्या सेट केला. Password: "+p);renderAdminElectionBranchPassword()}
@@ -1756,16 +1867,27 @@ function view(id){
    let isPdf=/^data:application\/pdf/i.test(x.proof);
    media+="<div style='margin-top:12px'><b>Identity Proof:</b><br><button class='p' type='button' onclick=\"viewFile('"+x.proof+"','"+(isPdf?"pdf":"image")+"')\">View Identity Proof</button></div>";
  }
+ if(x.signature)media+="<div style='margin-top:12px'><b>Upload Signature:</b><br><img src='"+x.signature+"' style=\"max-width:320px;max-height:140px;object-fit:contain;border:1px solid #ddd;border-radius:7px;background:#fff\"></div>";
  let summary="";
  if(session.type==="admin"){
-   summary="<div style='margin-top:18px;padding:16px;border:2px solid #2563eb;border-radius:10px;background:#eff6ff'><h3 style='margin:0 0 12px'>📋 Form Summary</h3><div class='grid'>"+
-   [["Reference",x.reference||"-"],["Status",x.status||"-"],["District",x.district||"-"],["Assembly Constituency",x.assembly||"-"],["Taluka",x.taluka||"-"],["Operator Full Name (English)",x.nameEnglish||"-"],["Operator Full Name (Marathi)",x.name||"-"],["Mobile Number",x.mobile||"-"],["Gender",x.gender||"-"],["DOB / Age",(x.dob||"-")+" / "+(x.age||"-")],["Joining Date",x.joiningDate||"-"],["Experience (Years)",x.experience??"-"],["PIN",x.pin||"-"],["Email",x.email||"-"],["WhatsApp",x.whatsapp||"-"]].map(v=>"<div><b>"+v[0]+":</b> "+esc(v[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(x.address||"-")+"</p>"+
-   (x.districtRemark?"<p><b>District Remark:</b><br>"+esc(x.districtRemark)+"</p>":"")+
-   (x.adminRemark?"<p><b>Admin Remark:</b><br>"+esc(x.adminRemark)+"</p>":"")+
-   (x.deleteRemark?"<p><b>Delete Request Remark:</b><br>"+esc(x.deleteRemark)+"</p>":"")+
-   (x.deleteRejectRemark?"<p><b>Delete Reject Remark:</b><br>"+esc(x.deleteRejectRemark)+"</p>":"")+"</div>";
+   const actionRows=[];
+   const addAction=(at,action,by,remark)=>{if(at)actionRows.push({at,action,by:by||"-",remark:remark||"-"})};
+   addAction(x.createdAt,"Form Submitted",x.createdBy||x.username||"-");
+   addAction(x.districtReviewedAt,"District कडून Admin कडे Forward",x.districtReviewedBy,x.districtRemark);
+   addAction(x.districtRejectedAt,"District कडून Reject",x.districtRejectedBy,x.districtRejectRemark);
+   addAction(x.approvedAt,"Admin कडून Accept",x.approvedBy,x.adminRemark);
+   addAction(x.rejectedAt,"Admin कडून Reject",x.rejectedBy,x.rejectRemark);
+   addAction(x.correctionRequestedAt,"Correction Request",x.correctionRequestedBy,x.correctionRemark);
+   addAction(x.correctionSentAt,"Correction Admin कडे पाठवली",x.correctionSentBy);
+   addAction(x.correctionAcceptedAt,"Correction Accept",x.correctionAcceptedBy);
+   addAction(x.deleteRequestedAt,"Delete Request",x.deleteRequestedBy,x.deleteRemark);
+   addAction(x.deleteRejectedAt,"Delete Request Reject",x.deleteRejectedBy,x.deleteRejectRemark);
+   addAction(x.adminFinalRejectedAt,"Admin Final Reject",x.adminFinalRejectedBy,x.adminFinalRejectRemark);
+   actionRows.sort((a,b)=>new Date(a.at)-new Date(b.at));
+   const actionHtml=actionRows.length?"<div style='overflow:auto'><table style='width:100%;border-collapse:collapse'><thead><tr><th style='text-align:left;padding:7px;border-bottom:1px solid #cbd5e1'>Date & Time</th><th style='text-align:left;padding:7px;border-bottom:1px solid #cbd5e1'>Action</th><th style='text-align:left;padding:7px;border-bottom:1px solid #cbd5e1'>By</th><th style='text-align:left;padding:7px;border-bottom:1px solid #cbd5e1'>Remark</th></tr></thead><tbody>"+actionRows.map(a=>"<tr><td style='padding:7px;border-bottom:1px solid #e5e7eb'>"+esc(new Date(a.at).toLocaleString("en-IN"))+"</td><td style='padding:7px;border-bottom:1px solid #e5e7eb'>"+esc(a.action)+"</td><td style='padding:7px;border-bottom:1px solid #e5e7eb'>"+esc(a.by)+"</td><td style='padding:7px;border-bottom:1px solid #e5e7eb'>"+esc(a.remark)+"</td></tr>").join("")+"</tbody></table></div>":"<div>या Form वर अद्याप कोणतीही Action उपलब्ध नाही.</div>";
+   summary="<div style='margin-top:18px;padding:16px;border:2px solid #2563eb;border-radius:10px;background:#eff6ff'><h3 style='margin:0 0 12px'>📋 Action Summary</h3>"+actionHtml+"</div>";
  }
- $("modalContent").innerHTML="<div class='grid'>"+[["Reference",x.reference], ["Status",x.status], ["District",x.district], ["Assembly",x.assembly], ["Taluka",x.taluka], ["Operator Full Name (English)",x.nameEnglish||"-"], ["Operator Full Name (Marathi)",x.name], ["Gender",x.gender], ["DOB / Age",(x.dob||"-")+" / "+(x.age||"-")], ["Joining Date",x.joiningDate||"-"], ["Experience (Years)",x.experience??"-"], ["PIN",x.pin], ["Email",x.email], ["Mobile",x.mobile], ["WhatsApp",x.whatsapp]].map(v=>"<div><b>"+v[0]+":</b> "+esc(v[1]||"-")+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(x.address||"-")+"</p>"+
+ $("modalContent").innerHTML="<div class='grid' style='display:block'>"+[["Reference",x.reference], ["Status",x.status], ["District",x.district], ["Assembly",x.assembly], ["Taluka",x.taluka], ["Operator Full Name (English)",x.nameEnglish||"-"], ["Operator Full Name (Marathi)",x.name], ["Gender",x.gender], ["DOB / Age",(x.dob||"-")+" / "+(x.age||"-")], ["Joining Date",x.joiningDate||"-"], ["Experience (Years)",x.experience??"-"], ["PIN",x.pin], ["Email",x.email], ["Mobile",x.mobile], ["WhatsApp",x.whatsapp]].map(v=>"<div><b>"+v[0]+":</b> "+esc(v[1]||"-")+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(x.address||"-")+"</p>"+
  (x.status==="Rejected"&&x.rejectRemark?"<p style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff1f2;color:#991b1b'><b>Reject Remark:</b><br>"+esc(x.rejectRemark)+"</p>":"")+summary+media;
  $("modal").classList.remove("hidden");
 }
