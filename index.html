@@ -416,14 +416,15 @@ body.operator-login #dashWrap_adminAccepted{display:block!important}
         <div><label>Age</label><input id="regAge" readonly></div>
         <div><label>Joining Date *</label><input id="regJoiningDate" type="date" required onchange="regExperienceCalc()"></div>
         <div><label>Experience (Year, Month, Days)</label><input id="regExperience" readonly placeholder="0 Year, 0 Month, 0 Days"></div>
-        <div><label>Home Address (Marathi) *</label><textarea id="regAddress" required></textarea></div>
+        <div><label>Home Address (English) *</label><textarea id="regAddressEnglish" required lang="en" spellcheck="false" oninput="sanitizeAddressEnglish(this);autoFillMarathiAddress('regAddressEnglish','regAddress')"></textarea></div>
+        <div><label>Home Address (Marathi) *</label><textarea id="regAddress" required lang="mr" spellcheck="false" oninput="sanitizeAddressMarathi(this)"></textarea></div>
         <div><label>PIN Code (6 digit) *</label><input id="regPin" maxlength="6" pattern="[0-9]{6}" required></div>
         <div><label>Email *</label><input id="regEmail" type="email" required></div>
         <div><label>Mobile Number (10 digit) *</label><input id="regMobile" maxlength="10" pattern="[0-9]{10}" required></div>
         <div><label>WhatsApp Number (10 digit) *</label><input id="regWhatsapp" maxlength="10" pattern="[0-9]{10}" required></div>
         <div><label>Passport Size Photo *</label><input id="regPhoto" type="file" accept="image/*" required onchange="readRegistrationFile(this)"></div>
         <div><label>Identity Proof *</label><input id="regProof" type="file" accept=".pdf,.jpg,.jpeg,.png" required onchange="readRegistrationFile(this)"></div>
-        <div><label>Upload Signature *</label><input id="regSignature" type="file" accept="image/*" required onchange="readRegistrationFile(this)"></div>
+        <div><label>Upload Signature *</label><input id="regSignature" type="file" accept="image/*" required onchange="readRegistrationFile(this)"><button id="regCropSignatureBtn" class="p hidden" type="button" onclick="openRegistrationSignatureCrop()">Crop Signature (256 × 64)</button></div>
         <div><label>Password *</label><input id="regPassword" type="password" minlength="6" required autocomplete="new-password"></div>
         <div><label>Confirm Password *</label><input id="regPasswordConfirm" type="password" minlength="6" required autocomplete="new-password"></div>
       </div>
@@ -478,7 +479,8 @@ body.operator-login #dashWrap_adminAccepted{display:block!important}
 <div><label>Gender *</label><select id="gender" required><option value="">Select</option><option value="पुरुष">पुरुष</option><option value="स्त्री">स्त्री</option></select></div>
 <div><label>Date of Birth *</label><input id="dob" type="date" required onchange="ageCalc()"></div>
 <div><label>Age</label><input id="age" readonly></div>
-<div><label>Home Address (Marathi) *</label><textarea id="address" required></textarea></div>
+<div><label>Home Address (English) *</label><textarea id="addressEnglish" required lang="en" spellcheck="false" oninput="sanitizeAddressEnglish(this);autoFillMarathiAddress('addressEnglish','address')"></textarea></div>
+<div><label>Home Address (Marathi) *</label><textarea id="address" required lang="mr" spellcheck="false" oninput="sanitizeAddressMarathi(this)"></textarea></div>
 <div><label>PIN Code (6 digit) *</label><input id="pin" maxlength="6" pattern="[0-9]{6}" required></div>
 <div><label>Email *</label><input id="email" type="email" required></div>
 <div><label>Mobile Number (10 digit) *</label><input id="mobile" maxlength="10" pattern="[0-9]{10}" required></div>
@@ -767,7 +769,7 @@ const KEY="maharashtraDistrictFormsV1";
 const SESSION_TIMEOUT_MS=30*60*1000;
 let session={type:"",district:"",username:""},photoData="",proofData="",previewData=null;
 let sessionTimeoutTimer=null;
-let regPhotoData="",regProofData="",regSignatureData="",regPreviewData=null,registrationCropMode=false;
+let regPhotoData="",regProofData="",regSignatureData="",regPreviewData=null,registrationCropMode=false,registrationSignatureCropMode=false,regSignatureCropped=false,regPhotoCropped=false,photoCropped=false;
 const OPERATOR_KEY="maharashtraOperatorAccountsV1";const DISTRICT_PASSWORD_KEY="maharashtraDistrictPasswordsV1";const ELECTION_BRANCH_PASSWORD_KEY="maharashtraElectionBranchPasswordsV1";
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
@@ -1109,6 +1111,53 @@ function autoFillMarathiName(){
   },250);
 }
 
+function sanitizeAddressEnglish(el){
+  if(!el)return;
+  const old=el.value;
+  // English address accepts Latin letters, numbers, spaces and common address punctuation only.
+  const cleaned=old.replace(/[^A-Za-z0-9 .,\-/#()'’&:]/g, "");
+  if(old!==cleaned)el.value=cleaned;
+}
+function sanitizeAddressMarathi(el){
+  if(!el)return;
+  const old=el.value;
+  // Marathi address accepts Devanagari, numbers, spaces and common address punctuation; Latin letters are blocked.
+  const cleaned=old.replace(/[^\u0900-\u097F0-9०-९ .,\-/#()'’&:]/g, "");
+  if(old!==cleaned)el.value=cleaned;
+}
+
+const addressTransliterationTimers = {};
+const addressTransliterationRequests = {};
+function autoFillMarathiAddress(englishId, marathiId){
+  const en=$(englishId), mr=$(marathiId);
+  if(!en||!mr)return;
+  const source=en.value.trim();
+  if(!source){mr.value="";return;}
+  clearTimeout(addressTransliterationTimers[englishId]);
+  const requestId=(addressTransliterationRequests[englishId]||0)+1;
+  addressTransliterationRequests[englishId]=requestId;
+  addressTransliterationTimers[englishId]=setTimeout(async()=>{
+    const current=en.value.trim();
+    if(!current)return;
+    try{
+      const url="https://inputtools.google.com/request?text="+encodeURIComponent(current)+
+        "&itc=mr-t-i0-und&num=5&cp=0&cs=1&ie=utf-8&oe=utf-8&app=demopage";
+      const response=await fetch(url,{method:"GET",mode:"cors"});
+      if(!response.ok)throw new Error("Google Input Tools request failed");
+      const data=await response.json();
+      const candidates=data?.[1]?.[0]?.[1];
+      if(requestId!==addressTransliterationRequests[englishId])return;
+      if(Array.isArray(candidates)&&candidates.length)mr.value=candidates[0];
+      else mr.value=current;
+      sanitizeAddressMarathi(mr);
+    }catch(e){
+      if(requestId!==addressTransliterationRequests[englishId])return;
+      mr.value=current.split(/\s+/).map(transliterateMarathiWord).join(" ");
+      sanitizeAddressMarathi(mr);
+    }
+  },350);
+}
+
 function transliterateMarathiWord(word){
   const special={"sachin":"सचिन","rahul":"राहुल","rohit":"रोहित","amit":"अमित","anil":"अनिल","sunil":"सुनील","mahesh":"महेश","ramesh":"रमेश","suresh":"सुरेश","pravin":"प्रवीण","swapnil":"स्वप्नील","sanjay":"संजय","vijay":"विजय","ajay":"अजय","akash":"आकाश","vikas":"विकास","nikhil":"निखिल","pankaj":"पंकज","ganesh":"गणेश","dinesh":"दिनेश","shubham":"शुभम","shweta":"श्वेता","pooja":"पूजा","priya":"प्रिया","neha":"नेहा","kavita":"कविता","sunita":"सुनीता","anita":"अनिता","seema":"सीमा","sneha":"स्नेहा","smita":"स्मिता","vaibhav":"वैभव","sandip":"संदीप","sandeep":"संदीप","mangesh":"मंगेश","nilesh":"निलेश","milind":"मिलिंद","madhuri":"माधुरी","manisha":"मनीषा","ravi":"रवि","rajendra":"राजेंद्र","dattatray":"दत्तात्रय","shankar":"शंकर","prakash":"प्रकाश","deepak":"दीपक","yogesh":"योगेश","omkar":"ओंकार","suhas":"सुहास","vishal":"विशाल","vinod":"विनोद","vivek":"विवेक","sameer":"समीर","samir":"समीर","tejas":"तेजस","manoj":"मनोज","mohan":"मोहन","mukesh":"मुकेश","raj":"राज","rakesh":"राकेश","rutuja":"ऋतुजा","vaishnavi":"वैष्णवी","sakshi":"साक्षी","swati":"स्वाती","jyoti":"ज्योती","arti":"आरती","aarti":"आरती","meena":"मीना","rekha":"रेखा","asha":"आशा","usha":"उषा"};
   const key=word.toLowerCase(); if(special[key])return special[key];
@@ -1119,25 +1168,61 @@ function readRegistrationFile(i){
   let f=i.files[0];if(!f)return;
   if(f.size>5*1024*1024){alert("फाईल 5 MB पेक्षा जास्त नसावी.");i.value="";return}
   let r=new FileReader();r.onload=()=>{
-    if(i.id==="regPhoto"){regPhotoData=r.result;$("regPhotoPreview").src=regPhotoData;$("regPhotoPreview").classList.remove("hidden");$("regCropPhotoBtn").classList.remove("hidden")}
-    else if(i.id==="regSignature"){regSignatureData=r.result;$("regSignatureName").textContent="Selected: "+f.name}
+    if(i.id==="regPhoto"){regPhotoData=r.result;regPhotoCropped=false;$("regPhotoPreview").src=regPhotoData;$("regPhotoPreview").classList.remove("hidden");$("regCropPhotoBtn").classList.remove("hidden")}
+    else if(i.id==="regSignature"){regSignatureData=r.result;regSignatureCropped=false;$("regSignatureName").textContent="Selected: "+f.name;$("regCropSignatureBtn").classList.remove("hidden")}
     else{regProofData=r.result;$("regProofName").textContent="Selected: "+f.name}
   };r.readAsDataURL(f)
 }
-function openRegistrationPhotoCrop(){
+let faceDetectorReady=null;
+async function ensureFaceDetector(){
+  if(!window.faceapi) throw new Error("Face detection library unavailable");
+  if(!faceDetectorReady) faceDetectorReady=faceapi.nets.tinyFaceDetector.loadFromUri("https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model");
+  await faceDetectorReady;
+}
+async function imageHasHumanFace(image){
+  await ensureFaceDetector();
+  const detections=await faceapi.detectAllFaces(image,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.35}));
+  return detections.length>0;
+}
+async function requireFaceInPhoto(dataUrl){
+  try{
+    const im=new Image();
+    await new Promise((resolve,reject)=>{im.onload=resolve;im.onerror=reject;im.src=dataUrl;});
+    if(await imageHasHumanFace(im)) return true;
+    alert("Passport Size Photo मध्ये Human Face detect होणे अनिवार्य आहे. कृपया चेहरा स्पष्ट दिसणारा फोटो निवडा.");
+    return false;
+  }catch(e){
+    alert("Human Face detect करण्यासाठी इंटरनेट आवश्यक आहे. इंटरनेट तपासून पुन्हा प्रयत्न करा.");
+    return false;
+  }
+}
+async function openRegistrationPhotoCrop(){
   if(!regPhotoData)return;
+  if(!(await requireFaceInPhoto(regPhotoData)))return;
   registrationCropMode=true;
   let im=new Image();im.onload=()=>{
     cropState.img=im;$("cropImage").src=regPhotoData;
-    requestAnimationFrame(()=>{let el=$("cropImage"),w=el.clientWidth,h=el.clientHeight,ratio=4/5,cw=w,ch=cw/ratio;
+    requestAnimationFrame(()=>{let el=$("cropImage"),w=el.clientWidth,h=el.clientHeight,ratio=4/5,cw=w,ch=cw/ratio;cropState.ratio=ratio;
       if(ch>h){ch=h;cw=ch*ratio}cropState.x=(w-cw)/2;cropState.y=(h-ch)/2;cropState.w=cw;cropState.h=ch;drawCropBox();bindCropEvents();
       $("cropModal").classList.remove("hidden");
     });
   };im.src=regPhotoData;
 }
 
+function openRegistrationSignatureCrop(){
+  if(!regSignatureData)return;
+  registrationCropMode=false;registrationSignatureCropMode=true;
+  let im=new Image();im.onload=()=>{
+    cropState.img=im;$("cropImage").src=regSignatureData;
+    requestAnimationFrame(()=>{let el=$("cropImage"),w=el.clientWidth,h=el.clientHeight,ratio=4,cw=w,ch=cw/ratio;
+      if(ch>h){ch=h;cw=ch*ratio}cropState.ratio=ratio;cropState.x=(w-cw)/2;cropState.y=(h-ch)/2;cropState.w=cw;cropState.h=ch;drawCropBox();bindCropEvents();
+      $("cropModal").classList.remove("hidden");
+    });
+  };im.src=regSignatureData;
+}
+
 function collectOperatorRegistration(){
-  return {district:$("regDistrict").value,assembly:$("regAssembly").value,taluka:$("regTaluka").value,name:$("regName").value.trim(),nameEnglish:$("regNameEnglish").value.trim(),gender:$("regGender").value,education:$("regEducation").value,dob:$("regDob").value,age:$("regAge").value,joiningDate:$("regJoiningDate").value,experience:$("regExperience").value,address:$("regAddress").value.trim(),pin:$("regPin").value.trim(),email:$("regEmail").value.trim(),mobile:$("regMobile").value.trim(),whatsapp:$("regWhatsapp").value.trim(),photo:regPhotoData,proof:regProofData,signature:regSignatureData,password:$("regPassword").value};
+  return {district:$("regDistrict").value,assembly:$("regAssembly").value,taluka:$("regTaluka").value,name:$("regName").value.trim(),nameEnglish:$("regNameEnglish").value.trim(),gender:$("regGender").value,education:$("regEducation").value,dob:$("regDob").value,age:$("regAge").value,joiningDate:$("regJoiningDate").value,experience:$("regExperience").value,addressEnglish:$("regAddressEnglish").value.trim(),address:$("regAddress").value.trim(),pin:$("regPin").value.trim(),email:$("regEmail").value.trim(),mobile:$("regMobile").value.trim(),whatsapp:$("regWhatsapp").value.trim(),photo:regPhotoData,proof:regProofData,signature:regSignatureData,password:$("regPassword").value};
 }
 function getLatestRejectedOperatorRegistration(mobile){
   return forms().filter(x=>x.source==="Operator Registration"&&x.mobile===mobile&&x.status==="Rejected")
@@ -1159,15 +1244,17 @@ function loadRejectedOperatorRegistration(){
   $("regNameEnglish").value=x.nameEnglish||"";$("regName").value=x.name||"";$("regGender").value=x.gender||"";$("regEducation").value=x.education||"";$("regDob").value=x.dob||"";$("regAge").value=x.age||"";$("regJoiningDate").value=x.joiningDate||"";$("regExperience").value=x.experience??"";
   $("regAddress").value=x.address||"";$("regPin").value=x.pin||"";$("regEmail").value=x.email||"";
   $("regMobile").value=x.mobile||"";$("regWhatsapp").value=x.whatsapp||"";
-  regPhotoData=x.photo||"";regProofData=x.proof||"";regSignatureData=x.signature||"";
+  regPhotoData=x.photo||"";regPhotoCropped=false;regProofData=x.proof||"";regSignatureData=x.signature||"";regSignatureCropped=false;
   if(regPhotoData){$("regPhotoPreview").src=regPhotoData;$("regPhotoPreview").classList.remove("hidden");$("regCropPhotoBtn").classList.remove("hidden")}
   if(regProofData)$("regProofName").textContent="Existing Identity Proof";
-  if(regSignatureData)$("regSignatureName").textContent="Existing Signature";
+  if(regSignatureData){$("regSignatureName").textContent="Existing Signature";$("regCropSignatureBtn").classList.remove("hidden")}
   $("regPassword").value="";$("regPasswordConfirm").value="";
   alert("Reject केलेला Form पुन्हा उपलब्ध झाला आहे. ही "+(attempts+1)+" वी Registration संधी आहे. माहिती दुरुस्त करून Preview & Submit करा.");
 }
 function previewOperatorRegistration(){
   if(!$("operatorRegistrationForm").reportValidity())return;
+  if(!regPhotoData||!regPhotoCropped){alert("कृपया पुढे जाण्यापूर्वी Crop Photo करणे अनिवार्य आहे.");$("regCropPhotoBtn").classList.remove("hidden");$("regCropPhotoBtn").focus();return;}
+  if(!regSignatureData||!regSignatureCropped){alert("कृपया पुढे जाण्यापूर्वी Crop Signature (256 × 64) करणे अनिवार्य आहे.");$("regCropSignatureBtn").classList.remove("hidden");$("regCropSignatureBtn").focus();return;}
   if(!validateRegistrationAge())return;
   regExperienceCalc();
   const jd=$("regJoiningDate").value, expText=$("regExperience").value;
@@ -1196,7 +1283,7 @@ function previewOperatorRegistration(){
   const attemptText=rejected?"<p class='notice'><b>Registration Attempt:</b> "+(d.reRegistrationAttempts+1)+" / 3</p>":"<p class='notice'><b>Registration Attempt:</b> 1 / 3</p>";
   const previewIdentityProof=d.proof?(/^data:application\/pdf/i.test(d.proof)?"<div style='margin-top:12px'><b>Identity Proof:</b><br><button class='p' type='button' onclick=\"viewFile('"+d.proof+"','pdf')\">View Identity Proof</button></div>":"<div style='margin-top:12px'><b>Identity Proof:</b><br><img src='"+d.proof+"' style='max-width:100%;max-height:420px;object-fit:contain;border:1px solid #ddd;border-radius:8px'></div>"):"";
   const previewSignature=d.signature?"<div style='margin-top:12px'><b>Upload Signature:</b><br><img src='"+d.signature+"' style='max-width:420px;max-height:180px;object-fit:contain;border:1px solid #ddd;border-radius:8px;background:#fff;padding:8px'></div>":"";
-  $("modalContent").innerHTML=attemptText+"<div class='grid' style='display:block'>"+[["District",d.district],["Assembly",d.assembly],["Taluka",d.taluka],["Operator Full Name (English)",d.nameEnglish],["Operator Full Name (Marathi)",d.name],["Gender",d.gender], ["DOB / Age",d.dob+" / "+d.age],["Joining Date",d.joiningDate],["Experience (Years)",d.experience],["PIN",d.pin],["Email",d.email],["Mobile / User ID",d.mobile],["WhatsApp",d.whatsapp]].map(x=>"<div><b>"+x[0]+":</b> "+esc(x[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(d.address)+"</p>"+(d.photo?"<img class='photo' src='"+d.photo+"'>":"")+previewIdentityProof+previewSignature+"<br><button class='s' onclick='saveOperatorRegistration()'>Confirm & Register</button><button class='m' onclick='closeModal()'>Back</button>";
+  $("modalContent").innerHTML=attemptText+"<div class='grid' style='display:block'>"+[["District",d.district],["Assembly",d.assembly],["Taluka",d.taluka],["Operator Full Name (English)",d.nameEnglish],["Operator Full Name (Marathi)",d.name],["Gender",d.gender], ["DOB / Age",d.dob+" / "+d.age],["Joining Date",d.joiningDate],["Experience (Years)",d.experience],["PIN",d.pin],["Email",d.email],["Mobile / User ID",d.mobile],["WhatsApp",d.whatsapp]].map(x=>"<div><b>"+x[0]+":</b> "+esc(x[1])+"</div>").join("")+"</div><p><b>Home Address (English):</b><br>"+esc(d.addressEnglish||"-")+"</p><p><b>Home Address (Marathi):</b><br>"+esc(d.address||"-")+"</p>"+(d.photo?"<img class='photo' src='"+d.photo+"'>":"")+previewIdentityProof+previewSignature+"<br><button class='s' onclick='saveOperatorRegistration()'>Confirm & Register</button><button class='m' onclick='closeModal()'>Back</button>";
   $("modal").classList.remove("hidden");
 }
 async function saveOperatorRegistration(){
@@ -1235,11 +1322,11 @@ async function saveOperatorRegistration(){
 }
 function clearRegistrationForm(){
   const f=$("operatorRegistrationForm");if(f)f.reset();
-  regPhotoData="";regProofData="";regSignatureData="";regPreviewData=null;
+  regPhotoData="";regPhotoCropped=false;regProofData="";regSignatureData="";regPreviewData=null;regSignatureCropped=false;
   if($("regPhotoPreview"))$("regPhotoPreview").classList.add("hidden");
   if($("regCropPhotoBtn"))$("regCropPhotoBtn").classList.add("hidden");
   if($("regProofName"))$("regProofName").textContent="";
-  if($("regSignatureName"))$("regSignatureName").textContent="";
+  if($("regSignatureName"))$("regSignatureName").textContent="";if($("regCropSignatureBtn"))$("regCropSignatureBtn").classList.add("hidden");
   if($("regDistrict"))loadRegistrationDistricts();
 }
 
@@ -1529,32 +1616,34 @@ function ageCalc(){
  let b=new Date($("dob").value),n=new Date(),a=n.getFullYear()-b.getFullYear(),m=n.getMonth()-b.getMonth();
  if(m<0||(m===0&&n.getDate()<b.getDate()))a--; $("age").value=a>=0?a:"";
 }
-let cropState={img:null,x:0,y:0,w:0,h:0,drag:false,resize:false,sx:0,sy:0,ox:0,oy:0,ow:0,oh:0};
+let cropState={img:null,x:0,y:0,w:0,h:0,drag:false,resize:false,sx:0,sy:0,ox:0,oy:0,ow:0,oh:0,ratio:4/5};
 function readFile(i){
  let f=i.files[0];if(!f)return;
  if(f.size>5*1024*1024){alert("फाईल 5 MB पेक्षा जास्त नसावी.");i.value="";return}
- let r=new FileReader();r.onload=()=>{if(i.id==="photo"){photoData=r.result;$("photoPreview").src=photoData;$("photoPreview").classList.remove("hidden");$("cropPhotoBtn").classList.remove("hidden")}else{proofData=r.result;$("proofName").textContent="Selected: "+f.name}};r.readAsDataURL(f)
+ let r=new FileReader();r.onload=()=>{if(i.id==="photo"){photoData=r.result;photoCropped=false;$("photoPreview").src=photoData;$("photoPreview").classList.remove("hidden");$("cropPhotoBtn").classList.remove("hidden")}else{proofData=r.result;$("proofName").textContent="Selected: "+f.name}};r.readAsDataURL(f)
 }
-function openPhotoCrop(){
+async function openPhotoCrop(){
  if(!photoData)return;
- let im=new Image();im.onload=()=>{cropState.img=im;$("cropImage").src=photoData;requestAnimationFrame(()=>{let el=$("cropImage"),w=el.clientWidth,h=el.clientHeight,ratio=4/5,cw=w,ch=cw/ratio;if(ch>h){ch=h;cw=ch*ratio}cropState.x=(w-cw)/2;cropState.y=(h-ch)/2;cropState.w=cw;cropState.h=ch;drawCropBox();bindCropEvents();$("cropModal").classList.remove("hidden")})};im.src=photoData
+ if(!(await requireFaceInPhoto(photoData)))return;
+ let im=new Image();im.onload=()=>{cropState.img=im;$("cropImage").src=photoData;requestAnimationFrame(()=>{let el=$("cropImage"),w=el.clientWidth,h=el.clientHeight,ratio=4/5,cw=w,ch=cw/ratio;cropState.ratio=ratio;if(ch>h){ch=h;cw=ch*ratio}cropState.x=(w-cw)/2;cropState.y=(h-ch)/2;cropState.w=cw;cropState.h=ch;drawCropBox();bindCropEvents();$("cropModal").classList.remove("hidden")})};im.src=photoData
 }
 function drawCropBox(){let area=$("cropArea"),box=$("cropBox");if(!box){box=document.createElement("div");box.id="cropBox";box.className="cropBox";box.innerHTML='<span class="cropHandle"></span>';area.appendChild(box)}box.style.left=cropState.x+"px";box.style.top=cropState.y+"px";box.style.width=cropState.w+"px";box.style.height=cropState.h+"px"}
 function bindCropEvents(){let box=$("cropBox"),area=$("cropArea"),handle=box.querySelector(".cropHandle");box.onpointerdown=e=>{if(e.target===handle)return;cropState.drag=true;startCropPointer(e)};handle.onpointerdown=e=>{e.stopPropagation();cropState.resize=true;startCropPointer(e)};area.onpointermove=e=>moveCropPointer(e);area.onpointerup=area.onpointercancel=()=>{cropState.drag=false;cropState.resize=false}}
 function startCropPointer(e){cropState.sx=e.clientX;cropState.sy=e.clientY;cropState.ox=cropState.x;cropState.oy=cropState.y;cropState.ow=cropState.w;cropState.oh=cropState.h}
-function moveCropPointer(e){if(!cropState.drag&&!cropState.resize)return;let area=$("cropArea"),maxW=area.clientWidth,maxH=$("cropImage").clientHeight,dx=e.clientX-cropState.sx,dy=e.clientY-cropState.sy,ratio=4/5;if(cropState.drag){cropState.x=Math.max(0,Math.min(maxW-cropState.w,cropState.ox+dx));cropState.y=Math.max(0,Math.min(maxH-cropState.h,cropState.oy+dy))}else{let nw=Math.max(60,Math.min(maxW-cropState.x,cropState.ow+dx)),nh=nw/ratio;if(cropState.y+nh>maxH){nh=maxH-cropState.y;nw=nh*ratio}cropState.w=nw;cropState.h=nh}drawCropBox()}
+function moveCropPointer(e){if(!cropState.drag&&!cropState.resize)return;let area=$("cropArea"),maxW=area.clientWidth,maxH=$("cropImage").clientHeight,dx=e.clientX-cropState.sx,dy=e.clientY-cropState.sy,ratio=cropState.ratio||4/5;if(cropState.drag){cropState.x=Math.max(0,Math.min(maxW-cropState.w,cropState.ox+dx));cropState.y=Math.max(0,Math.min(maxH-cropState.h,cropState.oy+dy))}else{let nw=Math.max(60,Math.min(maxW-cropState.x,cropState.ow+dx)),nh=nw/ratio;if(cropState.y+nh>maxH){nh=maxH-cropState.y;nw=nh*ratio}cropState.w=nw;cropState.h=nh}drawCropBox()}
 function closePhotoCrop(){$("cropModal").classList.add("hidden")}
-function savePhotoCrop(){let im=cropState.img,el=$("cropImage"),sx=cropState.x*(im.naturalWidth/el.clientWidth),sy=cropState.y*(im.naturalHeight/el.clientHeight),sw=cropState.w*(im.naturalWidth/el.clientWidth),sh=cropState.h*(im.naturalHeight/el.clientHeight),canvas=document.createElement("canvas"),scale=Math.min(800/sw,1000/sh);canvas.width=Math.max(1,Math.round(sw*scale));canvas.height=Math.max(1,Math.round(sh*scale));canvas.getContext("2d").drawImage(im,sx,sy,sw,sh,0,0,canvas.width,canvas.height);photoData=canvas.toDataURL("image/jpeg",0.9);if(registrationCropMode){regPhotoData=photoData;$("regPhotoPreview").src=regPhotoData;$("regPhotoPreview").classList.remove("hidden");registrationCropMode=false}else{$("photoPreview").src=photoData;$("photoPreview").classList.remove("hidden")}closePhotoCrop()}
+async function savePhotoCrop(){let im=cropState.img,el=$("cropImage"),sx=cropState.x*(im.naturalWidth/el.clientWidth),sy=cropState.y*(im.naturalHeight/el.clientHeight),sw=cropState.w*(im.naturalWidth/el.clientWidth),sh=cropState.h*(im.naturalHeight/el.clientHeight),canvas=document.createElement("canvas");if(registrationSignatureCropMode){canvas.width=256;canvas.height=64;canvas.getContext("2d").drawImage(im,sx,sy,sw,sh,0,0,256,64);regSignatureData=canvas.toDataURL("image/png");regSignatureCropped=true;$("regSignatureName").textContent="Signature cropped to 256 × 64";registrationSignatureCropMode=false}else{let scale=Math.min(800/sw,1000/sh);canvas.width=Math.max(1,Math.round(sw*scale));canvas.height=Math.max(1,Math.round(sh*scale));canvas.getContext("2d").drawImage(im,sx,sy,sw,sh,0,0,canvas.width,canvas.height);let croppedPhoto=canvas.toDataURL("image/jpeg",0.9);if(!(await requireFaceInPhoto(croppedPhoto)))return;photoData=croppedPhoto;if(registrationCropMode){regPhotoData=photoData;regPhotoCropped=true;$("regPhotoPreview").src=regPhotoData;$("regPhotoPreview").classList.remove("hidden");registrationCropMode=false}else{photoCropped=true;$("photoPreview").src=photoData;$("photoPreview").classList.remove("hidden")}}closePhotoCrop()}
 
 function collect(){
  let o=$("assembly").selectedOptions[0];
  return {id:$("editId").value||crypto.randomUUID(),reference:"",district:session.type==="admin"?(o?.dataset.d||""):session.district,
  assembly:$("assembly").value,taluka:$("taluka").value,name:$("name").value.trim(),gender:$("gender").value,dob:$("dob").value,age:$("age").value,
- address:$("address").value.trim(),pin:$("pin").value,email:$("email").value.trim(),mobile:$("mobile").value.trim(),
+ addressEnglish:$("addressEnglish").value.trim(),address:$("address").value.trim(),pin:$("pin").value,email:$("email").value.trim(),mobile:$("mobile").value.trim(),
  whatsapp:$("whatsapp").value.trim(),photo:photoData,proof:proofData,status:"Approval Pending",createdAt:new Date().toISOString()}
 }
 function preview(){
  if(!$("form").reportValidity())return;
+ if(!photoData||!photoCropped){alert("कृपया पुढे जाण्यापूर्वी Crop Photo करणे अनिवार्य आहे.");$("cropPhotoBtn").classList.remove("hidden");$("cropPhotoBtn").focus();return;}
  let d=collect(),old=$("editId").value?forms().find(x=>x.id===$("editId").value):null;
  if(old){
    d.reference=old.reference;
@@ -1572,7 +1661,7 @@ function preview(){
    d.createdAt=old.createdAt;
  }
  previewData=d;
- $("modalContent").innerHTML="<div class='grid' style='display:block'>"+[["Reference",d.reference||"Submit नंतर"],["District",d.district],["Assembly",d.assembly],["Taluka",d.taluka],["Operator",d.name],["Gender",d.gender], ["DOB / Age",d.dob+" / "+d.age],["PIN",d.pin],["Email",d.email],["Mobile",d.mobile],["WhatsApp",d.whatsapp]].map(x=>"<div><b>"+x[0]+":</b> "+esc(x[1])+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(d.address)+"</p>"+(d.photo?"<img class='photo' src='"+d.photo+"'>":"")+"<br><button class='s' onclick='saveEntry()'>Confirm & Submit</button><button class='m' onclick='closeModal()'>Back</button>";
+ $("modalContent").innerHTML="<div class='grid' style='display:block'>"+[["Reference",d.reference||"Submit नंतर"],["District",d.district],["Assembly",d.assembly],["Taluka",d.taluka],["Operator",d.name],["Gender",d.gender], ["DOB / Age",d.dob+" / "+d.age],["PIN",d.pin],["Email",d.email],["Mobile",d.mobile],["WhatsApp",d.whatsapp]].map(x=>"<div><b>"+x[0]+":</b> "+esc(x[1])+"</div>").join("")+"</div><p><b>Home Address (English):</b><br>"+esc(d.addressEnglish||"-")+"</p><p><b>Home Address (Marathi):</b><br>"+esc(d.address||"-")+"</p>"+(d.photo?"<img class='photo' src='"+d.photo+"'>":"")+"<br><button class='s' onclick='saveEntry()'>Confirm & Submit</button><button class='m' onclick='closeModal()'>Back</button>";
  $("modal").classList.remove("hidden")
 }
 function compressImageData(data,maxW=600,maxH=750,quality=0.78){
@@ -1625,7 +1714,7 @@ async function saveEntry(){
   alert("Form Submit करता आले नाही. कृपया पुन्हा प्रयत्न करा.");
  }
 }
-function clearForm(){$("form").reset();$("closeEditBtn").classList.add("hidden");$("editId").value="";$("age").value="";photoData="";proofData="";$("photoPreview").classList.add("hidden");$("cropPhotoBtn").classList.add("hidden");$("proofName").textContent="";$("district").value=session.type==="admin"?"Admin":session.district;loadAssemblies()}
+function clearForm(){$("form").reset();$("closeEditBtn").classList.add("hidden");$("editId").value="";$("age").value="";photoData="";photoCropped=false;proofData="";$("photoPreview").classList.add("hidden");$("cropPhotoBtn").classList.add("hidden");$("proofName").textContent="";$("district").value=session.type==="admin"?"Admin":session.district;loadAssemblies()}
 function closeEntry(){clearForm();tab("forms")}
 function closeEdit(){$("editId").value="";clearForm();tab("forms")}
 function scoped(){let a=forms();if(session.type==="admin")return a;if(session.type==="operator")return a.filter(x=>x.district===session.district&&x.mobile===session.operatorMobile);if(session.type==="district")return a.filter(x=>x.district===session.district);return []}
@@ -1887,7 +1976,7 @@ function view(id){
    const actionHtml=actionRows.length?"<div style='overflow:auto'><table style='width:100%;border-collapse:collapse'><thead><tr><th style='text-align:left;padding:7px;border-bottom:1px solid #cbd5e1'>Date & Time</th><th style='text-align:left;padding:7px;border-bottom:1px solid #cbd5e1'>Action</th><th style='text-align:left;padding:7px;border-bottom:1px solid #cbd5e1'>By</th><th style='text-align:left;padding:7px;border-bottom:1px solid #cbd5e1'>Remark</th></tr></thead><tbody>"+actionRows.map(a=>"<tr><td style='padding:7px;border-bottom:1px solid #e5e7eb'>"+esc(new Date(a.at).toLocaleString("en-IN"))+"</td><td style='padding:7px;border-bottom:1px solid #e5e7eb'>"+esc(a.action)+"</td><td style='padding:7px;border-bottom:1px solid #e5e7eb'>"+esc(a.by)+"</td><td style='padding:7px;border-bottom:1px solid #e5e7eb'>"+esc(a.remark)+"</td></tr>").join("")+"</tbody></table></div>":"<div>या Form वर अद्याप कोणतीही Action उपलब्ध नाही.</div>";
    summary="<div style='margin-top:18px;padding:16px;border:2px solid #2563eb;border-radius:10px;background:#eff6ff'><h3 style='margin:0 0 12px'>📋 Action Summary</h3>"+actionHtml+"</div>";
  }
- $("modalContent").innerHTML="<div class='grid' style='display:block'>"+[["Reference",x.reference], ["Status",x.status], ["District",x.district], ["Assembly",x.assembly], ["Taluka",x.taluka], ["Operator Full Name (English)",x.nameEnglish||"-"], ["Operator Full Name (Marathi)",x.name], ["Gender",x.gender], ["DOB / Age",(x.dob||"-")+" / "+(x.age||"-")], ["Joining Date",x.joiningDate||"-"], ["Experience (Years)",x.experience??"-"], ["PIN",x.pin], ["Email",x.email], ["Mobile",x.mobile], ["WhatsApp",x.whatsapp]].map(v=>"<div><b>"+v[0]+":</b> "+esc(v[1]||"-")+"</div>").join("")+"</div><p><b>Address:</b><br>"+esc(x.address||"-")+"</p>"+
+ $("modalContent").innerHTML="<div class='grid' style='display:block'>"+[["Reference",x.reference], ["Status",x.status], ["District",x.district], ["Assembly",x.assembly], ["Taluka",x.taluka], ["Operator Full Name (English)",x.nameEnglish||"-"], ["Operator Full Name (Marathi)",x.name], ["Gender",x.gender], ["DOB / Age",(x.dob||"-")+" / "+(x.age||"-")], ["Joining Date",x.joiningDate||"-"], ["Experience (Years)",x.experience??"-"], ["PIN",x.pin], ["Email",x.email], ["Mobile",x.mobile], ["WhatsApp",x.whatsapp]].map(v=>"<div><b>"+v[0]+":</b> "+esc(v[1]||"-")+"</div>").join("")+"</div><p><b>Home Address (English):</b><br>"+esc(x.addressEnglish||"-")+"</p><p><b>Home Address (Marathi):</b><br>"+esc(x.address||"-")+"</p>"+
  (x.status==="Rejected"&&x.rejectRemark?"<p style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff1f2;color:#991b1b'><b>Reject Remark:</b><br>"+esc(x.rejectRemark)+"</p>":"")+summary+media;
  $("modal").classList.remove("hidden");
 }
@@ -1899,7 +1988,7 @@ function viewFile(data,type){
 }
 
 function edit(id){let x=forms().find(z=>z.id===id);if(!x)return;if(session.type==="operator"&&(x.mobile!==session.operatorMobile||x.status!=="Accepted"))return;if(session.type!=="admin"&&session.type!=="operator"&&x.district!==session.district)return;
-if(x.source==="Operator Registration"&&x.status==="Registration Attempts Exhausted"&&session.type!=="admin"&&session.type!=="district")return;$("editId").value=x.id;loadAssemblies();$("assembly").value=x.assembly;loadTalukas();setTimeout(()=>$("taluka").value=x.taluka,0);$("name").value=x.name;$("gender").value=x.gender||"";$("dob").value=x.dob;$("age").value=x.age;$("address").value=x.address;$("pin").value=x.pin;$("email").value=x.email;$("mobile").value=x.mobile;$("whatsapp").value=x.whatsapp;photoData=x.photo||"";proofData=x.proof||"";if(photoData){$("photoPreview").src=photoData;$("photoPreview").classList.remove("hidden");$("cropPhotoBtn").classList.remove("hidden")}$("closeEditBtn").classList.remove("hidden");tab("entry")} 
+if(x.source==="Operator Registration"&&x.status==="Registration Attempts Exhausted"&&session.type!=="admin"&&session.type!=="district")return;$("editId").value=x.id;loadAssemblies();$("assembly").value=x.assembly;loadTalukas();setTimeout(()=>$("taluka").value=x.taluka,0);$("name").value=x.name;$("gender").value=x.gender||"";$("dob").value=x.dob;$("age").value=x.age;$("address").value=x.address;$("pin").value=x.pin;$("email").value=x.email;$("mobile").value=x.mobile;$("whatsapp").value=x.whatsapp;photoData=x.photo||"";photoCropped=false;proofData=x.proof||"";if(photoData){$("photoPreview").src=photoData;$("photoPreview").classList.remove("hidden");$("cropPhotoBtn").classList.remove("hidden")}$("closeEditBtn").classList.remove("hidden");tab("entry")} 
 
 
 function loadAdminAcceptedDistricts(){
@@ -2135,6 +2224,9 @@ restoreRoute();
 </script>
 
 
+
+
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 </body></html>
 <script>
 window.addEventListener("load", function(){
