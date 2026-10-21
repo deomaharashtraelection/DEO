@@ -296,7 +296,7 @@ body.operator-login #dashWrap_adminSummaryMenu{display:none!important}
 </style>
 
 <style id="admin-dashboard-only-5-buttons">
-body.admin-login #dashboardButtons > .dash-action:not(#dashWrap_adminAccepted):not(#dashWrap_adminPresidentList):not(#dashWrap_adminSentByDistrict):not(#dashWrap_adminDelete):not(#dashWrap_adminPasswordMenu){display:none!important}
+body.admin-login #dashboardButtons > .dash-action:not(#dashWrap_adminAccepted):not(#dashWrap_dse):not(#dashWrap_adminPresidentList):not(#dashWrap_adminSentByDistrict):not(#dashWrap_adminDelete):not(#dashWrap_adminPasswordMenu){display:none!important}
 </style>
 
 <style id="hide-correction-request-dashboard-buttons">
@@ -355,7 +355,9 @@ body.district-login #dashboardButtons > .dash-action:not(#dashWrap_districtOpera
 </style>
 
 <style id="operator-login-only-two-buttons">
-body.operator-login #dashboardButtons > .dash-action:not(#dashWrap_operatorPresidentList):not(#dashWrap_adminAccepted){display:none!important}
+body.operator-login #dashboardButtons > .dash-action:not(#dashWrap_operatorPresidentList):not(#dashWrap_adminAccepted):not(#dashWrap_formTracking):not(#dashWrap_operatorRollback){display:none!important}
+body.operator-login.operator-pending #dashboardButtons > .dash-action:not(#dashWrap_formTracking):not(#dashWrap_operatorRollback){display:none!important}
+body.operator-login #dashWrap_formTracking,body.operator-login #dashWrap_operatorRollback{display:block!important}
 </style>
 
 <style id="district-only-delete-requests-removed">body.district-login #dashWrap_adminDelete,body.district-login #dashWrap_deleteRequests,body.district-login #adminDelete,body.district-login #deleteRequests{display:none!important}</style>
@@ -526,13 +528,16 @@ input,select,textarea,button{max-width:100%;}
 <div class="dash-action" id="dashWrap_districtOperatorReg"><button id="districtOperatorRegBtn" class="w dashboard-btn" onclick="tab('districtOperatorReg')"><span class="dashboard-btn-icon" aria-hidden="true">🧾</span><span>Registration Forms</span></button></div>
 <div class="dash-action" id="dashWrap_districtCorrection"><button id="districtCorrectionBtn" class="w dashboard-btn" onclick="tab('districtCorrection')"><span class="dashboard-btn-icon" aria-hidden="true">✏️</span><span>Correction Requests</span></button></div>
 <div class="dash-action" id="dashWrap_adminAccepted"><button id="adminAcceptedBtn" class="s dashboard-btn" onclick="tab('adminAccepted')"><span class="dashboard-btn-icon" aria-hidden="true">✅</span><span>Accepted Forms</span></button></div>
+<div class="dash-action" id="dashWrap_dse"><button id="dseBtn" class="w dashboard-btn" onclick="tab('dse')"><span class="dashboard-btn-icon" aria-hidden="true">🔎</span><span>DSE</span></button></div>
 <div class="dash-action" id="dashWrap_adminPresidentList"><button id="adminPresidentBtn" class="p dashboard-btn" onclick="tab('adminPresidentList')"><span class="dashboard-btn-icon" aria-hidden="true">👤</span><span>अध्यक्ष यादी</span></button></div>
 <div class="dash-action" id="dashWrap_operatorPresidentList"><button id="operatorPresidentBtn" class="p dashboard-btn" onclick="tab('operatorPresidentList')"><span class="dashboard-btn-icon" aria-hidden="true">👤</span><span>अध्यक्ष यादी</span></button></div>
+<div class="dash-action" id="dashWrap_formTracking"><button id="formTrackingBtn" class="w dashboard-btn" onclick="tab('formTracking')"><span class="dashboard-btn-icon" aria-hidden="true">🔎</span><span>Form Tracking</span></button></div>
+<div class="dash-action" id="dashWrap_operatorRollback"><button id="operatorRollbackBtn" class="w dashboard-btn" onclick="tab('operatorRollback')"><span class="dashboard-btn-icon" aria-hidden="true">↩️</span><span>Roll Back</span></button></div>
 <div class="dash-action" id="dashWrap_districtPresidentList"><button id="districtPresidentBtn" class="p dashboard-btn" onclick="tab('districtPresidentList')"><span class="dashboard-btn-icon" aria-hidden="true">👤</span><span>अध्यक्ष यादी</span></button></div>
 <div class="dash-action" id="dashWrap_adminSentByDistrict"><button id="adminSentByDistrictBtn" class="w dashboard-btn" onclick="tab('adminSentByDistrict')"><span class="dashboard-btn-icon" aria-hidden="true">📤</span><span>Sent by District</span></button></div>
 <div class="dash-action" id="dashWrap_adminCorrection"><button id="adminCorrectionBtn" class="w dashboard-btn" onclick="tab('adminCorrection')"><span class="dashboard-btn-icon" aria-hidden="true">✏️</span><span>Correction Requests</span></button></div>
 <div class="dash-action" id="dashWrap_adminDelete"><button id="adminDeleteBtn" class="d dashboard-btn" onclick="tab('adminDelete')"><span class="dashboard-btn-icon" aria-hidden="true">🗑️</span><span>Delete Requests</span></button></div>
-<div class="dash-action" id="dashWrap_adminPasswordMenu"><button id="adminPasswordBtn" class="p dashboard-btn" onclick="openAdminPasswordMenu()"><span class="dashboard-btn-icon" aria-hidden="true">🔐</span><span>Password</span></button></div>
+<div class="dash-action" id="dashWrap_adminPasswordMenu"><button id="adminPasswordBtn" class="p dashboard-btn" onclick="openAdminPasswordMenu()"><span class="dashboard-btn-icon" aria-hidden="true">🔐</span><span>User Management</span></button></div>
 
 
 </div>
@@ -567,6 +572,8 @@ input,select,textarea,button{max-width:100%;}
 </section>
 
 <section id="forms" class="card hidden"><h2>Entered Forms</h2><input id="formSearch" placeholder="Reference / नाव / मोबाईल" oninput="renderForms()"><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Status</th><th>Reject Remark</th><th>Action</th></tr></thead><tbody id="formsBody"></tbody></table></div></section>
+<section id="formTracking" class="card hidden"><h2>Form Tracking</h2><p class="notice">आपल्या Registration Form ची सद्यस्थिती येथे तपासा.</p><div class="wrap"><table><thead><tr><th>Reference No.</th><th>Registration Date</th><th>District</th><th>स्थिती</th><th>Remark</th><th>Last Updated</th></tr></thead><tbody id="formTrackingBody"></tbody></table></div></section>
+<section id="operatorRollback" class="card hidden"><h2>Roll Back</h2><p class="notice">District Login कडून दुरुस्तीसाठी परत पाठविलेले Registration Forms येथे उपलब्ध होतील.</p><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference No.</th><th>Operator Name</th><th>District</th><th>District Remark</th><th>Roll Back Date</th><th>Action</th></tr></thead><tbody id="operatorRollbackBody"></tbody></table></div></section>
 <section id="pending" class="card hidden"><h2>Approval Pending</h2><div class="grid"><div class="card">Total Forms<br><span class="stat" id="total">0</span></div><div class="card">Approval Pending<br><span class="stat" id="pend">0</span></div><div class="card">Accepted<br><span class="stat" id="appv">0</span></div><div class="card">Delete Requests<br><span class="stat" id="delReqTotal">0</span></div><div class="card">Correction Requests<br><span class="stat" id="adminCorrectionTotal">0</span></div></div><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Status</th><th>Action</th></tr></thead><tbody id="pendingBody"></tbody></table></div></section>
 <section id="approved" class="card hidden"><h2>Accepted List</h2><div class="grid"><div><label>Form Type Filter</label><select id="approvedFormType" onchange="renderAccepted()"><option value="">-- सर्व Forms --</option><option value="electionBranch">जिल्हा निवडणूक शाखा Forms</option><option value="assembly">Assembly Constituency Forms</option></select></div><div><label>जिल्हानुसार Filter</label><select id="approvedDistrict" onchange="renderAccepted()"><option value="">-- सर्व 36 जिल्हे --</option></select></div><div><label>Search</label><input id="approvedSearch" placeholder="Reference / नाव / Assembly / Taluka" oninput="renderAccepted()"></div></div><div style="margin:10px 0"><button class="s" onclick="downloadApprovedExcel()">Excel Download</button> <button class="m" onclick="downloadApprovedPDF()">PDF Download</button></div><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>Mobile Number</th></tr></thead><tbody id="approvedBody"></tbody></table></div></section>
 <section id="districtOperatorReg" class="card hidden"><h2>Registration Forms</h2><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference</th><th>Operator</th><th>Mobile / User ID</th><th>Assembly</th><th>Taluka</th><th>Status</th><th>Action</th></tr></thead><tbody id="districtOperatorRegBody"></tbody></table></div></section>
@@ -590,6 +597,12 @@ input,select,textarea,button{max-width:100%;}
 <div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference</th><th>District</th><th>Operator + Photo</th><th>Mobile Number</th><th>Assembly</th><th>Taluka</th><th>Accepted Date</th><th>Action</th></tr></thead><tbody id="adminAcceptedBody"></tbody></table></div>
 </section>
 
+<section id="dse" class="card hidden">
+<h2>DSE — Demographically Similar Entries</h2>
+<p>Accepted Forms मधील नाव, जन्मतारीख, पत्ता, मतदारसंघ, Mobile Number किंवा फोटो यांपैकी किमान एक माहिती जुळणाऱ्या नोंदी येथे दाखवल्या आहेत.</p>
+<div class="wrap"><table><thead><tr><th>Sr.No.</th><th>जुळणारे घटक</th><th>पहिली नोंद</th><th>दुसरी नोंद</th><th>Action</th></tr></thead><tbody id="dseBody"></tbody></table></div>
+</section>
+
 <section id="adminPresidentList" class="card hidden">
 <h2>→ अध्यक्ष यादी</h2>
 <div class="grid"><div><label>जिल्हानुसार Filter</label><select id="adminPresidentDistrict" onchange="renderAdminPresidentList()"><option value="">-- सर्व 36 जिल्हे --</option></select></div>
@@ -608,20 +621,22 @@ input,select,textarea,button{max-width:100%;}
 
 <section id="adminDelete" class="card hidden"><h2>→ Delete Requests</h2><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Delete Remark</th><th>Action</th></tr></thead><tbody id="adminDeleteBody"></tbody></table></div></section>
 <section id="adminPasswordMenu" class="card hidden">
-<h2>→ Password</h2>
+<h2>→ User Management</h2>
 <div style="margin:10px 0"><button class="p" onclick="changeAdminPassword()">Admin Password Change</button> <button class="p" onclick="toggleRegistrationFormStatus()">Registration Form: <span id="registrationFormStatus">Enabled</span></button> <button class="p" onclick="tab('adminPasswordRequests')">Password Change Requests</button></div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0"><button class="p" onclick="showUserManagementGroup('district')">District Login</button><button class="p" onclick="showUserManagementGroup('operator')">Operator Login</button><button class="p" onclick="showUserManagementGroup('branch')">जिल्हा निवडणूक शाखा</button></div>
 
-<div class="wrap" style="margin-top:14px">
+<div id="userManagementDistrictGroup" class="wrap" style="margin-top:14px">
 <h3 style="margin:8px 0;color:#123b68">District Login</h3>
 <table><thead><tr><th>Sr.No.</th><th>Username</th><th>Operator</th><th>District</th><th>Assembly Constituency Name</th><th>Password</th><th>Status</th><th>Action</th></tr></thead><tbody id="adminAllDistrictPasswordBody"></tbody></table>
 </div>
 
-<div class="wrap" style="margin-top:18px">
+<div id="userManagementOperatorGroup" class="wrap" style="margin-top:18px;display:none">
 <h3 style="margin:8px 0;color:#123b68">Operator Login</h3>
+<div style="margin:10px 0"><label for="userManagementOperatorDistrictFilter">जिल्ह्यानुसार Filter</label> <select id="userManagementOperatorDistrictFilter" onchange="renderAdminPasswordAll()"><option value="">-- सर्व जिल्हे --</option></select></div>
 <table><thead><tr><th>Sr.No.</th><th>Username</th><th>Operator</th><th>District</th><th>Assembly Constituency Name</th><th>Password</th><th>Status</th><th>Action</th></tr></thead><tbody id="adminAllOperatorPasswordBody"></tbody></table>
 </div>
 
-<div class="wrap" style="margin-top:18px">
+<div id="userManagementBranchGroup" class="wrap" style="margin-top:18px;display:none">
 <h3 style="margin:8px 0;color:#123b68">जिल्हा निवडणूक शाखा</h3>
 <table><thead><tr><th>Sr.No.</th><th>Username</th><th>Operator</th><th>District</th><th>Assembly Constituency Name</th><th>Password</th><th>Status</th><th>Action</th></tr></thead><tbody id="adminAllElectionBranchPasswordBody"></tbody></table>
 </div>
@@ -984,7 +999,11 @@ function toggleLoginStatus(key){if(session.type!=="admin")return;let a=getLoginS
 function loginStatusButton(key){return '<button class="'+(loginEnabled(key)?'s':'d')+'" onclick="toggleLoginStatus(\''+esc(key)+'\')">'+(loginEnabled(key)?'Disable':'Enable')+'</button>'}
 const ADMIN_PASSWORD_PIN_KEY="maharashtraAdminPasswordPinV1";
 function getAdminPasswordPin(){return localStorage.getItem(ADMIN_PASSWORD_PIN_KEY)||""}
-function setAdminPasswordPin(pin){localStorage.setItem(ADMIN_PASSWORD_PIN_KEY,pin)}
+function setAdminPasswordPin(pin){
+  localStorage.setItem(ADMIN_PASSWORD_PIN_KEY,pin);
+  /* Central sync uses the existing Supabase password-sync channel. */
+  if(typeof window.centralAuthUpsertPublic==="function") window.centralAuthUpsertPublic("adminPasswordPin",String(pin));
+}
 function validPin(pin){return /^\d{4,6}$/.test(String(pin||""))}
 
 function requestAdminPasswordPin(callback){
@@ -992,7 +1011,7 @@ function requestAdminPasswordPin(callback){
   overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px";
   const box=document.createElement("div");
   box.style.cssText="background:#fff;width:320px;max-width:100%;padding:20px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.28);font-family:Arial,sans-serif";
-  box.innerHTML='<h3 style="margin:0 0 12px;font-size:17px">→ Password</h3><label style="display:block;margin-bottom:6px;font-size:14px">PIN प्रविष्ट करा</label><input id="adminPasswordPinInput" type="password" inputmode="numeric" autocomplete="off" maxlength="6" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #bbb;border-radius:6px;font-size:16px"><div style="margin-top:14px;text-align:right"><button id="adminPinCancel" class="m" type="button">Cancel</button> <button id="adminPinOk" class="p" type="button">Enter</button></div>';
+  box.innerHTML='<h3 style="margin:0 0 12px;font-size:17px">→ User Management</h3><label style="display:block;margin-bottom:6px;font-size:14px">PIN प्रविष्ट करा</label><input id="adminPasswordPinInput" type="password" inputmode="numeric" autocomplete="off" maxlength="6" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #bbb;border-radius:6px;font-size:16px"><div style="margin-top:14px;text-align:right"><button id="adminPinCancel" class="m" type="button">Cancel</button> <button id="adminPinOk" class="p" type="button">Enter</button></div>';
   overlay.appendChild(box);
   document.body.appendChild(overlay);
   const input=box.querySelector("#adminPasswordPinInput");
@@ -1063,7 +1082,7 @@ function showOperatorRegistration(){
   if(!loginEnabled("registrationForm")){alert("Registration Form सध्या Disable आहे.");return;}
   $("loginPage").classList.add("hidden");$("operatorRegistrationPage").classList.remove("hidden");
   const registrationLogo=$("registrationOrganizationLogo");if(registrationLogo)registrationLogo.src=ASSOCIATION_LOGO_DATA;
-  loadRegistrationDistricts();clearRegistrationForm();
+  regEditId="";loadRegistrationDistricts();clearRegistrationForm();
 }
 function closeOperatorRegistration(){$("operatorRegistrationPage").classList.add("hidden");$("loginPage").classList.remove("hidden")}
 function loadRegistrationDistricts(){
@@ -1368,7 +1387,7 @@ function previewOperatorRegistration(){
   if(d.password!==$("regPasswordConfirm").value){alert("Password आणि Confirm Password समान असणे आवश्यक आहे.");return}
   const rejected=getLatestRejectedOperatorRegistration(d.mobile);
   const existingAccount=getOperatorAccounts().find(x=>x.mobile===d.mobile);
-  if(existingAccount&&!rejected){alert("हा Mobile Number आधीच Operator User ID म्हणून नोंदणीकृत आहे.");return}
+  if(existingAccount&&!rejected&&!regEditId){alert("हा Mobile Number आधीच Operator User ID म्हणून नोंदणीकृत आहे. कृपया User ID Password प्रविष्ट करून लॉगिन करा");return}
   if(rejected&&getOperatorRegistrationAttempts(rejected)>=3){alert("Registration च्या 3 संधी पूर्ण झाल्या आहेत. आता District Login / Admin कडून Data Entry करता येईल.");return}
   d.reRegistrationId=rejected?.id||"";
   d.reRegistrationAttempts=rejected?getOperatorRegistrationAttempts(rejected):0;
@@ -1383,8 +1402,18 @@ async function saveOperatorRegistration(){
   try{
     let d=regPreviewData;if(!d)return;
     const accounts=getOperatorAccounts(), now=new Date(), createdAt=now.toISOString();
-    let a=forms(), existing=d.reRegistrationId?a.find(x=>x.id===d.reRegistrationId):null;
-    if(existing){
+    let a=forms(), rollbackSaved=false, existing=regEditId?a.find(x=>x.id===regEditId):(d.reRegistrationId?a.find(x=>x.id===d.reRegistrationId):null);
+    if(existing && regEditId){
+      if(existing.status!=="Rollback to Operator"||existing.mobile!==d.mobile||existing.mobile!==session.operatorMobile){alert("हा Registration Form दुरुस्तीसाठी उपलब्ध नाही.");return;}
+      const updated={...existing,...d,status:"Pending at District",resubmittedAt:createdAt,registrationAttempts:getOperatorRegistrationAttempts(existing),districtRollbackRemark:"",districtRollbackAt:"",districtRollbackBy:""};
+      if(updated.photo&&/^data:image\//i.test(updated.photo))updated.photo=await compressImageData(updated.photo,800,1000,0.78);
+      if(updated.proof&&/^data:image\//i.test(updated.proof))updated.proof=await compressImageData(updated.proof,1000,1200,0.72);
+      if(updated.signature&&/^data:image\//i.test(updated.signature))updated.signature=await compressImageData(updated.signature,1000,500,0.80);
+      a[a.findIndex(x=>x.id===existing.id)]=updated;save(a);
+      const ai=accounts.findIndex(x=>x.mobile===d.mobile);if(ai>=0){accounts[ai].password=d.password;accounts[ai].district=d.district;accounts[ai].name=d.name;saveOperatorAccounts(accounts);}
+      regEditId="";rollbackSaved=true;closeModal();$("operatorRegistrationPage").classList.add("hidden");$("app").classList.remove("hidden");
+      alert("दुरुस्त केलेला Registration Form पुन्हा District Login कडे पाठविला.");
+    }else if(existing){
       const attempts=getOperatorRegistrationAttempts(existing);
       if(existing.status!=="Rejected"||attempts>=3){alert("या Form साठी Registration ची पुढील संधी उपलब्ध नाही.");return}
       const dc=String(DATA[d.district]?.code||"00").padStart(2,"0"),ac=String(assemblyNo(d.assembly)).padStart(3,"0"),dd=String(now.getDate()).padStart(2,"0"),mm=String(now.getMonth()+1).padStart(2,"0"),yyyy=now.getFullYear();
@@ -1399,7 +1428,7 @@ async function saveOperatorRegistration(){
       else {accounts.push({mobile:d.mobile,password:d.password,district:d.district,name:d.name,createdAt:createdAt});saveOperatorAccounts(accounts)}
       closeModal();alert("Rejected Form पुन्हा Registration साठी Submit झाला.\n\nRegistration Attempt: "+updated.registrationAttempts+" / 3\nForm District Login कडे तपासणीसाठी उपलब्ध आहे.");
     }else{
-      if(accounts.some(x=>x.mobile===d.mobile)){alert("हा Mobile Number आधीच Operator User ID म्हणून नोंदणीकृत आहे.");return}
+      if(accounts.some(x=>x.mobile===d.mobile)&&!regEditId){alert("हा Mobile Number आधीच Operator User ID म्हणून नोंदणीकृत आहे. कृपया User ID Password प्रविष्ट करून लॉगिन करा");return}
       const dc=String(DATA[d.district]?.code||"00").padStart(2,"0"),ac=String(assemblyNo(d.assembly)).padStart(3,"0"),dd=String(now.getDate()).padStart(2,"0"),mm=String(now.getMonth()+1).padStart(2,"0"),yyyy=now.getFullYear();
       const form={id:(window.crypto&&crypto.randomUUID)?crypto.randomUUID():("reg-"+Date.now()+"-"+Math.random().toString(36).slice(2)),reference:"D"+dc+"-"+ac+"-"+dd+"-"+mm+"-"+yyyy,district:d.district,assembly:d.assembly,taluka:d.taluka,name:d.name,nameEnglish:d.nameEnglish,gender:d.gender,dob:d.dob,age:d.age,address:d.address,addressEnglish:d.addressEnglish,officeAddressEnglish:d.officeAddressEnglish,officeAddress:d.officeAddress,pin:d.pin,email:d.email,mobile:d.mobile,whatsapp:d.whatsapp,joiningDate:d.joiningDate,experience:d.experience,photo:d.photo,proof:d.proof,signature:d.signature,status:"Pending at District",createdAt:createdAt,source:"Operator Registration",registrationAttempts:1};
       if(form.photo&&/^data:image\//i.test(form.photo))form.photo=await compressImageData(form.photo,800,1000,0.78);
@@ -1409,8 +1438,14 @@ async function saveOperatorRegistration(){
       accounts.push({mobile:d.mobile,password:d.password,district:d.district,name:d.name,createdAt:createdAt});saveOperatorAccounts(accounts);
       closeModal();alert("Registration Successful! ✅\n\nUser ID: "+d.mobile+"\nForm Reference: "+form.reference+"\n\nआपला Form District Login User कडे आहे.\nDistrict Login User तपासून Admin कडे Approval साठी Forward करेल.");
     }
-    closeOperatorRegistration();$("loginType").value="operator";toggleLogin();$("username").value=d.mobile;$("password").value="";
+    if(!rollbackSaved){
+      closeOperatorRegistration();
+      $("loginType").value="operator";toggleLogin();$("username").value=d.mobile;$("password").value=d.password;
+      session={type:"operator",district:d.district,username:d.mobile,operatorMobile:d.mobile};enter();
+      tab("formTracking");
+    }
     renderForms();renderDistrictOperatorRegistrations();renderAdmin();renderAdminSentByDistrict();renderPending();renderSummary();
+    if(rollbackSaved)tab("forms");
   }catch(e){console.error(e);alert("Operator Registration करता आले नाही. कृपया पुन्हा प्रयत्न करा.")}
 }
 function clearRegistrationForm(){
@@ -1488,8 +1523,8 @@ function login(){
     if(!op){$("loginMsg").textContent="Operator User ID / Password चुकीचे आहे.";return}
     const operatorForm=forms().find(x=>x.mobile===op.mobile&&x.district===op.district&&x.source==="Operator Registration");
     if(operatorForm&&operatorForm.assembly==="जिल्हा निवडणूक शाखा"&&!loginEnabled("electionBranch:"+op.district)){$("loginMsg").textContent="जिल्हा निवडणूक शाखा Login सध्या Disable आहे.";return}
-    if(!operatorForm||!["Accepted","Correction Requested","Correction Approval Pending","Correction Sent for Approval"].includes(operatorForm.status)){
-      $("loginMsg").textContent="Operator Login साठी District Login मधून Send Approval आणि Admin कडून Accept होणे आवश्यक आहे.";
+    if(!operatorForm){
+      $("loginMsg").textContent="Registration Form उपलब्ध नाही. कृपया Registration Form Submit करा.";
       return;
     }
     session={type:"operator",district:op.district,username:op.mobile,operatorMobile:op.mobile};enter();
@@ -1545,6 +1580,8 @@ function enter(){
  document.body.classList.toggle("district-login",session.type==="district");
  document.body.classList.toggle("operator-login",session.type==="operator");
  document.body.classList.toggle("admin-login",session.type==="admin");
+ const operatorRegistrationStatus=session.type==="operator"?forms().find(x=>x.source==="Operator Registration"&&x.mobile===session.operatorMobile&&x.district===session.district)?.status:"";
+ document.body.classList.toggle("operator-pending",session.type==="operator"&&operatorRegistrationStatus!=="Accepted");
  persistSession();
  startSessionTimeout();
  $("loginPage").classList.add("hidden");$("app").classList.remove("hidden");
@@ -1582,7 +1619,7 @@ function logout(auto=false){
   $("loginMsg").textContent=auto?"30 मिनिटांचा Login कालावधी संपला आहे. कृपया पुन्हा Login करा.":"";
   $("password").value="";
 }
-const APP_ROUTES=["home","dashboard","entry","forms","pending","approved","districtOperatorReg","districtCorrection","admin","adminAccepted","adminPresidentList","operatorPresidentList","districtPresidentList","adminSentByDistrict","adminCorrection","adminDelete","adminPasswordMenu","adminPasswordRequests","adminOperatorPassword","adminDistrictPassword","adminElectionBranchPassword","adminSummaryMenu","adminDistrictSummary","summary"];
+const APP_ROUTES=["home","dashboard","entry","forms","formTracking","operatorRollback","pending","approved","districtOperatorReg","districtCorrection","admin","adminAccepted","dse","adminPresidentList","operatorPresidentList","districtPresidentList","adminSentByDistrict","adminCorrection","adminDelete","adminPasswordMenu","adminPasswordRequests","adminOperatorPassword","adminDistrictPassword","adminElectionBranchPassword","adminSummaryMenu","adminDistrictSummary","summary"];
 
 function tab(t,options){
   if(!APP_ROUTES.includes(t))return;
@@ -1606,12 +1643,15 @@ function tab(t,options){
   if(!el)return;
   el.classList.remove("hidden");
   if(t==="forms")renderForms();
+  if(t==="formTracking")renderFormTracking();
+  if(t==="operatorRollback")renderOperatorRollback();
   if(t==="pending")renderPending();
   if(t==="approved"){loadAcceptedDistricts();renderAccepted();}
   if(t==="districtOperatorReg")renderDistrictOperatorRegistrations();
   if(t==="districtCorrection")renderDistrictCorrection();
   if(t==="admin")renderAdmin();
   if(t==="adminAccepted"){loadAdminAcceptedDistricts();renderAdminAccepted()}
+  if(t==="dse")renderDSE()
   if(t==="adminPresidentList"){loadAdminPresidentDistricts();renderAdminPresidentList()}
   if(t==="operatorPresidentList"){renderOperatorPresidentList()}
   if(t==="districtPresidentList"){renderDistrictPresidentList()}
@@ -1655,6 +1695,8 @@ function restoreRoute(){
   document.body.classList.toggle("district-login",session.type==="district");
   document.body.classList.toggle("operator-login",session.type==="operator");
   document.body.classList.toggle("admin-login",session.type==="admin");
+  const operatorRegistrationStatus=session.type==="operator"?forms().find(x=>x.source==="Operator Registration"&&x.mobile===session.operatorMobile&&x.district===session.district)?.status:"";
+  document.body.classList.toggle("operator-pending",session.type==="operator"&&operatorRegistrationStatus!=="Accepted");
   $("currentDistrict").textContent=session.type==="admin"?"सर्व 36 जिल्हे":session.district;
   $("session").textContent=(session.type==="admin"?"Login":session.type==="operator"?"Operator Login":"District Login")+" • "+session.username;
   
@@ -1817,7 +1859,9 @@ function renderForms(){
  let q=$("formSearch").value.toLowerCase(),a=all.filter(x=>JSON.stringify(x).toLowerCase().includes(q));
  $("formsBody").innerHTML=a.map((x,i)=>{
    let actions="<button class='p' onclick=\"view('"+x.id+"')\">View</button>";
-   if(session.type==="operator" && x.status==="Accepted"){actions+="<button class='w' onclick=\"edit('"+x.id+"')\">Edit</button>"}
+   if(session.type==="operator" && x.source==="Operator Registration" && x.status==="Rollback to Operator"){actions+="<button class='w' onclick=\"startRollbackRegistration('"+x.id+"')\">Registration दुरुस्त करा</button>"}
+   if(session.type==="operator" && x.source==="Operator Registration" && x.status==="Rollback to Operator" && x.districtRollbackRemark){actions+="<span style='display:block;color:#b91c1c;font-weight:700;margin-top:5px'>District Remark: "+esc(x.districtRollbackRemark)+"</span>"}
+   if(session.type==="operator" && x.status==="Accepted" && x.source!=="Operator Registration"){actions+="<button class='w' onclick=\"edit('"+x.id+"')\">Edit</button>"}
    if(session.type==="operator" && x.status==="Correction Requested"){actions+="<button class='s' onclick=\"send('"+x.id+"')\">Send Approval</button>"}
    if(session.type==="district" && x.district===session.district && x.status!=="Delete Requested"){
      actions+="<button class='d' onclick=\"requestDelete('"+x.id+"')\">Delete Request</button>";
@@ -1836,7 +1880,7 @@ function renderPending(){
  $("pendingBody").innerHTML=p.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+badge(x.status)+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+(session.type==="admin"&&x.status==="Sent for Approval"?("<button class='s' onclick=\"approve('"+x.id+"')\">Approve</button><button class='d' onclick=\"rejectForm('"+x.id+"')\">Reject</button>"):"")+"</td></tr>").join("")||"<tr><td colspan='5'>Approval Pending नाही.</td></tr>"
 }
 function send(id){let a=forms(),x=a.find(z=>z.id===id);if(!x||!(session.type==="admin"||x.district===session.district&&(session.type!=="operator"||x.mobile===session.operatorMobile)))return;if(session.type==="operator"&&x.status==="Correction Requested"){x.status="Correction Approval Pending";x.correctionOperatorSentAt=new Date().toISOString();x.correctionOperatorSentBy=session.username;save(a);renderForms();renderDistrictCorrection();renderAdminCorrection();renderPending();renderSummary();alert("Correction Form District Login कडे Approval साठी पाठवला.");return}x.status="Sent for Approval";save(a);renderForms();alert("Admin Approval साठी पाठवले.")}
-function approve(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x)return;if(x.source==="Operator Registration"&&x.status!=="Forwarded to Admin")return;if(x.status!=="Sent for Approval"&&!(x.source==="Operator Registration"&&x.status==="Forwarded to Admin"))return;let remark=prompt("Admin Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Admin Remark लिहिणे आवश्यक आहे.");return}x.status="Accepted";x.adminRemark=remark;x.approvedAt=new Date().toISOString();x.approvedBy=session.username;save(a);renderAdmin();renderAdminSentByDistrict();renderAccepted();renderPending();renderAdminAccepted();renderAdminCorrection();renderForms();renderSummary();alert("Form Admin कडून Accept करण्यात आला.")}
+function approve(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x)return;if(x.source==="Operator Registration"&&x.status!=="Forwarded to Admin")return;if(x.status!=="Sent for Approval"&&!(x.source==="Operator Registration"&&x.status==="Forwarded to Admin"))return;if(x.source==="Operator Registration"){const duplicate=a.find(z=>z.id!==x.id&&z.source==="Operator Registration"&&z.mobile===x.mobile&&z.status!=="Rejected"&&z.status!=="Registration Attempts Exhausted");if(duplicate){alert("हा Mobile Number आधीच Operator User ID म्हणून नोंदणीकृत आहे. कृपया User ID Password प्रविष्ट करून लॉगिन करा");return}}let remark=prompt("Admin Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Admin Remark लिहिणे आवश्यक आहे.");return}x.status="Accepted";x.adminRemark=remark;x.approvedAt=new Date().toISOString();x.approvedBy=session.username;save(a);renderAdmin();renderAdminSentByDistrict();renderAccepted();renderPending();renderAdminAccepted();renderAdminCorrection();renderForms();renderSummary();alert("Form Admin कडून Accept करण्यात आला.")}
 function rejectForm(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x)return;if(x.source==="Operator Registration"&&x.status!=="Forwarded to Admin")return;if(x.status!=="Sent for Approval"&&!(x.source==="Operator Registration"&&x.status==="Forwarded to Admin"))return;let remark=prompt("Admin Remark / Reject Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Reject Remark लिहिणे आवश्यक आहे.");return}x.status="Rejected";x.rejectRemark=remark;x.rejectedAt=new Date().toISOString();x.rejectedBy=session.username;
 if(x.source==="Operator Registration"){
   x.registrationAttempts=getOperatorRegistrationAttempts(x);
@@ -1892,17 +1936,81 @@ function renderAccepted(){
  if(ath)ath.innerHTML="<th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>Mobile Number</th><th>Action</th>";
 }
 function requestCorrection(id){if(session.type!=="district"&&session.type!=="operator")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.status!=="Accepted"||x.district!==session.district||(session.type==="operator"&&x.mobile!==session.operatorMobile))return;let remark=prompt("Correction Request चे कारण / Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Correction Remark लिहिणे आवश्यक आहे.");return}x.status="Correction Requested";x.correctionRemark=remark;x.correctionRequestedAt=new Date().toISOString();x.correctionRequestedBy=session.username;save(a);renderAccepted();renderForms();renderPending();renderAdminCorrection();renderSummary();alert("Correction Request Admin कडे पाठवण्यात आली.")}
+function renderOperatorRollback(){
+  const body=$("operatorRollbackBody");if(!body)return;
+  if(session.type!=="operator"){body.innerHTML="<tr><td colspan='7'>Operator Login आवश्यक आहे.</td></tr>";return;}
+  const rows=forms().filter(x=>x.source==="Operator Registration"&&x.mobile===session.operatorMobile&&x.status==="Rollback to Operator").sort((a,b)=>new Date(b.districtRollbackAt||0)-new Date(a.districtRollbackAt||0));
+  body.innerHTML=rows.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.reference||"-")+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.district||"-")+"</td><td style='color:#b91c1c;font-weight:700'>"+esc(x.districtRollbackRemark||"-")+"</td><td>"+(x.districtRollbackAt?new Date(x.districtRollbackAt).toLocaleString("en-IN"):"-")+"</td><td><button class='w' onclick=\"startRollbackRegistration('"+x.id+"')\">दुरुस्ती करा</button></td></tr>").join("")||"<tr><td colspan='7'>District Login कडून Roll Back केलेले Registration Forms उपलब्ध नाहीत.</td></tr>";
+}
+
+function renderFormTracking(){
+  const body=$("formTrackingBody");if(!body)return;
+  if(session.type!=="operator"){body.innerHTML="<tr><td colspan=\"6\">फक्त Operator Login साठी उपलब्ध.</td></tr>";return;}
+  const rows=forms().filter(x=>x.source==="Operator Registration"&&x.mobile===session.operatorMobile&&x.district===session.district);
+  body.innerHTML=rows.map(x=>{
+    const remark=x.districtRollbackRemark||x.districtRejectRemark||x.rejectRemark||x.adminFinalRejectRemark||x.adminRemark||x.districtRemark||x.correctionRemark||"-";
+    const updated=x.adminFinalRejectedAt||x.approvedAt||x.rejectedAt||x.districtRollbackAt||x.districtReviewedAt||x.resubmittedAt||x.createdAt;
+    const status=x.status==="Pending at District"?"District तपासणी प्रलंबित":x.status==="Forwarded to Admin"?"Admin Approval प्रलंबित":x.status==="Accepted"?"Accepted":x.status==="Rollback to Operator"?"दुरुस्तीसाठी परत पाठविले":x.status==="Rejected"?"Rejected":x.status;
+    return "<tr><td>"+esc(x.reference||"-")+"</td><td>"+(x.createdAt?new Date(x.createdAt).toLocaleDateString("en-IN"):"-")+"</td><td>"+esc(x.district||"-")+"</td><td>"+esc(status)+"</td><td>"+esc(remark)+"</td><td>"+(updated?new Date(updated).toLocaleString("en-IN"):"-")+"</td></tr>";
+  }).join("")||"<tr><td colspan=\"6\">Registration Form उपलब्ध नाही.</td></tr>";
+}
+
+
+function acceptedDuplicateForms(x){
+ if(!x||!x.mobile)return [];
+ const mobile=String(x.mobile).replace(/\D/g,"");
+ return forms().filter(z=>z.id!==x.id&&z.source==="Operator Registration"&&String(z.mobile||"").replace(/\D/g,"")===mobile&&z.status==="Accepted");
+}
+function showDuplicateAcceptedForms(id){
+ const x=forms().find(z=>z.id===id);if(!x)return;const matches=acceptedDuplicateForms(x);
+ if(!matches.length){alert("यापूर्वी Accept झालेला Duplicate Form आढळला नाही.");return;}
+ alert("Duplicate Form — यापूर्वी Accept झालेली नोंद:\n\n"+matches.map((z,i)=>(i+1)+". जिल्हा: "+(z.district||"-")+"\n   मतदार संघ: "+(z.assembly||"-")+"\n   संदर्भ क्रमांक: "+(z.reference||"-")).join("\n\n"));
+}
+function duplicateFormButton(x){return acceptedDuplicateForms(x).length?"<button style='background:#dc2626;color:#fff;border:0;border-radius:5px;padding:7px 10px;font-weight:700' onclick=\"showDuplicateAcceptedForms('"+x.id+"')\">Duplicate Form</button>":"";}
+
 function renderDistrictOperatorRegistrations(){
   if(session.type!=="district")return;
   let a=forms().filter(x=>x.source==="Operator Registration"&&x.district===session.district&&(x.status==="Pending at District"||x.status==="Rejected"||x.status==="Registration Attempts Exhausted"));
   $("districtOperatorRegBody").innerHTML=a.map((x,i)=>{
     const attempts=getOperatorRegistrationAttempts(x), exhausted=attempts>=3;
     const statusText=x.status==="Rejected"?(x.status+" • "+attempts+"/3"):(x.status==="Pending at District"?(x.status+" • "+attempts+"/3"):(x.status+" • 3/3"));
-    const actions="<button class='p' onclick=\"view('"+x.id+"')\">View</button>"+
-      (x.status==="Pending at District"?("<button class='s' onclick=\"forwardOperatorRegistration('"+x.id+"')\">Forward to Admin</button><button class='d' onclick=\"districtRejectOperatorRegistration('"+x.id+"')\">Wrong Entry/Wrong User</button>"):"")+
+    const actions="<button class='p' onclick=\"view('"+x.id+"')\">View</button>"+duplicateFormButton(x)+
+      (x.status==="Pending at District"?("<button class='s' onclick=\"forwardOperatorRegistration('"+x.id+"')\">Forward to Admin</button><button class='w' onclick=\"rollbackOperatorRegistration('"+x.id+"')\">Roll Back</button><button class='d' onclick=\"districtRejectOperatorRegistration('"+x.id+"')\">Wrong Entry/Wrong User</button>"):"")+
       (exhausted?("<button class='w' onclick=\"edit('"+x.id+"')\">Data Entry</button>"):"");
     return "<tr><td>"+(i+1)+"</td><td>"+esc(x.reference)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.mobile)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+badge(statusText)+"</td><td>"+actions+"</td></tr>";
   }).join("")||"<tr><td colspan='8'>Operator Registration Request उपलब्ध नाही.</td></tr>";
+}
+function rollbackOperatorRegistration(id){
+  if(session.type!=="district")return;
+  let a=forms(),x=a.find(z=>z.id===id);
+  if(!x||x.source!=="Operator Registration"||x.district!==session.district||x.status!=="Pending at District")return;
+  let remark=prompt("Roll Back Remark लिहा (अनिवार्य):");
+  if(remark===null)return;
+  remark=remark.trim();
+  if(!remark){alert("Roll Back Remark लिहिणे अनिवार्य आहे.");return;}
+  x.status="Rollback to Operator";
+  x.districtRollbackRemark=remark;
+  x.districtRollbackAt=new Date().toISOString();
+  x.districtRollbackBy=session.username;
+  save(a);
+  renderDistrictOperatorRegistrations();renderForms();renderAdmin();renderAdminSentByDistrict();renderPending();renderSummary();
+  alert("Registration Form Remark सहित Operator Login कडे दुरुस्तीसाठी परत पाठविला.");
+}
+function startRollbackRegistration(id){
+  if(session.type!=="operator")return;
+  let x=forms().find(z=>z.id===id);
+  if(!x||x.source!=="Operator Registration"||x.mobile!==session.operatorMobile||x.status!=="Rollback to Operator")return;
+  regEditId=x.id;
+  $("app").classList.add("hidden");$("operatorRegistrationPage").classList.remove("hidden");
+  const logo=$("registrationOrganizationLogo");if(logo)logo.src=ASSOCIATION_LOGO_DATA;
+  loadRegistrationDistricts();$("regDistrict").value=x.district;loadRegistrationAssemblies();$("regAssembly").value=x.assembly;loadRegistrationTalukas();$("regTaluka").value=x.taluka||"";
+  $("regOfficeAddressEnglish").value=x.officeAddressEnglish||"";$("regOfficeAddress").value=x.officeAddress||"";$("regNameEnglish").value=x.nameEnglish||"";$("regName").value=x.name||"";$("regGender").value=x.gender||"";$("regEducation").value=x.education||"";$("regDob").value=x.dob||"";$("regAge").value=x.age||"";$("regJoiningDate").value=x.joiningDate||"";$("regExperience").value=x.experience||"";$("regAddressEnglish").value=x.addressEnglish||"";$("regAddress").value=x.address||"";$("regPin").value=x.pin||"";$("regEmail").value=x.email||"";$("regMobile").value=x.mobile||"";$("regWhatsapp").value=x.whatsapp||"";
+  regPhotoData=x.photo||"";regPhotoCropped=!!regPhotoData;regProofData=x.proof||"";regSignatureData=x.signature||"";regSignatureCropped=!!regSignatureData;
+  if(regPhotoData){$("regPhotoPreview").src=regPhotoData;$("regPhotoPreview").classList.remove("hidden");$("regCropPhotoBtn").classList.remove("hidden");}
+  if(regProofData)$("regProofName").textContent="Existing Identity Proof";
+  if(regSignatureData){$("regSignatureName").textContent="Existing Signature";$("regCropSignatureBtn").classList.remove("hidden");}
+  $("regPassword").value="";$("regPasswordConfirm").value="";
+  alert("District Remark: "+x.districtRollbackRemark+"\nकृपया माहिती दुरुस्त करा. Password आणि Confirm Password पुन्हा भरा.");
 }
 function forwardOperatorRegistration(id){
   if(session.type!=="district")return;
@@ -1970,17 +2078,31 @@ function rejectDelete(id){if(session.type!=="admin")return;let a=forms(),x=a.fin
 
 function getElectionBranchPasswords(){try{const v=JSON.parse(localStorage.getItem(ELECTION_BRANCH_PASSWORD_KEY)||"{}");return v&&typeof v==="object"?v:{}}catch(e){return {}}}
 function saveElectionBranchPasswords(a){localStorage.setItem(ELECTION_BRANCH_PASSWORD_KEY,JSON.stringify(a))}
+function showUserManagementGroup(group){
+  if(session.type!=="admin")return;
+  const groups={district:"userManagementDistrictGroup",operator:"userManagementOperatorGroup",branch:"userManagementBranchGroup"};
+  Object.keys(groups).forEach(k=>{const el=$(groups[k]);if(el)el.style.display=(k===group)?"block":"none";});
+}
+
 function renderAdminPasswordAll(){
   if(session.type!=="admin")return;
+  showUserManagementGroup("district");
   let dp=getDistrictPasswords();
   let districtRows=LOGINS.slice().sort((x,y)=>Number(x.district_code)-Number(y.district_code));
   $("adminAllDistrictPasswordBody").innerHTML=districtRows.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.username)}</td><td>District Login</td><td>${esc(x.district)}</td><td>-</td><td><input id="allDistPass_${esc(x.district_code)}" value="${esc(dp[x.district]||x.password)}" type="text" style="min-width:180px"></td><td>${loginEnabled("district:"+x.district)?"Enabled":"Disabled"}</td><td><button class="s" onclick="setDistrictPasswordAll('${esc(x.district)}','${esc(x.district_code)}')">Set Password</button> <button class="${loginEnabled("district:"+x.district)?"d":"s"}" onclick="toggleLoginStatus('district:${esc(x.district)}');renderAdminPasswordAll()">${loginEnabled("district:"+x.district)?"Disable":"Enable"}</button></td></tr>`).join("")||'<tr><td colspan="8">District उपलब्ध नाही.</td></tr>';
 
   let allForms=forms();
+  const opDistrictFilter=$("userManagementOperatorDistrictFilter");
+  if(opDistrictFilter){
+    const selectedDistrict=opDistrictFilter.value;
+    const districtNames=Array.from(new Set(getOperatorAccounts().map(x=>x.district).filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),"mr"));
+    opDistrictFilter.innerHTML='<option value="">-- सर्व जिल्हे --</option>'+districtNames.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join("");
+    if(districtNames.includes(selectedDistrict))opDistrictFilter.value=selectedDistrict;
+  }
   let operators=getOperatorAccounts().map(x=>{
     let f=allForms.filter(z=>z.source==="Operator Registration"&&z.mobile===x.mobile).sort((p,q)=>new Date(q.createdAt||0)-new Date(p.createdAt||0))[0];
     return Object.assign({},x,{assemblyName:x.assembly||f?.assembly||"-"});
-  }).slice().sort((x,y)=>String(x.district||"").localeCompare(String(y.district||""),"mr")||String(x.assemblyName||"").localeCompare(String(y.assemblyName||""),"mr"));
+  }).filter(x=>!opDistrictFilter||!opDistrictFilter.value||x.district===opDistrictFilter.value).slice().sort((x,y)=>String(x.district||"").localeCompare(String(y.district||""),"mr")||String(x.assemblyName||"").localeCompare(String(y.assemblyName||""),"mr"));
   $("adminAllOperatorPasswordBody").innerHTML=operators.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.mobile)}</td><td>${esc(x.name||"-")}</td><td>${esc(x.district||"-")}</td><td>${esc(x.assemblyName||"-")}</td><td><input id="allOpPass_${esc(x.mobile)}" value="${esc(x.password||"")}" type="text" style="min-width:180px"></td><td>${loginEnabled("operator:"+x.mobile)?"Enabled":"Disabled"}</td><td><button class="s" onclick="setOperatorPasswordAll('${esc(x.mobile)}')">Set Password</button> <button class="${loginEnabled("operator:"+x.mobile)?"d":"s"}" onclick="toggleLoginStatus('operator:${esc(x.mobile)}');renderAdminPasswordAll()">${loginEnabled("operator:"+x.mobile)?"Disable":"Enable"}</button> <button class="d" onclick="deleteOperatorAccountAll('${esc(x.mobile)}')">Delete User</button></td></tr>`).join("")||'<tr><td colspan="8">Operator Account उपलब्ध नाही.</td></tr>';
 
   let ep=getElectionBranchPasswords();
@@ -2006,7 +2128,7 @@ function renderAdminSentByDistrict(){
   if(session.type!=="admin")return;
   let a=forms().filter(x=>x.source==="Operator Registration"&&x.status==="Forwarded to Admin");
   a.sort((x,y)=>new Date(x.districtReviewedAt||0)-new Date(y.districtReviewedAt||0));
-  $("adminSentByDistrictBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.districtRemark||x.districtRejectRemark||"-")+"</td><td>"+(x.districtReviewedAt||x.districtRejectedAt?new Date(x.districtReviewedAt||x.districtRejectedAt).toLocaleString("en-IN"):"-")+"</td><td>"+esc(x.districtReviewedBy||x.districtRejectedBy||"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+(x.districtRejectedAt?"<button class='d' onclick=\"adminFinalRejectOperatorRegistration('"+x.id+"')\">Reject</button>":"<button class='s' onclick=\"adminFinalApproveOperatorRegistration('"+x.id+"')\">Approve</button><button class='d' onclick=\"adminFinalRejectOperatorRegistration('"+x.id+"')\">Reject</button>")+"</td></tr>").join("")||"<tr><td colspan='9'>District कडून Admin कडे Forward केलेले Forms उपलब्ध नाहीत.</td></tr>";
+  $("adminSentByDistrictBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.districtRemark||x.districtRejectRemark||"-")+"</td><td>"+(x.districtReviewedAt||x.districtRejectedAt?new Date(x.districtReviewedAt||x.districtRejectedAt).toLocaleString("en-IN"):"-")+"</td><td>"+esc(x.districtReviewedBy||x.districtRejectedBy||"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+duplicateFormButton(x)+(x.districtRejectedAt?"<button class='d' onclick=\"adminFinalRejectOperatorRegistration('"+x.id+"')\">Reject</button>":"<button class='s' onclick=\"adminFinalApproveOperatorRegistration('"+x.id+"')\">Approve</button><button class='d' onclick=\"adminFinalRejectOperatorRegistration('"+x.id+"')\">Reject</button>")+"</td></tr>").join("")||"<tr><td colspan='9'>District कडून Admin कडे Forward केलेले Forms उपलब्ध नाहीत.</td></tr>";
 }
 function adminFinalApproveOperatorRegistration(id){
   if(session.type!=="admin")return;
@@ -2032,6 +2154,27 @@ function adminFinalRejectOperatorRegistration(id){
   save(a);renderAdminSentByDistrict();renderAdmin();renderPending();renderForms();renderSummary();
   alert("Admin कडून Final Decision म्हणून Form Reject करण्यात आला.");
 }
+
+function renderDSE(){
+ if(session.type!=="admin")return;
+ const a=forms().filter(x=>x.status==="Accepted");
+ const norm=v=>String(v??"").trim().toLowerCase().replace(/\s+/g," ");
+ const pairs=[];
+ const fields=[
+  ["नाव",x=>x.name||x.nameEnglish],
+  ["जन्मतारीख",x=>x.dob],
+  ["पत्ता",x=>x.address||x.addressEnglish||x.homeAddress],
+  ["मतदारसंघ",x=>x.assembly],
+  ["Mobile Number",x=>x.mobile],
+  ["फोटो",x=>x.photo||x.photoData]
+ ];
+ for(let i=0;i<a.length;i++){for(let j=i+1;j<a.length;j++){
+  const matched=fields.filter(([label,get])=>{const v1=norm(get(a[i])),v2=norm(get(a[j]));return !!v1&&!!v2&&(label==="फोटो"?v1===v2:v1===v2)}).map(z=>z[0]);
+  if(matched.length)pairs.push({x:a[i],y:a[j],matched});
+ }}
+ $("dseBody").innerHTML=pairs.map((p,i)=>"<tr><td>"+(i+1)+"</td><td style='color:#b91c1c;font-weight:700'>"+esc(p.matched.join(", "))+"</td><td>"+esc(p.x.reference||"-")+"<br>"+esc(p.x.name||"-")+"<br>"+esc(p.x.district||"-")+" / "+esc(p.x.assembly||"-")+"<br>"+esc(p.x.mobile||"-")+(p.x.photo?"<br><img src='"+p.x.photo+"' style='width:45px;height:55px;object-fit:cover'>":"")+"</td><td>"+esc(p.y.reference||"-")+"<br>"+esc(p.y.name||"-")+"<br>"+esc(p.y.district||"-")+" / "+esc(p.y.assembly||"-")+"<br>"+esc(p.y.mobile||"-")+(p.y.photo?"<br><img src='"+p.y.photo+"' style='width:45px;height:55px;object-fit:cover'>":"")+"</td><td><button class='p' onclick=\"view('"+p.x.id+"')\">पहिली नोंद</button> <button class='p' onclick=\"view('"+p.y.id+"')\">दुसरी नोंद</button></td></tr>").join("")||"<tr><td colspan='5'>Accepted Forms मध्ये जुळणाऱ्या नोंदी आढळल्या नाहीत.</td></tr>";
+}
+
 function renderAdmin(){
  let a=forms(),p=a.filter(x=>x.status==="Sent for Approval"&&x.source!=="Operator Registration");
  $("adminBody").innerHTML=p.map(x=>{let isReg=x.source==="Operator Registration";return "<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+(isReg?"<span class='small' style='display:block;margin:5px 0'>District Remark: "+esc(x.districtRemark||"-")+"</span>":"")+"<button class='s' onclick=\"approve('"+x.id+"')\">Approve</button><button class='d' onclick=\"rejectForm('"+x.id+"')\">Reject</button></td></tr>"}).join("")||"<tr><td colspan='6'>Approval साठी Form नाही.</td></tr>";
@@ -2443,6 +2586,14 @@ window.addEventListener("load", function(){
         if(p && p.kind==="password_sync" && p.key) remote[p.key]=p.data;
       });
 
+      /* Admin User Management PIN: central value wins; otherwise migrate local value. */
+      const localAdminPin = localStorage.getItem(ADMIN_PASSWORD_PIN_KEY);
+      if(Object.prototype.hasOwnProperty.call(remote,"adminPasswordPin")){
+        localStorage.setItem(ADMIN_PASSWORD_PIN_KEY,String(remote.adminPasswordPin));
+      }else if(localAdminPin!==null && localAdminPin!==""){
+        await centralAuthUpsert("adminPasswordPin",String(localAdminPin));
+      }
+
       /* Admin password: central value wins; otherwise migrate local value. */
       const localAdmin = localStorage.getItem(ADMIN_PASSWORD_KEY);
       if(Object.prototype.hasOwnProperty.call(remote,"admin")){
@@ -2500,6 +2651,9 @@ window.addEventListener("load", function(){
       console.warn("Central password load failed; local cache will be used.",e);
     }
   }
+
+  /* Allow the existing User Management PIN setter to use central sync. */
+  window.centralAuthUpsertPublic = function(key,data){ return centralAuthUpsert(key,data); };
 
   /* Keep existing local functions/UI, but add central persistence. */
   const originalSetAdminPassword = window.setAdminPassword;
