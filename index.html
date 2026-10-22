@@ -453,7 +453,7 @@ input,select,textarea,button{max-width:100%;}
 <div class="small" style="margin-top:12px"><b>District:</b> जिल्हा निवडल्यानंतर Username Auto-Fill होईल.</div>
 </div>
 </div>
-<div class="ecinet-footer"><span>🔊 <span class="ecinet-link">ECI Updates</span></span><span>▣ <span class="ecinet-link">Contact Directory</span></span><div class="copyright">महाराष्ट्र राज्य - निवडणूक विभाग डाटा एन्ट्री ऑपरेटर संघटना</div></div>
+<div class="ecinet-footer"><div class="copyright">महाराष्ट्र राज्य - निवडणूक विभाग डाटा एन्ट्री ऑपरेटर संघटना</div></div>
 </div>
 
 
@@ -2400,9 +2400,10 @@ function renderAdminAccepted(){
  $("adminAcceptedBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"<br>"+(x.photo?"<img src='"+x.photo+"' style=\"width:55px;height:68px;object-fit:cover;border:1px solid #aaa;border-radius:5px;margin-top:4px;cursor:pointer\" title=\"Photo पाहण्यासाठी क्लिक करा\" onclick=\"view('"+x.id+"')\">":"-")+"</td><td>"+esc(x.mobile||"-")+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+(x.approvedAt?new Date(x.approvedAt).toLocaleString("en-IN"):"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button> "+(x.isPresident?"<button class='w' onclick=\"togglePresidentMark(\'"+x.id+"\')\">अध्यक्ष पदावरून काढा</button>":"<button class='s' onclick=\"togglePresidentMark(\'"+x.id+"\')\">अध्यक्ष म्हणून Mark</button>")+"</td></tr>").join("")||"<tr><td colspan='9'>Accepted Forms उपलब्ध नाहीत.</td></tr>";
 }
 function getAcceptedDownloadRows(){
- let district=session.type==="admin"?$("adminAcceptedDistrict").value:session.district;
- let formType=session.type==="admin"?($("adminAcceptedFormType")?.value||""):"";
- let q=(session.type==="admin"?$("adminAcceptedSearch").value:$("approvedSearch").value||"").toLowerCase();
+ // Export exactly the rows currently shown by the Accepted Forms table filters.
+ let district=$("adminAcceptedDistrict")?.value||"";
+ let formType=$("adminAcceptedFormType")?.value||"";
+ let q=($("adminAcceptedSearch")?.value||"").toLowerCase();
  let a=forms().filter(x=>x.status==="Accepted");
  if(formType==="electionBranch")a=a.filter(x=>x.assembly==="जिल्हा निवडणूक शाखा");
  if(formType==="assembly")a=a.filter(x=>x.assembly!=="जिल्हा निवडणूक शाखा");
@@ -2413,6 +2414,10 @@ function getAcceptedDownloadRows(){
    let dy=Number(LOGINS.find(d=>d.district===y.district)?.district_code||999);
    return dx-dy||assemblyNo(x.assembly)-assemblyNo(y.assembly)||String(x.assembly||"").localeCompare(String(y.assembly||""),"mr");
  });
+}
+function getAcceptedDownloadTitle(){
+ let district=$("adminAcceptedDistrict")?.value||"";
+ return district ? district+" जिल्हा - निवडणूक विभागात कार्यरत डाटा एन्ट्री ऑपरेटर यांची यादी" : "महाराष्ट्र राज्य - निवडणूक विभाग डाटा एन्ट्री ऑपरेटर यांची जिल्हा निहाय यादी";
 }
 function downloadAcceptedCSV(){
  let a=getAcceptedDownloadRows();
@@ -2430,7 +2435,8 @@ function downloadApprovedExcel(){
  const headers=["Sr.No.","District","Assembly Constituency","Taluka","Operator Name","Mobile Number"];
  const rows=a.map((x,i)=>[i+1,x.district,x.assembly,x.taluka,x.name,x.mobile]);
  const escX=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
- const html="<html><head><meta charset='UTF-8'></head><body><table border='1'><thead><tr>"+headers.map(h=>"<th>"+escX(h)+"</th>").join("")+"</tr></thead><tbody>"+rows.map(r=>"<tr>"+r.map(v=>"<td>"+escX(v)+"</td>").join("")+"</tr>").join("")+"</tbody></table></body></html>";
+ const title=getAcceptedDownloadTitle();
+ const html="<html><head><meta charset='UTF-8'><style>table{border-collapse:collapse;table-layout:auto;width:auto}th,td{white-space:normal;overflow-wrap:break-word;word-wrap:break-word;vertical-align:top;height:auto;mso-wrap-text:yes}th{font-weight:bold}</style></head><body><table border='1' style='table-layout:auto;width:auto'><thead><tr><th colspan='6' style='text-align:center;font-size:16px'>"+escX(title)+"</th></tr><tr>"+headers.map(h=>"<th>"+escX(h)+"</th>").join("")+"</tr></thead><tbody>"+rows.map(r=>"<tr>"+r.map(v=>"<td>"+escX(v)+"</td>").join("")+"</tr>").join("")+"</tbody></table></body></html>";
  const blob=new Blob([html],{type:"application/vnd.ms-excel;charset=utf-8"});
  const url=URL.createObjectURL(blob),aEl=document.createElement("a");aEl.href=url;aEl.download="Accepted_Forms.xls";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
 }
@@ -2438,8 +2444,9 @@ function downloadApprovedPDF(){
  let a=getAcceptedDownloadRows();
  if(!a.length){alert("PDF तयार करण्यासाठी Accepted Forms उपलब्ध नाहीत.");return}
  const rows=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.mobile)+"</td></tr>").join("");
+ const title=getAcceptedDownloadTitle();
  const w=window.open("","_blank");if(!w){alert("PDF साठी नवीन window उघडण्याची परवानगी द्या.");return}
- w.document.write("<!doctype html><html><head><meta charset='UTF-8'><title>Accepted Forms</title><style>body{font-family:Arial,sans-serif;padding:15px}h2{text-align:center}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #777;padding:5px;text-align:left;vertical-align:top}th{font-weight:700}@media print{body{padding:0}@page{size:A4 landscape;margin:8mm}}</style></head><body><h2>Accepted Forms</h2><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>Mobile Number</th></tr></thead><tbody>"+rows+"</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>");w.document.close();
+ w.document.write("<!doctype html><html><head><meta charset='UTF-8'><title>"+esc(title)+"</title><style>@page{size:A4 portrait;margin:6mm}*{box-sizing:border-box}body{font-family:Arial,'Noto Sans Devanagari',sans-serif;margin:0;padding:0}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px}th,td{border:1px solid #777;padding:3px;text-align:left;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;height:auto}th{font-weight:700}.report-title{font-size:11px;text-align:center;font-weight:700;white-space:normal;overflow-wrap:anywhere;word-break:break-word;padding:6px}@media print{body{margin:0}}</style></head><body><table><colgroup><col style='width:8%'><col style='width:15%'><col style='width:22%'><col style='width:15%'><col style='width:22%'><col style='width:18%'></colgroup><thead><tr><th class='report-title' colspan='6'>"+esc(title)+"</th></tr><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>Mobile Number</th></tr></thead><tbody>"+rows+"</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>");w.document.close();
 }
 function downloadAcceptedExcel(){
  let a=getAcceptedDownloadRows();
@@ -2448,7 +2455,8 @@ function downloadAcceptedExcel(){
    const headers=["Sr.No.","District","Assembly Constituency","Taluka","Operator Name","Mobile Number"];
    const rows=a.map((x,i)=>[i+1,x.district,x.assembly,x.taluka,x.name,x.mobile]);
    const escX=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-   const xhtml="<html><head><meta charset='UTF-8'></head><body><table border='1'><thead><tr>"+headers.map(h=>"<th>"+escX(h)+"</th>").join("")+"</tr></thead><tbody>"+rows.map(r=>"<tr>"+r.map(v=>"<td>"+escX(v)+"</td>").join("")+"</tr>").join("")+"</tbody></table></body></html>";
+   const title=getAcceptedDownloadTitle();
+   const xhtml="<html><head><meta charset='UTF-8'><style>table{border-collapse:collapse;table-layout:auto;width:auto}th,td{white-space:normal;overflow-wrap:break-word;word-wrap:break-word;vertical-align:top;height:auto;mso-wrap-text:yes}th{font-weight:bold}</style></head><body><table border='1' style='table-layout:auto;width:auto'><thead><tr><th colspan='6' style='text-align:center;font-size:16px'>"+escX(title)+"</th></tr><tr>"+headers.map(h=>"<th>"+escX(h)+"</th>").join("")+"</tr></thead><tbody>"+rows.map(r=>"<tr>"+r.map(v=>"<td>"+escX(v)+"</td>").join("")+"</tr>").join("")+"</tbody></table></body></html>";
    const blob=new Blob([xhtml],{type:"application/vnd.ms-excel;charset=utf-8"});
    const url=URL.createObjectURL(blob),aEl=document.createElement("a");aEl.href=url;aEl.download="Accepted_Forms.xls";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
    return;
@@ -2456,20 +2464,22 @@ function downloadAcceptedExcel(){
  const headers=["District","Assembly Constituency","Taluka","Operator Name","DOB","Age","Address","PIN","Mobile","WhatsApp"];
  const rows=a.map(x=>[x.district,x.assembly,x.taluka,x.name,x.dob,x.age,x.address,x.pin,x.mobile,x.whatsapp]);
  const escX=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
- const xhtml="<html><head><meta charset='UTF-8'></head><body><table border='1'><thead><tr>"+headers.map(h=>"<th>"+escX(h)+"</th>").join("")+"</tr></thead><tbody>"+rows.map(r=>"<tr>"+r.map(v=>"<td>"+escX(v)+"</td>").join("")+"</tr>").join("")+"</tbody></table></body></html>";
+ const title=getAcceptedDownloadTitle();
+ const xhtml="<html><head><meta charset='UTF-8'><style>table{border-collapse:collapse;table-layout:auto;width:auto}th,td{white-space:normal;overflow-wrap:break-word;word-wrap:break-word;vertical-align:top;height:auto;mso-wrap-text:yes}th{font-weight:bold}</style></head><body><table border='1' style='table-layout:auto;width:auto'><thead><tr><th colspan='10' style='text-align:center;font-size:16px'>"+escX(title)+"</th></tr><tr>"+headers.map(h=>"<th>"+escX(h)+"</th>").join("")+"</tr></thead><tbody>"+rows.map(r=>"<tr>"+r.map(v=>"<td>"+escX(v)+"</td>").join("")+"</tr>").join("")+"</tbody></table></body></html>";
  const blob=new Blob([xhtml],{type:"application/vnd.ms-excel;charset=utf-8"});
  const url=URL.createObjectURL(blob),aEl=document.createElement("a");aEl.href=url;aEl.download="Accepted_Forms.xls";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
 }
 function downloadAcceptedPDF(){
  let a=getAcceptedDownloadRows();
  if(!a.length){alert("PDF तयार करण्यासाठी Accepted Forms उपलब्ध नाहीत.");return}
+ const title=getAcceptedDownloadTitle();
  const w=window.open("","_blank");if(!w){alert("PDF साठी नवीन window उघडण्याची परवानगी द्या.");return}
  if(session.type!=="admin"){
    const rows=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.mobile)+"</td></tr>").join("");
-   w.document.write("<!doctype html><html><head><meta charset='UTF-8'><title>Accepted Forms</title><style>body{font-family:Arial,sans-serif;padding:15px}h2{text-align:center}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #777;padding:5px;text-align:left;vertical-align:top}th{font-weight:700}@media print{body{padding:0}@page{size:A4 landscape;margin:8mm}}</style></head><body><h2>Accepted Forms</h2><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>Mobile Number</th></tr></thead><tbody>"+rows+"</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>");
+   w.document.write("<!doctype html><html><head><meta charset='UTF-8'><title>"+esc(title)+"</title><style>@page{size:A4 portrait;margin:6mm}*{box-sizing:border-box}body{font-family:Arial,'Noto Sans Devanagari',sans-serif;margin:0;padding:0}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px}th,td{border:1px solid #777;padding:3px;text-align:left;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;height:auto}th{font-weight:700}.report-title{font-size:11px;text-align:center;font-weight:700;white-space:normal;overflow-wrap:anywhere;word-break:break-word;padding:6px}@media print{body{margin:0}}</style></head><body><table><colgroup><col style='width:8%'><col style='width:15%'><col style='width:22%'><col style='width:15%'><col style='width:22%'><col style='width:18%'></colgroup><thead><tr><th class='report-title' colspan='6'>"+esc(title)+"</th></tr><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>Mobile Number</th></tr></thead><tbody>"+rows+"</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>");
  }else{
    const rows=a.map(x=>"<tr><td>"+esc(x.district)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.dob)+"</td><td>"+esc(x.age)+"</td><td>"+esc(x.address)+"</td><td>"+esc(x.pin)+"</td><td>"+esc(x.mobile)+"</td><td>"+esc(x.whatsapp)+"</td></tr>").join("");
-   w.document.write("<!doctype html><html><head><meta charset='UTF-8'><title>Accepted Forms</title><style>body{font-family:Arial,sans-serif;padding:15px}h2{text-align:center}table{width:100%;border-collapse:collapse;font-size:9px}th,td{border:1px solid #777;padding:5px;text-align:left;vertical-align:top}th{font-weight:700}@media print{body{padding:0}@page{size:A4 landscape;margin:8mm}}</style></head><body><h2>Accepted Forms</h2><table><thead><tr><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>DOB</th><th>Age</th><th>Address</th><th>PIN</th><th>Mobile</th><th>WhatsApp</th></tr></thead><tbody>"+rows+"</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>");
+   w.document.write("<!doctype html><html><head><meta charset='UTF-8'><title>"+esc(title)+"</title><style>@page{size:A4 portrait;margin:5mm}*{box-sizing:border-box}body{font-family:Arial,'Noto Sans Devanagari',sans-serif;margin:0;padding:0}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:6.5px}th,td{border:1px solid #777;padding:2px;text-align:left;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;height:auto}th{font-weight:700}.report-title{font-size:10px;text-align:center;font-weight:700;white-space:normal;overflow-wrap:anywhere;word-break:break-word;padding:5px}@media print{body{margin:0}}</style></head><body><table><colgroup><col style='width:12%'><col style='width:15%'><col style='width:12%'><col style='width:15%'><col style='width:8%'><col style='width:5%'><col style='width:14%'><col style='width:6%'><col style='width:7%'><col style='width:6%'></colgroup><thead><tr><th class='report-title' colspan='10'>"+esc(title)+"</th></tr><tr><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>DOB</th><th>Age</th><th>Address</th><th>PIN</th><th>Mobile</th><th>WhatsApp</th></tr></thead><tbody>"+rows+"</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>");
  }
  w.document.close();
 }
