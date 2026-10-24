@@ -768,7 +768,7 @@ const ASSOCIATION_LOGO_DATA = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAA
 window.GOOGLE_SYNC_CONFIG = {
   enabled: true,
   webAppUrl: "https://script.google.com/macros/s/AKfycbxu0fMwv1memG20e6Gz3A9NBiZL9b0ti1DQZNn6ngr0xEFR-_nSRYCozZb_4jOCQXaY/exec", // Google Apps Script Web App URL येथे एकदाच भरा
-  secret: "MahaAutoBackup_2026_-6eKSrLcLk5LiS5wOyQkzDskdpSuS-TZ",    // Apps Script मधील SYNC_SECRET प्रमाणेच
+  secret: "AYm47L4Qqf3nqgES7q958q1bLNyn9WDJFsfcY2ufEBexNjF3juWw8Cd_Ro4EneVb",    // Apps Script मधील SYNC_SECRET प्रमाणेच
   notifyEmail: "deo.maharashtra.election@gmail.com",
   syncDelayMs: 1500
 };
@@ -1139,20 +1139,42 @@ function forgotAdminPasswordPin(){
   setAdminPasswordPin(np);
   alert("Forgot PIN प्रक्रिया पूर्ण. नवीन PIN सेट झाला आहे.");
 }
-function changeAdminPassword(){
+async function changeAdminPassword(){
   if(session.type!=="admin")return;
-  let current=prompt("सध्याचा Admin Password प्रविष्ट करा:");
-  if(current===null)return;
-  if(current!==getAdminPassword()){alert("सध्याचा Admin Password चुकीचा आहे.");return}
-  let np=prompt("नवीन Admin Password प्रविष्ट करा:");
-  if(np===null)return;
-  np=String(np).trim();
-  if(np.length<6){alert("नवीन Password किमान 6 characters असावा.");return}
-  let cp=prompt("नवीन Admin Password पुन्हा प्रविष्ट करा:");
-  if(cp===null)return;
-  if(np!==String(cp).trim()){alert("नवीन Password आणि Confirm Password जुळत नाहीत.");return}
-  setAdminPassword(np);
-  alert("Admin Password यशस्वीरीत्या बदलला आहे.");
+  if(!window.google || !google.script || !google.script.run){
+    alert("OTP साठी पोर्टल Google Apps Script Web App मधून उघडा. संगणकावरील file:/// HTML मधून OTP विनंती करता येणार नाही.");
+    return;
+  }
+  const adminUsername=prompt("Server-side पडताळणीसाठी Admin Username प्रविष्ट करा:");
+  if(adminUsername===null)return;
+  const adminPassword=prompt("Server-side पडताळणीसाठी सध्याचा Admin Password प्रविष्ट करा:");
+  if(adminPassword===null)return;
+  const callServer=(method,...args)=>new Promise((resolve,reject)=>{
+    try{
+      const runner=google.script.run.withSuccessHandler(resolve).withFailureHandler(err=>reject(new Error(err&&err.message?err.message:"Apps Script विनंती अयशस्वी.")));
+      runner[method](...args);
+    }catch(err){reject(err)}
+  });
+  const ensureOk=result=>{if(!result||result.ok!==true)throw new Error(result&&result.error?result.error:"Server request अयशस्वी.");return result};
+  try{
+    ensureOk(await callServer("adminOtpSend",String(adminUsername).trim(),adminPassword));
+    alert("Admin Username/Password ची server-side पडताळणी झाली. OTP फक्त deo.maharashtra.election@gmail.com या ईमेलवर पाठवला आहे.");
+    const otp=prompt("ईमेलवर प्राप्त झालेला OTP प्रविष्ट करा:");
+    if(otp===null)return;
+    const verified=ensureOk(await callServer("adminOtpVerify",String(otp).trim()));
+    const newPassword=prompt("नवीन Admin Password प्रविष्ट करा (किमान 8 characters):");
+    if(newPassword===null)return;
+    if(String(newPassword).length<8){alert("नवीन Password किमान 8 characters असावा.");return}
+    const confirmPassword=prompt("नवीन Admin Password पुन्हा प्रविष्ट करा:");
+    if(confirmPassword===null)return;
+    if(newPassword!==confirmPassword){alert("नवीन Password आणि Confirm Password जुळत नाहीत.");return}
+    ensureOk(await callServer("adminPasswordReset",verified.token,newPassword));
+    setAdminPassword(newPassword);
+    alert("Server-side OTP पडताळणी पूर्ण. सर्व्हरवरील Admin Password Hash बदलला आहे. या ब्राउझरमध्येही नवीन Password सेव्ह केला आहे.");
+  }catch(err){
+    console.error("Admin Password OTP:",err);
+    alert("Admin प्रमाणीकरण / OTP / Password बदल अयशस्वी: "+(err.message||"Apps Script Web App तपासा")+". Password बदललेला नसू शकतो; सर्व्हरवरील प्रतिसाद तपासा.");
+  }
 }
 function toggleRegistrationFormStatus(){if(session.type!=="admin")return;let a=getLoginStatuses();a.registrationForm=a.registrationForm===false;saveLoginStatuses(a);renderRegistrationFormStatus()}
 function renderRegistrationFormStatus(){let el=$("registrationFormStatus");if(el)el.textContent=loginEnabled("registrationForm")?"Enabled":"Disabled";let b=document.querySelector("button[onclick=\"showOperatorRegistration()\"]");if(b)b.style.display=loginEnabled("registrationForm")?"":"none"}
