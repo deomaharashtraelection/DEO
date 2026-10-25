@@ -768,7 +768,7 @@ const ASSOCIATION_LOGO_DATA = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAA
 window.GOOGLE_SYNC_CONFIG = {
   enabled: true,
   webAppUrl: "https://script.google.com/macros/s/AKfycbxu0fMwv1memG20e6Gz3A9NBiZL9b0ti1DQZNn6ngr0xEFR-_nSRYCozZb_4jOCQXaY/exec", // Google Apps Script Web App URL येथे एकदाच भरा
-  secret: "AYm47L4Qqf3nqgES7q958q1bLNyn9WDJFsfcY2ufEBexNjF3juWw8Cd_Ro4EneVb",    // Apps Script मधील SYNC_SECRET प्रमाणेच
+  secret: "MahaAutoBackup_2026_-6eKSrLcLk5LiS5wOyQkzDskdpSuS-TZ",    // Apps Script मधील SYNC_SECRET प्रमाणेच
   notifyEmail: "deo.maharashtra.election@gmail.com",
   syncDelayMs: 1500
 };
@@ -1089,92 +1089,72 @@ function setAdminPasswordPin(pin){
 }
 function validPin(pin){return /^\d{4,6}$/.test(String(pin||""))}
 
-function requestAdminPasswordPin(callback){
+const ADMIN_USER_MANAGEMENT_OTP_EMAIL="deo.maharashtra.election@gmail.com";
+async function requestAdminPasswordOtp(){
   const overlay=document.createElement("div");
   overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px";
   const box=document.createElement("div");
-  box.style.cssText="background:#fff;width:320px;max-width:100%;padding:20px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.28);font-family:Arial,sans-serif";
-  box.innerHTML='<h3 style="margin:0 0 12px;font-size:17px">→ User Management</h3><label style="display:block;margin-bottom:6px;font-size:14px">PIN प्रविष्ट करा</label><input id="adminPasswordPinInput" type="password" inputmode="numeric" autocomplete="off" maxlength="6" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #bbb;border-radius:6px;font-size:16px"><div style="margin-top:14px;text-align:right"><button id="adminPinCancel" class="m" type="button">Cancel</button> <button id="adminPinOk" class="p" type="button">Enter</button></div>';
-  overlay.appendChild(box);
-  document.body.appendChild(overlay);
-  const input=box.querySelector("#adminPasswordPinInput");
-  const finish=(value)=>{overlay.remove();callback(value)};
-  box.querySelector("#adminPinCancel").onclick=()=>finish(null);
-  box.querySelector("#adminPinOk").onclick=()=>finish(input.value);
-  input.addEventListener("keydown",e=>{if(e.key==="Enter")finish(input.value);if(e.key==="Escape")finish(null)});
+  box.style.cssText="background:#fff;width:340px;max-width:100%;padding:20px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.28);font-family:Arial,sans-serif";
+  box.innerHTML='<h3 style="margin:0 0 12px;font-size:17px">→ User Management</h3><p style="font-size:13px;line-height:1.5">नोंदणीकृत Admin ई-मेलवर OTP पाठवण्यासाठी खालील बटण दाबा.</p><div id="adminOtpStatus" class="small" style="margin:8px 0"></div><label for="adminEmailOtpInput" style="display:block;margin-bottom:6px;font-size:14px">ई-मेलवर आलेला OTP प्रविष्ट करा</label><input id="adminEmailOtpInput" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #bbb;border-radius:6px;font-size:16px"><div style="margin-top:14px;display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap"><button id="adminOtpCancel" class="m" type="button">Cancel</button><button id="adminOtpSend" class="w" type="button">Send OTP</button><button id="adminOtpVerify" class="p" type="button">Verify OTP</button></div>';
+  overlay.appendChild(box); document.body.appendChild(overlay);
+  const status=box.querySelector('#adminOtpStatus'), input=box.querySelector('#adminEmailOtpInput');
+  const cancel=()=>overlay.remove();
+  box.querySelector('#adminOtpCancel').onclick=cancel;
+  const db=window.centralDb;
+  const send=async()=>{
+    if(!window.CENTRAL_DB_READY||!db||!db.auth){status.textContent='OTP सेवा उपलब्ध नाही. Supabase Auth configuration तपासा.';return;}
+    const btn=box.querySelector('#adminOtpSend'); btn.disabled=true; status.textContent='OTP पाठवत आहे...';
+    try{
+      const {error}=await db.auth.signInWithOtp({email:ADMIN_USER_MANAGEMENT_OTP_EMAIL,options:{shouldCreateUser:true}});
+      if(error) throw error;
+      status.textContent='OTP पाठवण्याची विनंती यशस्वी. ई-मेल तपासा आणि OTP प्रविष्ट करा.';
+      input.focus();
+    }catch(e){
+      console.error('Admin User Management OTP send failed:',e);
+      const detail=String((e&& (e.message||e.msg||e.error_description))||'Unknown error');
+      status.textContent='OTP पाठवता आला नाही: '+detail;
+    }
+    finally{btn.disabled=false;}
+  };
+  box.querySelector('#adminOtpSend').onclick=send;
+  const verify=async()=>{
+    const token=input.value.trim();
+    if(!/^\d{6,8}$/.test(token)){status.textContent='कृपया ई-मेलवर आलेला 6 ते 8 अंकी OTP प्रविष्ट करा.';return;}
+    const btn=box.querySelector('#adminOtpVerify'); btn.disabled=true; status.textContent='OTP तपासत आहे...';
+    try{
+      if(!window.CENTRAL_DB_READY||!db||!db.auth) throw new Error('Supabase Auth unavailable');
+      const {data,error}=await db.auth.verifyOtp({email:ADMIN_USER_MANAGEMENT_OTP_EMAIL,token,type:'email'});
+      if(error) throw error;
+      if(!data||!data.user||String(data.user.email||'').toLowerCase()!==ADMIN_USER_MANAGEMENT_OTP_EMAIL.toLowerCase()) throw new Error('OTP identity mismatch');
+      overlay.remove(); tab('adminPasswordMenu');
+    }catch(e){console.error('Admin User Management OTP verification failed:',e);status.textContent='OTP चुकीचा, कालबाह्य किंवा पडताळणी अयशस्वी. पुन्हा प्रयत्न करा.';}
+    finally{btn.disabled=false;}
+  };
+  box.querySelector('#adminOtpVerify').onclick=verify;
+  input.addEventListener('keydown',e=>{if(e.key==='Enter')verify();if(e.key==='Escape')cancel();});
   input.focus();
 }
 function openAdminPasswordMenu(){
   if(session.type!=="admin")return;
-  let pin=getAdminPasswordPin();
-  if(!pin){
-    let np=prompt("→ Password बटणासाठी प्रथम 4 ते 6 अंकी PIN सेट करा:");
-    if(np===null)return;
-    np=String(np).trim();
-    if(!validPin(np)){alert("PIN फक्त 4 ते 6 अंकी असावा.");return}
-    setAdminPasswordPin(np);
-    alert("Password बटणाचा PIN सेट झाला आहे. पुढील वेळी PIN आवश्यक असेल.");
-    tab("adminPasswordMenu");
-    return;
-  }
-  requestAdminPasswordPin(function(entered){
-    if(entered===null)return;
-    if(String(entered).trim()===pin){tab("adminPasswordMenu");return}
-    if(confirm("PIN विसरलात? Forgot PIN वापरून PIN बदलायचा आहे का?")){
-      forgotAdminPasswordPin();
-    }else{alert("PIN चुकीचा आहे. Password विभाग उघडता येणार नाही.");}
-  });
+  requestAdminPasswordOtp();
 }
 function forgotAdminPasswordPin(){
+  alert('User Management साठी आता PIN ऐवजी ई-मेल OTP वापरला जातो.');
+}
+function changeAdminPassword(){
   if(session.type!=="admin")return;
-  let u=prompt("Admin Username प्रविष्ट करा:");
-  if(u===null)return;
-  let p=prompt("Admin Password प्रविष्ट करा:");
-  if(p===null)return;
-  if(String(u).trim()!==ADMIN.username||p!==ADMIN.password){alert("Admin Username किंवा Password चुकीचे आहे. PIN बदलता येणार नाही.");return}
-  let np=prompt("नवीन 4 ते 6 अंकी PIN प्रविष्ट करा:");
+  let current=prompt("सध्याचा Admin Password प्रविष्ट करा:");
+  if(current===null)return;
+  if(current!==getAdminPassword()){alert("सध्याचा Admin Password चुकीचा आहे.");return}
+  let np=prompt("नवीन Admin Password प्रविष्ट करा:");
   if(np===null)return;
   np=String(np).trim();
-  if(!validPin(np)){alert("PIN फक्त 4 ते 6 अंकी असावा.");return}
-  setAdminPasswordPin(np);
-  alert("Forgot PIN प्रक्रिया पूर्ण. नवीन PIN सेट झाला आहे.");
-}
-async function changeAdminPassword(){
-  if(session.type!=="admin")return;
-  if(!window.google || !google.script || !google.script.run){
-    alert("OTP साठी पोर्टल Google Apps Script Web App मधून उघडा. संगणकावरील file:/// HTML मधून OTP विनंती करता येणार नाही.");
-    return;
-  }
-  const adminUsername=prompt("Server-side पडताळणीसाठी Admin Username प्रविष्ट करा:");
-  if(adminUsername===null)return;
-  const adminPassword=prompt("Server-side पडताळणीसाठी सध्याचा Admin Password प्रविष्ट करा:");
-  if(adminPassword===null)return;
-  const callServer=(method,...args)=>new Promise((resolve,reject)=>{
-    try{
-      const runner=google.script.run.withSuccessHandler(resolve).withFailureHandler(err=>reject(new Error(err&&err.message?err.message:"Apps Script विनंती अयशस्वी.")));
-      runner[method](...args);
-    }catch(err){reject(err)}
-  });
-  const ensureOk=result=>{if(!result||result.ok!==true)throw new Error(result&&result.error?result.error:"Server request अयशस्वी.");return result};
-  try{
-    ensureOk(await callServer("adminOtpSend",String(adminUsername).trim(),adminPassword));
-    alert("Admin Username/Password ची server-side पडताळणी झाली. OTP फक्त deo.maharashtra.election@gmail.com या ईमेलवर पाठवला आहे.");
-    const otp=prompt("ईमेलवर प्राप्त झालेला OTP प्रविष्ट करा:");
-    if(otp===null)return;
-    const verified=ensureOk(await callServer("adminOtpVerify",String(otp).trim()));
-    const newPassword=prompt("नवीन Admin Password प्रविष्ट करा (किमान 8 characters):");
-    if(newPassword===null)return;
-    if(String(newPassword).length<8){alert("नवीन Password किमान 8 characters असावा.");return}
-    const confirmPassword=prompt("नवीन Admin Password पुन्हा प्रविष्ट करा:");
-    if(confirmPassword===null)return;
-    if(newPassword!==confirmPassword){alert("नवीन Password आणि Confirm Password जुळत नाहीत.");return}
-    ensureOk(await callServer("adminPasswordReset",verified.token,newPassword));
-    setAdminPassword(newPassword);
-    alert("Server-side OTP पडताळणी पूर्ण. सर्व्हरवरील Admin Password Hash बदलला आहे. या ब्राउझरमध्येही नवीन Password सेव्ह केला आहे.");
-  }catch(err){
-    console.error("Admin Password OTP:",err);
-    alert("Admin प्रमाणीकरण / OTP / Password बदल अयशस्वी: "+(err.message||"Apps Script Web App तपासा")+". Password बदललेला नसू शकतो; सर्व्हरवरील प्रतिसाद तपासा.");
-  }
+  if(np.length<6){alert("नवीन Password किमान 6 characters असावा.");return}
+  let cp=prompt("नवीन Admin Password पुन्हा प्रविष्ट करा:");
+  if(cp===null)return;
+  if(np!==String(cp).trim()){alert("नवीन Password आणि Confirm Password जुळत नाहीत.");return}
+  setAdminPassword(np);
+  alert("Admin Password यशस्वीरीत्या बदलला आहे.");
 }
 function toggleRegistrationFormStatus(){if(session.type!=="admin")return;let a=getLoginStatuses();a.registrationForm=a.registrationForm===false;saveLoginStatuses(a);renderRegistrationFormStatus()}
 function renderRegistrationFormStatus(){let el=$("registrationFormStatus");if(el)el.textContent=loginEnabled("registrationForm")?"Enabled":"Disabled";let b=document.querySelector("button[onclick=\"showOperatorRegistration()\"]");if(b)b.style.display=loginEnabled("registrationForm")?"":"none"}
