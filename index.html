@@ -302,7 +302,7 @@ body.operator-login #dashWrap_adminSummaryMenu{display:none!important}
 </style>
 
 <style id="admin-dashboard-only-5-buttons">
-body.admin-login #dashboardButtons > .dash-action:not(#dashWrap_adminAccepted):not(#dashWrap_dse):not(#dashWrap_adminPresidentList):not(#dashWrap_adminSentByDistrict):not(#dashWrap_adminDelete):not(#dashWrap_adminPasswordMenu){display:none!important}
+body.admin-login #dashboardButtons > .dash-action:not(#dashWrap_adminAccepted):not(#dashWrap_acceptedSummary):not(#dashWrap_dse):not(#dashWrap_adminPresidentList):not(#dashWrap_adminSentByDistrict):not(#dashWrap_adminDelete):not(#dashWrap_adminPasswordMenu){display:none!important}
 </style>
 
 <style id="hide-correction-request-dashboard-buttons">
@@ -357,12 +357,12 @@ body.district-login #passwordMenu{display:none!important}
 </style>
 
 <style id="district-login-only-three-buttons">
-body.district-login #dashboardButtons > .dash-action:not(#dashWrap_districtOperatorReg):not(#dashWrap_districtPresidentList):not(#dashWrap_adminAccepted){display:none!important}
+body.district-login #dashboardButtons > .dash-action:not(#dashWrap_districtOperatorReg):not(#dashWrap_districtPresidentList):not(#dashWrap_adminAccepted):not(#dashWrap_acceptedSummary){display:none!important}
 </style>
 
 <style id="operator-login-only-two-buttons">
-body.operator-login #dashboardButtons > .dash-action:not(#dashWrap_operatorPresidentList):not(#dashWrap_adminAccepted):not(#dashWrap_formTracking):not(#dashWrap_operatorRollback){display:none!important}
-body.operator-login.operator-pending #dashboardButtons > .dash-action:not(#dashWrap_formTracking):not(#dashWrap_operatorRollback){display:none!important}
+body.operator-login #dashboardButtons > .dash-action:not(#dashWrap_operatorPresidentList):not(#dashWrap_adminAccepted):not(#dashWrap_acceptedSummary):not(#dashWrap_formTracking):not(#dashWrap_operatorRollback){display:none!important}
+body.operator-login.operator-pending #dashboardButtons > .dash-action:not(#dashWrap_formTracking):not(#dashWrap_operatorRollback):not(#dashWrap_acceptedSummary){display:none!important}
 body.operator-login #dashWrap_formTracking,body.operator-login #dashWrap_operatorRollback{display:block!important}
 </style>
 
@@ -376,6 +376,9 @@ body{font-size:18px!important}
 body.admin-login #dashWrap_adminAccepted,
 body.district-login #dashWrap_adminAccepted,
 body.operator-login #dashWrap_adminAccepted{display:block!important}
+body.admin-login #dashWrap_acceptedSummary,
+body.district-login #dashWrap_acceptedSummary,
+body.operator-login #dashWrap_acceptedSummary{display:block!important}
 </style>
 <style id="accepted-forms-visible-all-logins-final">
 body.admin-login #dashWrap_adminAccepted,
@@ -440,6 +443,19 @@ input,select,textarea,button{max-width:100%;}
   #registrationOrganizationHeader>div{font-size:13px!important;text-align:left!important;}
 }
 @media(min-width:1201px){#operatorRegistrationPage>.card{max-width:1400px;}}
+</style>
+
+<style id="summary-excel-admin-login-only">
+#districtSummaryExcelDownload,#summaryExcelDownload{display:none!important}
+body.admin-login #districtSummaryExcelDownload,body.admin-login #summaryExcelDownload{display:inline-block!important}
+</style>
+<style id="accepted-summary-excel-admin-only">
+#acceptedSummaryExcelDownload{display:none!important}
+body.admin-login #acceptedSummaryExcelDownload{display:inline-block!important}
+</style>
+<style id="accepted-forms-download-admin-only">
+#approvedExcelDownload,#approvedPDFDownload,#acceptedExcelDownloadButton,#acceptedPDFDownloadButton{display:none!important}
+body.admin-login #approvedExcelDownload,body.admin-login #approvedPDFDownload,body.admin-login #acceptedExcelDownloadButton,body.admin-login #acceptedPDFDownloadButton{display:inline-block!important}
 </style>
 </head>
 <body>
@@ -611,6 +627,7 @@ input,select,textarea,button{max-width:100%;}
 <div class="dash-action" id="dashWrap_districtOperatorReg"><button id="districtOperatorRegBtn" class="w dashboard-btn" onclick="tab('districtOperatorReg')"><span class="dashboard-btn-icon" aria-hidden="true">🧾</span><span>Registration Forms</span></button></div>
 <div class="dash-action" id="dashWrap_districtCorrection"><button id="districtCorrectionBtn" class="w dashboard-btn" onclick="tab('districtCorrection')"><span class="dashboard-btn-icon" aria-hidden="true">✏️</span><span>Correction Requests</span></button></div>
 <div class="dash-action" id="dashWrap_adminAccepted"><button id="adminAcceptedBtn" class="s dashboard-btn" onclick="tab('adminAccepted')"><span class="dashboard-btn-icon" aria-hidden="true">✅</span><span>Accepted Forms</span></button></div>
+<div class="dash-action" id="dashWrap_acceptedSummary"><button id="acceptedSummaryBtn" class="w dashboard-btn" onclick="tab('acceptedSummary')"><span class="dashboard-btn-icon" aria-hidden="true">📊</span><span>Summary</span></button></div>
 <div class="dash-action" id="dashWrap_dse"><button id="dseBtn" class="w dashboard-btn" onclick="tab('dse')"><span class="dashboard-btn-icon" aria-hidden="true">🔎</span><span>DSE</span></button></div>
 <div class="dash-action" id="dashWrap_adminPresidentList"><button id="adminPresidentBtn" class="p dashboard-btn" onclick="tab('adminPresidentList')"><span class="dashboard-btn-icon" aria-hidden="true">👤</span><span>अध्यक्ष यादी</span></button></div>
 <div class="dash-action" id="dashWrap_operatorPresidentList"><button id="operatorPresidentBtn" class="p dashboard-btn" onclick="tab('operatorPresidentList')"><span class="dashboard-btn-icon" aria-hidden="true">👤</span><span>अध्यक्ष यादी</span></button></div>
@@ -658,7 +675,7 @@ input,select,textarea,button{max-width:100%;}
 <section id="formTracking" class="card hidden"><h2>Form Tracking</h2><p class="notice">आपल्या Registration Form ची सद्यस्थिती येथे तपासा.</p><div class="wrap"><table><thead><tr><th>Reference No.</th><th>Registration Date</th><th>District</th><th>स्थिती</th><th>Remark</th><th>Last Updated</th><th>Action</th></tr></thead><tbody id="formTrackingBody"></tbody></table></div></section>
 <section id="operatorRollback" class="card hidden"><h2>Roll Back</h2><p class="notice">District Login कडून दुरुस्तीसाठी परत पाठविलेले Registration Forms येथे उपलब्ध होतील.</p><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference No.</th><th>Operator Name</th><th>District</th><th>District Remark</th><th>Roll Back Date</th><th>Action</th></tr></thead><tbody id="operatorRollbackBody"></tbody></table></div></section>
 <section id="pending" class="card hidden"><h2>Approval Pending</h2><div class="grid"><div class="card">Total Forms<br><span class="stat" id="total">0</span></div><div class="card">Approval Pending<br><span class="stat" id="pend">0</span></div><div class="card">Accepted<br><span class="stat" id="appv">0</span></div><div class="card">Delete Requests<br><span class="stat" id="delReqTotal">0</span></div><div class="card">Correction Requests<br><span class="stat" id="adminCorrectionTotal">0</span></div></div><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Status</th><th>Action</th></tr></thead><tbody id="pendingBody"></tbody></table></div></section>
-<section id="approved" class="card hidden"><h2>Accepted List</h2><div class="grid"><div><label>Form Type Filter</label><select id="approvedFormType" onchange="renderAccepted()"><option value="">-- Form Type निवडा --</option><option value="electionBranch">जिल्हा निवडणूक शाखा Forms</option><option value="assembly">Assembly Constituency Forms</option></select></div><div><label>जिल्हानुसार Filter</label><select id="approvedDistrict" onchange="renderAccepted()"><option value="">-- जिल्हा निवडा --</option></select></div><div><label>Search</label><input id="approvedSearch" placeholder="Reference / नाव / Assembly / Taluka" oninput="renderAccepted()"></div></div><div style="margin:10px 0"><button class="s" onclick="downloadApprovedExcel()">Excel Download</button> <button class="m" onclick="downloadApprovedPDF()">PDF Download</button></div><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>Mobile Number</th></tr></thead><tbody id="approvedBody"></tbody></table></div></section>
+<section id="approved" class="card hidden"><h2>Accepted List</h2><div class="grid"><div><label>Form Type Filter</label><select id="approvedFormType" onchange="renderAccepted()"><option value="">-- Form Type निवडा --</option><option value="electionBranch">जिल्हा निवडणूक शाखा Forms</option><option value="assembly">Assembly Constituency Forms</option></select></div><div><label>जिल्हानुसार Filter</label><select id="approvedDistrict" onchange="renderAccepted()"><option value="">-- जिल्हा निवडा --</option></select></div><div><label>Search</label><input id="approvedSearch" placeholder="Reference / नाव / Assembly / Taluka" oninput="renderAccepted()"></div></div><div style="margin:10px 0"><button id="approvedExcelDownload" class="s" onclick="downloadApprovedExcel()">Excel Download</button> <button id="approvedPDFDownload" class="m" onclick="downloadApprovedPDF()">PDF Download</button></div><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>Mobile Number</th></tr></thead><tbody id="approvedBody"></tbody></table></div></section>
 <section id="districtOperatorReg" class="card hidden"><h2>Registration Forms</h2><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference</th><th>Operator</th><th>Mobile / User ID</th><th>Assembly</th><th>Taluka</th><th>Status</th><th>Action</th></tr></thead><tbody id="districtOperatorRegBody"></tbody></table></div></section>
 <section id="districtCorrection" class="card hidden"><h2>Correction Requests</h2><div class="wrap"><table><thead><tr><th>Reference</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Request Remark</th><th>Action</th></tr></thead><tbody id="districtCorrectionBody"></tbody></table></div></section>
 <section id="adminSentByDistrict" class="card hidden">
@@ -675,10 +692,24 @@ input,select,textarea,button{max-width:100%;}
  <div><label>Search</label><input id="adminAcceptedSearch" placeholder="Reference / नाव / Assembly / Taluka" oninput="renderAdminAccepted()"></div>
  </div>
 <div style="margin:10px 0">
-<button class="s" onclick="downloadAcceptedExcel()">Accepted Forms Excel Download</button> <button class="m" onclick="downloadAcceptedPDF()">Accepted Forms PDF Download</button>
+<button id="acceptedExcelDownloadButton" class="s" onclick="downloadAcceptedExcel()">Accepted Forms Excel Download</button> <button id="acceptedPDFDownloadButton" class="m" onclick="downloadAcceptedPDF()">Accepted Forms PDF Download</button>
 </div>
 <div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference</th><th>District</th><th>Operator + Photo</th><th>Mobile Number</th><th>Assembly</th><th>Taluka</th><th>Accepted Date</th><th>Action</th></tr></thead><tbody id="adminAcceptedBody"></tbody></table></div>
 <div id="adminAcceptedPagination" style="display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px"></div>
+</section>
+
+<section id="acceptedSummary" class="card hidden">
+<h2>Accepted Forms — महाराष्ट्र राज्य Summary</h2>
+<p class="small">ही आकडेवारी Accepted Forms (status = Accepted) मधून तयार होते. मतदारसंघांची यादी DATA मधील master list वरून आणि तालुक्यांची यादी जिल्हानिहाय master list वरून घेतली आहे.</p>
+<div style="margin:10px 0"><button id="acceptedSummaryExcelDownload" class="s" onclick="downloadAcceptedSummaryExcel()" style="display:none">Summary Excel Download</button></div>
+<div id="acceptedSummaryCards" class="grid" style="margin:12px 0"></div>
+<h3>जिल्हानिहाय Summary</h3>
+<div class="wrap"><table><thead><tr><th>अ.क्र.</th><th>जिल्हा</th><th>एकूण मतदारसंघ</th><th>फॉर्म भरलेले मतदारसंघ</th><th>फॉर्म न भरलेले मतदारसंघ</th><th>एकूण तालुके</th><th>फॉर्म भरलेले तालुके</th><th>फॉर्म न भरलेले तालुके</th><th>Accepted Forms</th></tr></thead><tbody id="acceptedSummaryDistrictBody"></tbody></table></div>
+<h3 style="margin-top:22px">मतदारसंघनिहाय Summary</h3>
+<div class="wrap"><table><thead><tr><th>अ.क्र.</th><th>जिल्हा</th><th>विधानसभा मतदारसंघ</th><th>Accepted Forms</th><th>स्थिती</th></tr></thead><tbody id="acceptedSummaryAssemblyBody"></tbody></table></div>
+<h3 style="margin-top:22px">तालुकानिहाय Summary</h3>
+<div class="wrap"><table><thead><tr><th>अ.क्र.</th><th>जिल्हा</th><th>तालुका</th><th>Accepted Forms</th><th>स्थिती</th></tr></thead><tbody id="acceptedSummaryTalukaBody"></tbody></table></div>
+<p class="small" style="margin-top:12px">टीप: उपलब्ध master data मध्ये विधानसभा मतदारसंघ-तालुका यांची स्वतंत्र जोडणी नाही. त्यामुळे तालुका Summary जिल्हानिहाय दाखवली आहे; चुकीची मतदारसंघ-तालुका जोडणी गृहीत धरलेली नाही.</p>
 </section>
 
 <section id="dse" class="card hidden">
@@ -737,7 +768,7 @@ input,select,textarea,button{max-width:100%;}
 
 <section id="adminDistrictSummary" class="card hidden">
 <h2>District wise Summary</h2><div id="districtSummaryDateTime" class="small" style="margin-bottom:10px"></div>
-<div style="margin:10px 0"><button class="s" onclick="downloadDistrictSummaryExcel()">District Summary Excel Download</button> <button class="m" onclick="downloadDistrictSummaryPDF()">District Summary PDF Download</button></div>
+<div style="margin:10px 0"><button id="districtSummaryExcelDownload" class="s" onclick="downloadDistrictSummaryExcel()">District Summary Excel Download</button> <button class="m" onclick="downloadDistrictSummaryPDF()">District Summary PDF Download</button></div>
 <div class="wrap"><table><thead><tr><th>Sr.No.</th><th>District Code</th><th>District</th><th>Total Forms</th><th>Accepted</th><th>Rejected</th><th>Correction</th><th>Deleted</th></tr></thead><tbody id="adminDistrictSummaryBody"></tbody></table></div>
 </section>
 
@@ -747,7 +778,7 @@ input,select,textarea,button{max-width:100%;}
 <div><label>जिल्हा</label><select id="summaryDistrict" onchange="renderSummary()"><option value="">-- सर्व जिल्हे --</option></select></div>
 </div>
 <div style="margin:10px 0">
-<button class="s" onclick="downloadSummaryExcel()">Summary Excel Download</button> <button class="m" onclick="downloadSummaryPDF()">Summary PDF Download</button>
+<button id="summaryExcelDownload" class="s" onclick="downloadSummaryExcel()">Summary Excel Download</button> <button class="m" onclick="downloadSummaryPDF()">Summary PDF Download</button>
 </div>
 <div class="wrap"><table><thead><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Total Forms</th><th>Accepted</th><th>Rejected</th><th>Correction</th><th>Deleted</th></tr></thead><tbody id="summaryBody"></tbody></table></div>
 </section>
@@ -1792,7 +1823,7 @@ function logout(auto=false){
   $("loginMsg").textContent=auto?"30 मिनिटांचा Login कालावधी संपला आहे. कृपया पुन्हा Login करा.":"";
   $("password").value="";
 }
-const APP_ROUTES=["home","dashboard","entry","forms","formTracking","operatorRollback","pending","approved","districtOperatorReg","districtCorrection","admin","adminAccepted","dse","adminPresidentList","operatorPresidentList","districtPresidentList","adminSentByDistrict","adminCorrection","adminDelete","adminPasswordMenu","adminPasswordRequests","adminOperatorPassword","adminDistrictPassword","adminElectionBranchPassword","adminSummaryMenu","adminDistrictSummary","summary"];
+const APP_ROUTES=["home","dashboard","entry","forms","formTracking","operatorRollback","pending","approved","districtOperatorReg","districtCorrection","admin","adminAccepted","dse","adminPresidentList","operatorPresidentList","districtPresidentList","adminSentByDistrict","adminCorrection","adminDelete","adminPasswordMenu","adminPasswordRequests","adminOperatorPassword","adminDistrictPassword","adminElectionBranchPassword","adminSummaryMenu","adminDistrictSummary","summary","acceptedSummary"];
 
 function tab(t,options){
   if(!APP_ROUTES.includes(t))return;
@@ -1838,6 +1869,7 @@ function tab(t,options){
   if(t==="adminElectionBranchPassword"){renderAdminElectionBranchPassword()}
   if(t==="adminDistrictSummary"){renderAdminDistrictSummary()}
   if(t==="summary"){loadSummaryDistricts();renderSummary()}
+  if(t==="acceptedSummary"){renderAcceptedSummary()}
 }
 
 function currentRoute(){
@@ -2493,6 +2525,7 @@ function getAdminDistrictSummaryRows(){
  return ds.map(d=>{let f=a.filter(x=>x.district===d.district),del=deleted.filter(x=>x.district===d.district);return {code:d.district_code,district:d.district,total:f.length,pending:f.filter(x=>x.status==="Sent for Approval"||x.status==="Approval Pending").length,accepted:f.filter(x=>x.status==="Accepted").length,rejected:f.filter(x=>x.status==="Rejected").length,correction:f.filter(x=>x.correctionRequestedAt).length,deleted:del.length}});
 }
 function downloadDistrictSummaryExcel(){
+ if(session.type!=="admin"){alert("Summary Excel Download करण्याचा अधिकार फक्त Admin Login ला आहे.");return}
  let a=getAdminDistrictSummaryRows();if(!a.length){alert("Download करण्यासाठी आकडेवारी उपलब्ध नाही.");return}
  const headers=["Sr.No.","District Code","District","Total Forms","Accepted","Rejected","Correction","Deleted"];
  const rows=a.map((x,i)=>[i+1,x.code,x.district,x.total,x.accepted,x.rejected,x.correction,x.deleted]);
@@ -2533,6 +2566,7 @@ function renderSummary(){
  $("summaryBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.assembly)+"</td><td>"+x.total+"</td><td>"+x.approved+"</td><td>"+x.rejected+"</td><td>"+x.correction+"</td><td>"+x.deleted+"</td></tr>").join("")+"<tr><th colspan='3'>Total</th><th>"+totals.total+"</th><th>"+totals.approved+"</th><th>"+totals.rejected+"</th><th>"+totals.correction+"</th><th>"+totals.deleted+"</th></tr>";
 }
 function downloadSummaryExcel(){
+ if(session.type!=="admin"){alert("Summary Excel Download करण्याचा अधिकार फक्त Admin Login ला आहे.");return}
  let a=getSummaryRows();if(!a.length){alert("Download करण्यासाठी आकडेवारी उपलब्ध नाही.");return}
  const headers=["Sr.No.","District","Assembly Constituency","Total Forms","Accepted","Rejected","Correction","Deleted"];
  const rows=a.map((x,i)=>[i+1,x.district,x.assembly,x.total,x.approved,x.rejected,x.correction,x.deleted]);
@@ -2577,6 +2611,48 @@ function renderAdminPresidentList(){
  a=a.slice().sort((x,y)=>{let dx=Number(LOGINS.find(d=>d.district===x.district)?.district_code||999),dy=Number(LOGINS.find(d=>d.district===y.district)?.district_code||999);return dx-dy||assemblyNo(x.assembly)-assemblyNo(y.assembly)||String(x.assembly||"").localeCompare(String(y.assembly||""),"mr");});
  $("adminPresidentBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district||"-")+"</td><td>"+esc(x.assembly||"-")+"</td><td>"+esc(x.taluka||"-")+"</td><td>"+(x.photo?"<img src='"+x.photo+"' style=\"width:55px;height:68px;object-fit:cover;border:1px solid #aaa;border-radius:5px\">":"-")+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.mobile||"-")+"</td></tr>").join("")||"<tr><td colspan='7'>अध्यक्ष यादीमध्ये माहिती उपलब्ध नाही.</td></tr>";
 }
+function downloadAcceptedSummaryExcel(){
+ if(!session||session.type!=="admin"){alert("Summary Excel Download करण्याचा अधिकार फक्त Admin Login ला आहे.");return;}
+ const tableIds=["acceptedSummaryDistrictBody","acceptedSummaryAssemblyBody","acceptedSummaryTalukaBody"];
+ const titles=["District wise Summary","Assembly Constituency wise Summary","Taluka wise Summary"];
+ const escX=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+ const tableHtml=(bodyId,title)=>{
+   const body=$(bodyId); if(!body)return "";
+   const table=body.closest("table"); if(!table)return "";
+   return "<h2>"+escX(title)+"</h2><table border='1' cellspacing='0' cellpadding='4'>"+table.querySelector("thead").outerHTML+"<tbody>"+body.innerHTML+"</tbody></table><br><br>";
+ };
+ const sections=tableIds.map((id,i)=>tableHtml(id,titles[i])).join("");
+ if(!sections.trim()){alert("Download करण्यासाठी Summary आकडेवारी उपलब्ध नाही.");return;}
+ const html="<html><head><meta charset='UTF-8'></head><body><h1>Accepted Forms — महाराष्ट्र राज्य Summary</h1><div>Date &amp; Time: "+escX(summaryDateTime())+"</div><br>"+sections+"</body></html>";
+ const blob=new Blob(["\ufeff"+html],{type:"application/vnd.ms-excel;charset=utf-8;"});
+ const url=URL.createObjectURL(blob),aEl=document.createElement("a");aEl.href=url;aEl.download="Accepted_Forms_Maharashtra_Summary.xls";document.body.appendChild(aEl);aEl.click();aEl.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function renderAcceptedSummary(){
+ const accepted=forms().filter(x=>x.status==="Accepted");
+ const districts=Object.keys(DATA).sort((a,b)=>Number(DATA[a]?.code||999)-Number(DATA[b]?.code||999));
+ const districtRows=[]; const assemblyRows=[]; const talukaRows=[];
+ let totalAssemblies=0,filledAssemblies=0,totalTalukas=0,filledTalukas=0;
+ const norm=v=>String(v||"").trim().replace(/\s+/g," ");
+ const statusCell=n=>n>0?"<span class='badge ok'>फॉर्म भरला आहे</span>":"<span class='badge rej'>फॉर्म भरलेला नाही</span>";
+ districts.forEach((d,di)=>{
+   const master=DATA[d]||{}; const acs=(master.assemblies||[]).filter(a=>a!=="जिल्हा निवडणूक शाखा"); const talukas=master.talukas||[];
+   const districtAccepted=accepted.filter(x=>x.district===d);
+   const assemblyCount=acs.filter(ac=>accepted.some(x=>x.district===d&&x.assembly===ac)).length;
+   const talukaCount=talukas.filter(t=>accepted.some(x=>x.district===d&&norm(x.taluka)===norm(t))).length;
+   totalAssemblies+=acs.length;filledAssemblies+=assemblyCount;totalTalukas+=talukas.length;filledTalukas+=talukaCount;
+   districtRows.push({d,acTotal:acs.length,acFilled:assemblyCount,acMissing:acs.length-assemblyCount,tTotal:talukas.length,tFilled:talukaCount,tMissing:talukas.length-talukaCount,forms:districtAccepted.length});
+   acs.forEach(ac=>{const count=accepted.filter(x=>x.district===d&&x.assembly===ac).length;assemblyRows.push({d,ac,count});});
+   talukas.forEach(t=>{const count=accepted.filter(x=>x.district===d&&norm(x.taluka)===norm(t)).length;talukaRows.push({d,t,count});});
+ });
+ const districtCount=districts.filter(d=>accepted.some(x=>x.district===d)).length;
+ const totalAccepted=accepted.length;
+ const cards=[['महाराष्ट्रातील एकूण जिल्हे',districts.length],['Accepted Form असलेले जिल्हे',districtCount],['एकूण विधानसभा मतदारसंघ',totalAssemblies],['फॉर्म भरलेले मतदारसंघ',filledAssemblies],['फॉर्म न भरलेले मतदारसंघ',totalAssemblies-filledAssemblies],['एकूण तालुके',totalTalukas],['फॉर्म भरलेले तालुके',filledTalukas],['फॉर्म न भरलेले तालुके',totalTalukas-filledTalukas],['एकूण Accepted Forms',totalAccepted]];
+ const cardsEl=$("acceptedSummaryCards");if(cardsEl)cardsEl.innerHTML=cards.map(([label,value])=>"<div class='card' style='margin:0;text-align:center'><div>"+esc(label)+"</div><div class='stat'>"+value+"</div></div>").join("");
+ const db=$("acceptedSummaryDistrictBody");if(db)db.innerHTML=districtRows.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.d)+"</td><td>"+x.acTotal+"</td><td>"+x.acFilled+"</td><td>"+x.acMissing+"</td><td>"+x.tTotal+"</td><td>"+x.tFilled+"</td><td>"+x.tMissing+"</td><td>"+x.forms+"</td></tr>").join("")+"<tr><th colspan='2'>एकूण</th><th>"+totalAssemblies+"</th><th>"+filledAssemblies+"</th><th>"+(totalAssemblies-filledAssemblies)+"</th><th>"+totalTalukas+"</th><th>"+filledTalukas+"</th><th>"+(totalTalukas-filledTalukas)+"</th><th>"+totalAccepted+"</th></tr>";
+ const ab=$("acceptedSummaryAssemblyBody");if(ab)ab.innerHTML=assemblyRows.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.d)+"</td><td>"+esc(x.ac)+"</td><td>"+x.count+"</td><td>"+statusCell(x.count)+"</td></tr>").join("")||"<tr><td colspan='5'>माहिती उपलब्ध नाही.</td></tr>";
+ const tb=$("acceptedSummaryTalukaBody");if(tb)tb.innerHTML=talukaRows.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.d)+"</td><td>"+esc(x.t)+"</td><td>"+x.count+"</td><td>"+statusCell(x.count)+"</td></tr>").join("")||"<tr><td colspan='5'>माहिती उपलब्ध नाही.</td></tr>";
+}
+
 let adminAcceptedPage=0;
 let adminAcceptedFilterSignature="";
 function changeAdminAcceptedPage(delta){
@@ -2664,6 +2740,7 @@ function downloadAcceptedCSV(){
  aEl.href=url;aEl.download="Accepted_Forms.csv";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
 }
 function downloadApprovedExcel(){
+ if(!session || session.type!=="admin"){alert("Accepted Forms Excel/PDF Download सुविधा फक्त Admin Login साठी उपलब्ध आहे.");return}
  let a=getAcceptedDownloadRows();
  if(!a || !a.length){if(a && !a.length)alert("Download करण्यासाठी Accepted Forms उपलब्ध नाहीत.");return}
  const headers=["Sr.No.","District","Assembly Constituency","Taluka","Operator Name","Mobile Number"];
@@ -2675,6 +2752,7 @@ function downloadApprovedExcel(){
  const url=URL.createObjectURL(blob),aEl=document.createElement("a");aEl.href=url;aEl.download="Accepted_Forms.xls";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
 }
 function downloadApprovedPDF(){
+ if(!session || session.type!=="admin"){alert("Accepted Forms Excel/PDF Download सुविधा फक्त Admin Login साठी उपलब्ध आहे.");return}
  let a=getAcceptedDownloadRows();
  if(!a || !a.length){if(a && !a.length)alert("PDF तयार करण्यासाठी Accepted Forms उपलब्ध नाहीत.");return}
  const rows=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.mobile)+"</td></tr>").join("");
@@ -2683,6 +2761,7 @@ function downloadApprovedPDF(){
  w.document.write("<!doctype html><html><head><meta charset='UTF-8'><title>"+esc(title)+"</title><style>@page{size:A4 portrait;margin:6mm}*{box-sizing:border-box}body{font-family:Arial,'Noto Sans Devanagari',sans-serif;margin:0;padding:0}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px}th,td{border:1px solid #777;padding:3px;text-align:left;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;height:auto}th{font-weight:700}.report-title{font-size:11px;text-align:center;font-weight:700;white-space:normal;overflow-wrap:anywhere;word-break:break-word;padding:6px}@media print{body{margin:0}}</style></head><body><table><colgroup><col style='width:8%'><col style='width:15%'><col style='width:22%'><col style='width:15%'><col style='width:22%'><col style='width:18%'></colgroup><thead><tr><th class='report-title' colspan='6'>"+esc(title)+"</th></tr><tr><th>Sr.No.</th><th>District</th><th>Assembly Constituency</th><th>Taluka</th><th>Operator Name</th><th>Mobile Number</th></tr></thead><tbody>"+rows+"</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>");w.document.close();
 }
 function downloadAcceptedExcel(){
+ if(!session || session.type!=="admin"){alert("Accepted Forms Excel/PDF Download सुविधा फक्त Admin Login साठी उपलब्ध आहे.");return}
  let a=getAcceptedDownloadRows();
  if(!a || !a.length){if(a && !a.length)alert("Download करण्यासाठी Accepted Forms उपलब्ध नाहीत.");return}
  if(session.type!=="admin"){
@@ -2704,6 +2783,7 @@ function downloadAcceptedExcel(){
  const url=URL.createObjectURL(blob),aEl=document.createElement("a");aEl.href=url;aEl.download="Accepted_Forms.xls";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
 }
 function downloadAcceptedPDF(){
+ if(!session || session.type!=="admin"){alert("Accepted Forms Excel/PDF Download सुविधा फक्त Admin Login साठी उपलब्ध आहे.");return}
  let a=getAcceptedDownloadRows();
  if(!a || !a.length){if(a && !a.length)alert("PDF तयार करण्यासाठी Accepted Forms उपलब्ध नाहीत.");return}
  const title=getAcceptedDownloadTitle();
