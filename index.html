@@ -617,7 +617,7 @@ input,select,textarea,button{max-width:100%;}
 <div class="dash-action" id="dashWrap_formTracking"><button id="formTrackingBtn" class="w dashboard-btn" onclick="tab('formTracking')"><span class="dashboard-btn-icon" aria-hidden="true">🔎</span><span>Form Tracking</span></button></div>
 <div class="dash-action" id="dashWrap_operatorRollback"><button id="operatorRollbackBtn" class="w dashboard-btn" onclick="tab('operatorRollback')"><span class="dashboard-btn-icon" aria-hidden="true">↩️</span><span>Roll Back</span></button></div>
 <div class="dash-action" id="dashWrap_districtPresidentList"><button id="districtPresidentBtn" class="p dashboard-btn" onclick="tab('districtPresidentList')"><span class="dashboard-btn-icon" aria-hidden="true">👤</span><span>अध्यक्ष यादी</span></button></div>
-<div class="dash-action" id="dashWrap_adminSentByDistrict"><button id="adminSentByDistrictBtn" class="w dashboard-btn" onclick="tab('adminSentByDistrict')"><span class="dashboard-btn-icon" aria-hidden="true">📤</span><span>Sent by District</span></button></div>
+
 <div class="dash-action" id="dashWrap_adminCorrection"><button id="adminCorrectionBtn" class="w dashboard-btn" onclick="tab('adminCorrection')"><span class="dashboard-btn-icon" aria-hidden="true">✏️</span><span>Correction Requests</span></button></div>
 <div class="dash-action" id="dashWrap_adminDelete"><button id="adminDeleteBtn" class="d dashboard-btn" onclick="tab('adminDelete')"><span class="dashboard-btn-icon" aria-hidden="true">🗑️</span><span>Delete Requests</span></button></div>
 <div class="dash-action" id="dashWrap_adminPasswordMenu"><button id="adminPasswordBtn" class="p dashboard-btn" onclick="openAdminPasswordMenu()"><span class="dashboard-btn-icon" aria-hidden="true">🔐</span><span>User Management</span></button></div>
@@ -2146,11 +2146,36 @@ function renderDistrictOperatorRegistrations(){
   $("districtOperatorRegBody").innerHTML=a.map((x,i)=>{
     const attempts=getOperatorRegistrationAttempts(x), exhausted=attempts>=3;
     const statusText=x.status==="Rejected"?(x.status+" • "+attempts+"/3"):(x.status==="Pending at District"?(x.status+" • "+attempts+"/3"):(x.status+" • 3/3"));
-    const actions="<button class='p' onclick=\"view('"+x.id+"')\">View</button>"+duplicateFormButton(x)+
-      (x.status==="Pending at District"?("<button class='s' onclick=\"forwardOperatorRegistration('"+x.id+"')\">Forward to Admin</button><button class='w' onclick=\"rollbackOperatorRegistration('"+x.id+"')\">Roll Back</button><button class='d' onclick=\"districtRejectOperatorRegistration('"+x.id+"')\">Wrong Entry/Wrong User</button>"):"")+
-      (exhausted?("<button class='w' onclick=\"edit('"+x.id+"')\">Data Entry</button>"):"");
+    const actions="<button class='p' onclick=\"view('"+x.id+"')\">View</button>";
     return "<tr><td>"+(i+1)+"</td><td>"+esc(x.reference)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.mobile)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+badge(statusText)+"</td><td>"+actions+"</td></tr>";
   }).join("")||"<tr><td colspan='8'>Operator Registration Request उपलब्ध नाही.</td></tr>";
+}
+function districtApproveOperatorRegistration(id){
+  if(session.type!=="district")return;
+  let a=forms(),x=a.find(z=>z.id===id);
+  if(!x||x.source!=="Operator Registration"||x.district!==session.district||x.status!=="Pending at District")return;
+  const duplicate=a.find(z=>z.id!==x.id&&z.source==="Operator Registration"&&z.mobile===x.mobile&&z.status==="Accepted");
+  if(duplicate){alert("हा Mobile Number असलेला Registration Form आधीच Accept झाला आहे.");return;}
+  if(!confirm("हा Registration Form District Login मधून Approve करायचा आहे का?"))return;
+  let remark=prompt("Registration Form Accept करण्यासाठी Remark लिहा (अनिवार्य):");
+  if(remark===null)return;
+  remark=remark.trim();
+  if(!remark){alert("Accept करण्यासाठी Remark लिहिणे अनिवार्य आहे. Remark शिवाय Form Accept होणार नाही.");return;}
+  const now=new Date().toISOString();
+  x.status="Accepted";
+  x.districtAcceptRemark=remark;
+  x.districtRemark=remark;
+  x.districtReviewedAt=now;
+  x.districtReviewedBy=session.username;
+  x.districtApprovedAt=now;
+  x.districtApprovedBy=session.username;
+  x.approvedAt=now;
+  x.approvedBy=session.username;
+  x.adminRemark=remark;
+  save(a);
+  closeModal();
+  renderDistrictOperatorRegistrations();renderAdmin();renderAdminSentByDistrict();renderAccepted();renderPending();renderAdminAccepted();renderForms();renderSummary();
+  alert("Registration Form District Login मधून Approve करण्यात आला.");
 }
 function rollbackOperatorRegistration(id){
   if(session.type!=="district")return;
@@ -2165,6 +2190,7 @@ function rollbackOperatorRegistration(id){
   x.districtRollbackAt=new Date().toISOString();
   x.districtRollbackBy=session.username;
   save(a);
+  closeModal();
   renderDistrictOperatorRegistrations();renderForms();renderAdmin();renderAdminSentByDistrict();renderPending();renderSummary();
   alert("Registration Form Remark सहित Operator Login कडे दुरुस्तीसाठी परत पाठविला.");
 }
@@ -2205,7 +2231,7 @@ function districtRejectOperatorRegistration(id){
   if(session.type!=="district")return;
   let a=forms(),x=a.find(z=>z.id===id);
   if(!x||x.source!=="Operator Registration"||x.district!==session.district||x.status!=="Pending at District")return;
-  let remark=prompt("Wrong Entry/Wrong User चे कारण / Remark लिहा:");
+  let remark=prompt("Reject करण्याचे कारण / Remark लिहा:");
   if(remark===null)return;
   remark=remark.trim();
   if(!remark){alert("Reject Remark लिहिणे आवश्यक आहे.");return}
@@ -2217,8 +2243,9 @@ function districtRejectOperatorRegistration(id){
   x.districtRejectedAt=x.rejectedAt;
   x.districtRejectedBy=session.username;
   save(a);
+  closeModal();
   renderDistrictOperatorRegistrations(); renderAdmin(); renderAdminSentByDistrict(); renderForms(); renderPending(); renderSummary();
-  alert("Operator Registration Wrong Entry/Wrong User म्हणून Reject करण्यात आले.");
+  alert("Registration Form Reject करण्यात आला.");
 }
 function renderDistrictCorrection(){if(session.type!=="district")return;let a=forms().filter(x=>x.district===session.district&&(x.status==="Correction Requested"||x.status==="Correction Approval Pending"));$("districtCorrectionBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.correctionRemark||"Operator ने केलेली दुरुस्ती")+"</td><td>"+(x.status==="Correction Approval Pending"?"<button class='s' onclick=\"sendCorrectionToAdmin('"+x.id+"')\">Send to Admin</button>":"<span class='badge'>Operator Approval Pending</span>")+"<button class='p' onclick=\"view('"+x.id+"')\">View</button></td></tr>").join("")||"<tr><td colspan='6'>Correction Request उपलब्ध नाही.</td></tr>"}
 function sendCorrectionToAdmin(id){if(session.type!=="district")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.district!==session.district||x.status!=="Correction Approval Pending")return;x.status="Correction Sent for Approval";x.correctionSentAt=new Date().toISOString();x.correctionSentBy=session.username;save(a);renderDistrictCorrection();renderAdminCorrection();renderPending();renderForms();renderSummary();alert("Correction Request Admin कडे approval साठी पाठवण्यात आली.")}
@@ -2364,9 +2391,13 @@ function view(id){
    const actionRows=[];
    const addAction=(at,action,by,remark)=>{if(at)actionRows.push({at,action,by:by||"-",remark:remark||"-"})};
    addAction(x.createdAt,"Form Submitted",x.createdBy||x.username||"-");
-   addAction(x.districtReviewedAt,"District कडून Admin कडे Forward",x.districtReviewedBy,x.districtRemark);
+   if(x.districtApprovedAt||x.districtAcceptRemark){
+     addAction(x.districtApprovedAt||x.districtReviewedAt,"District कडून Accept",x.districtApprovedBy||x.districtReviewedBy,x.districtAcceptRemark||x.districtRemark);
+   }else{
+     addAction(x.districtReviewedAt,"District कडून Admin कडे Forward",x.districtReviewedBy,x.districtRemark);
+   }
    addAction(x.districtRejectedAt,"District कडून Reject",x.districtRejectedBy,x.districtRejectRemark);
-   addAction(x.approvedAt,"Admin कडून Accept",x.approvedBy,x.adminRemark);
+   if(!x.districtApprovedAt) addAction(x.approvedAt,"Admin कडून Accept",x.approvedBy,x.adminRemark);
    addAction(x.rejectedAt,"Admin कडून Reject",x.rejectedBy,x.rejectRemark);
    addAction(x.correctionRequestedAt,"Correction Request",x.correctionRequestedBy,x.correctionRemark);
    addAction(x.correctionSentAt,"Correction Admin कडे पाठवली",x.correctionSentBy);
@@ -2383,7 +2414,8 @@ function view(id){
  "<div style='display:flex;align-items:center;justify-content:center;gap:6px;border-bottom:2px solid #333;padding-bottom:14px;margin-bottom:16px'><img src='"+ASSOCIATION_LOGO_DATA+"' style='width:90px;height:90px;object-fit:contain;flex:0 0 90px' alt='संघटनेचा Logo'><div style='flex:0 1 auto;min-width:0;text-align:center'><div style='font-size:19px;font-weight:700'>महाराष्ट्र राज्य - निवडणूक विभाग, डाटा एन्ट्री ऑपरेटर, संघटना.</div><div style='font-size:17px;font-weight:700;margin-top:4px'>नोंदणी अर्ज</div></div>"+(x.photo?"<img src='"+x.photo+"' alt='Passport Size Photo' style='width:78px;height:96px;object-fit:cover;border:1px solid #555;padding:2px;flex:0 0 78px'>":"")+"</div><div style='display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px;margin:0 0 12px'><span>Reference No.: "+esc(String(x.reference||"-"))+"</span><span>Date: "+esc(new Date(x.createdAt||Date.now()).toLocaleDateString("en-GB"))+"</span><span>Status: "+esc(x.status||"-")+"</span></div>"+
  "<div style='display:flex;flex-direction:column;gap:9px'>"+paperRows.filter(v=>v[1]!==undefined&&v[1]!==null&&String(v[1]).trim()!=="").map(v=>"<div style='display:flex;align-items:flex-end;gap:8px;min-height:25px;border-bottom:1px solid #888;padding-bottom:3px'><span style='font-size:13px;white-space:nowrap'>"+v[0]+":</span><span style='flex:1;min-width:20px;padding:0 3px 2px;font-size:14px;overflow-wrap:anywhere'>"+esc(String(v[1]))+"</span></div>").join("")+"</div>"+
  "<div style='margin-top:18px;border-top:2px solid #333;padding-top:12px'><div style='margin-bottom:12px;display:flex;align-items:flex-end;gap:8px'><div style='font-size:13px;white-space:nowrap'>घरचा पत्ता (English):</div><div style='flex:1;border-bottom:1px solid #888;min-height:28px;padding:2px 3px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px'>"+esc(x.addressEnglish||" ")+"</div></div><div style='margin-bottom:12px;display:flex;align-items:flex-end;gap:8px'><div style='font-size:13px;white-space:nowrap'>घरचा पत्ता (Marathi):</div><div style='flex:1;border-bottom:1px solid #888;min-height:28px;padding:2px 3px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px'>"+esc(x.address||" ")+"</div></div><div style='margin-bottom:12px;display:flex;align-items:flex-end;gap:8px'><div style='font-size:13px;white-space:nowrap'>कार्यालयाचा पत्ता (English):</div><div style='flex:1;border-bottom:1px solid #888;min-height:28px;padding:2px 3px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px'>"+esc(x.officeAddressEnglish||" ")+"</div></div><div style='margin-bottom:12px;display:flex;align-items:flex-end;gap:8px'><div style='font-size:13px;white-space:nowrap'>कार्यालयाचा पत्ता (Marathi):</div><div style='flex:1;border-bottom:1px solid #888;min-height:28px;padding:2px 3px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px'>"+esc(x.officeAddress||" ")+"</div></div><div style='border:1px solid #888;padding:12px 14px;margin-top:14px'><div style='font-size:14px;font-weight:700;text-decoration:underline;margin-bottom:8px'>UNDERTAKING</div><div style='font-size:12px;font-style:italic'>I hereby declare that the information provided in this registration form is true and correct to the best of my knowledge.</div><div style='display:flex;justify-content:flex-end;align-items:flex-end;gap:6px;margin-top:24px'><span style='font-style:italic;font-size:14px'>Signature:</span>"+"<span style='display:inline-flex;align-items:center;justify-content:center;width:256px;height:64px;border:1px solid #555;box-sizing:border-box;background:#fff'>"+(x.signature?"<img src='"+x.signature+"' style='width:100%;height:100%;object-fit:contain'>":"")+"</span>"+"</div></div></div></div>";
- $("modalContent").innerHTML=renderRegistrationSample(x,false)+(x.status==="Rejected"&&x.rejectRemark?"<p style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff1f2;color:#991b1b'><b>Reject Remark:</b><br>"+esc(x.rejectRemark)+"</p>":"")+summary;
+ const districtRegistrationActions=(session.type==="district"&&x.source==="Operator Registration"&&x.district===session.district&&x.status==="Pending at District")?"<div style='display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:16px 0;padding:14px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc'><button class='s' type='button' onclick=\"districtApproveOperatorRegistration('"+x.id+"')\">Accept</button><button class='w' type='button' onclick=\"rollbackOperatorRegistration('"+x.id+"')\">Roll Back</button><button class='d' type='button' onclick=\"districtRejectOperatorRegistration('"+x.id+"')\">Reject</button></div>":"";
+ $("modalContent").innerHTML=renderRegistrationSample(x,false)+(x.status==="Rejected"&&x.rejectRemark?"<p style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff1f2;color:#991b1b'><b>Reject Remark:</b><br>"+esc(x.rejectRemark)+"</p>":"")+districtRegistrationActions+summary;
  if(session.type==="admin"||session.type==="district"||session.type==="operator"){
    $("modalContent").insertAdjacentHTML("beforeend","<div style='text-align:center;margin:14px 0 8px'><button class='p' type='button' onclick=\"downloadRegistrationPDF('"+x.id+"',false)\">Download PDF</button></div><div id='uploadedDocumentsPanel' class='hidden' style='margin:10px 0 16px;padding:14px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc'></div>");
  }
