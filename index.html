@@ -2892,7 +2892,16 @@ window.addEventListener("load", async function(){
   }
 
   function authRow(key, data){
+    /* portal_forms.id is UUID NOT NULL without a database default.
+       Supply a UUID so both insert and upsert work on first password save. */
+    const rowId = (window.crypto && typeof window.crypto.randomUUID === "function")
+      ? window.crypto.randomUUID()
+      : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c){
+          const r = Math.random() * 16 | 0;
+          return (c === "x" ? r : (r & 3 | 8)).toString(16);
+        });
     return {
+      id: rowId,
       reference: AUTH_PREFIX + key,
       district: "",
       username: key,
