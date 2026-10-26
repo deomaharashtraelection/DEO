@@ -1201,7 +1201,8 @@ async function changeAdminPassword(){
   /* Persist centrally first; do not report success or update cache on failure. */
   const saved = await window.centralAuthUpsertPublic("admin", np);
   if(!saved){
-    alert("Central Database मध्ये नवीन Password सेव्ह झाला नाही. जुना Password कायम आहे. Connection/permissions तपासा.");
+    const detail = window.CENTRAL_AUTH_LAST_ERROR ? "\\nतपशील: " + window.CENTRAL_AUTH_LAST_ERROR : "";
+    alert("Central Database मध्ये नवीन Password सेव्ह झाला नाही. जुना Password कायम आहे. Connection/permissions तपासा." + detail);
     return;
   }
   localStorage.setItem(ADMIN_PASSWORD_KEY, np);
@@ -2904,30 +2905,33 @@ window.addEventListener("load", async function(){
     };
   }
 
+  window.CENTRAL_AUTH_LAST_ERROR = "";
   async function centralAuthUpsert(key, data){
-    if(!authReady()) return false;
+    if(!authReady()){
+      window.CENTRAL_AUTH_LAST_ERROR = "Central Database connection is not ready.";
+      return false;
+    }
     try{
       const db = window.centralDb;
       const table = window.SUPABASE_CONFIG.table;
-      const {data:found,error:findError} = await db
-        .from(table)
-        .select("id")
-        .eq("source", AUTH_SOURCE)
-        .eq("form_id", key)
-        .limit(1);
-
-      if(findError) throw findError;
-
       const row = authRow(key,data);
-      if(found && found.length){
-        const {error} = await db.from(table).update(row).eq("id",found[0].id);
-        if(error) throw error;
-      }else{
-        const {error} = await db.from(table).insert(row);
-        if(error) throw error;
-      }
+      /* Use the unique reference as the conflict target so a previously-created
+         row is updated instead of failing with a duplicate-key error. */
+      const {data:savedRows,error} = await db
+        .from(table)
+        .upsert(row,{onConflict:"reference"})
+        .select("id,reference,source,form_id");
+      if(error) throw error;
+      const verified = Array.isArray(savedRows) && savedRows.some(r =>
+        r && r.reference === row.reference &&
+        r.source === AUTH_SOURCE && r.form_id === key
+      );
+      if(!verified) throw new Error("Database did not confirm the saved password row.");
+      window.CENTRAL_AUTH_LAST_ERROR = "";
       return true;
     }catch(e){
+      window.CENTRAL_AUTH_LAST_ERROR = (e && (e.message || e.details || e.hint || e.code)) ?
+        String(e.message || e.details || e.hint || e.code) : "Unknown database error.";
       console.error("Central password save failed:",e);
       return false;
     }
