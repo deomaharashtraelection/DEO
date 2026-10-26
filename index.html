@@ -1038,6 +1038,7 @@ async function centralLoadForms(){
     const {data,error} = await window.centralDb
       .from(window.SUPABASE_CONFIG.table)
       .select("id,reference,district,username,payload,updated_at,mobile,status,source,form_id")
+      .eq("source","web_portal")
       .order("updated_at",{ascending:false});
     if(error) throw error;
     const remote = (data||[]).map(formFromCentralRow).filter(Boolean);
@@ -1051,18 +1052,20 @@ async function centralLoadForms(){
 }
 
 async function centralUpsertForms(a){
-  if(!window.CENTRAL_DB_READY) return;
+  if(!window.CENTRAL_DB_READY) return false;
   const rows = (Array.isArray(a)?a:[]).map(centralRowFromForm);
-  if(!rows.length) return;
+  if(!rows.length) return true;
   try{
     const {error} = await window.centralDb
       .from(window.SUPABASE_CONFIG.table)
       .upsert(rows,{onConflict:"reference"});
     if(error) throw error;
     showCentralDbStatus("✓ Central Database Saved",true);
+    return true;
   }catch(e){
     console.error("Central forms save failed:",e);
     showCentralDbStatus("⚠ Central Database Save झाला नाही",false);
+    return false;
   }
 }
 
@@ -1573,7 +1576,23 @@ async function saveOperatorRegistration(){
       if(form.proof&&/^data:image\//i.test(form.proof))form.proof=await compressImageData(form.proof,1000,1200,0.72);
        if(form.signature&&/^data:image\//i.test(form.signature))form.signature=await compressImageData(form.signature,1000,500,0.80);
       a.push(form);save(a);
-      accounts.push({mobile:d.mobile,password:d.password,district:d.district,name:d.name,createdAt:createdAt});saveOperatorAccounts(accounts);if(window.centralAuthUpsertPublic)await window.centralAuthUpsertPublic("operators",accounts);
+      /* Persist the registration form centrally before reporting success, so another
+         device can load both the operator account and its matching registration form. */
+      const centralFormSaved = await centralUpsertForms(a);
+      if(!centralFormSaved){
+        a.splice(a.findIndex(z=>z.id===form.id),1);
+        save(a);
+        alert("Central Database मध्ये Registration Form सेव्ह झाला नाही. Registration पूर्ण झालेली नाही. Internet/Database connection तपासा.");
+        return;
+      }
+      accounts.push({mobile:d.mobile,password:d.password,district:d.district,name:d.name,createdAt:createdAt});saveOperatorAccounts(accounts);
+      const centralAccountsSaved = window.centralAuthUpsertPublic ? await window.centralAuthUpsertPublic("operators",accounts) : false;
+      if(!centralAccountsSaved){
+        accounts=accounts.filter(x=>x.mobile!==d.mobile);saveOperatorAccounts(accounts);
+        a.splice(a.findIndex(z=>z.id===form.id),1);save(a);
+        alert("Central Database मध्ये Operator Login सेव्ह झाला नाही. Registration पूर्ण झालेली नाही. Internet/Database connection तपासा.");
+        return;
+      }
       closeModal();alert("Registration Successful! ✅\n\nUser ID: "+d.mobile+"\nForm Reference: "+form.reference+"\n\nआपला Form District Login User कडे आहे.\nDistrict Login User तपासून Admin कडे Approval साठी Forward करेल.");
     }
     if(!rollbackSaved){
