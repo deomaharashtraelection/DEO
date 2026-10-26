@@ -1176,11 +1176,21 @@ function forgotAdminPasswordPin(){
   setAdminPasswordPin(np);
   alert("Forgot PIN प्रक्रिया पूर्ण. नवीन PIN सेट झाला आहे.");
 }
-function changeAdminPassword(){
+async function changeAdminPassword(){
   if(session.type!=="admin")return;
+  /* Always verify against the latest central password, not a device-only cache. */
+  if(!window.centralAuthLoadPublic || !window.centralAuthUpsertPublic){
+    alert("Central Database Password सुविधा उपलब्ध नाही. Password बदलता येणार नाही.");
+    return;
+  }
+  const canonicalPassword = await window.centralAuthLoadPublic();
+  if(typeof canonicalPassword !== "string"){
+    alert("Central Database मधील Password तपासता आला नाही. Internet/Database connection तपासा.");
+    return;
+  }
   let current=prompt("सध्याचा Admin Password प्रविष्ट करा:");
   if(current===null)return;
-  if(current!==getAdminPassword()){alert("सध्याचा Admin Password चुकीचा आहे.");return}
+  if(current!==canonicalPassword){alert("सध्याचा Admin Password चुकीचा आहे.");return}
   let np=prompt("नवीन Admin Password प्रविष्ट करा:");
   if(np===null)return;
   np=String(np).trim();
@@ -1188,8 +1198,14 @@ function changeAdminPassword(){
   let cp=prompt("नवीन Admin Password पुन्हा प्रविष्ट करा:");
   if(cp===null)return;
   if(np!==String(cp).trim()){alert("नवीन Password आणि Confirm Password जुळत नाहीत.");return}
-  setAdminPassword(np);
-  alert("Admin Password यशस्वीरीत्या बदलला आहे.");
+  /* Persist centrally first; do not report success or update cache on failure. */
+  const saved = await window.centralAuthUpsertPublic("admin", np);
+  if(!saved){
+    alert("Central Database मध्ये नवीन Password सेव्ह झाला नाही. जुना Password कायम आहे. Connection/permissions तपासा.");
+    return;
+  }
+  localStorage.setItem(ADMIN_PASSWORD_KEY, np);
+  alert("Admin Password Central Database मध्ये यशस्वीरीत्या बदलला आहे. आता सर्व ठिकाणी नवीन Password वापरा.");
 }
 function toggleRegistrationFormStatus(){if(session.type!=="admin")return;let a=getLoginStatuses();a.registrationForm=a.registrationForm===false;saveLoginStatuses(a);renderRegistrationFormStatus()}
 function renderRegistrationFormStatus(){let el=$("registrationFormStatus");if(el)el.textContent=loginEnabled("registrationForm")?"Enabled":"Disabled";let b=document.querySelector("button[onclick=\"showOperatorRegistration()\"]");if(b)b.style.display=loginEnabled("registrationForm")?"":"none"}
@@ -3009,10 +3025,13 @@ window.addEventListener("load", async function(){
 
   /* Keep existing local functions/UI, but add central persistence. */
   const originalSetAdminPassword = window.setAdminPassword;
-  window.setAdminPassword = function(p){
+  window.setAdminPassword = async function(p){
+    /* Central save must succeed before the local cache is updated. */
+    const saved = await centralAuthUpsert("admin",String(p));
+    if(!saved) return false;
     if(typeof originalSetAdminPassword==="function")originalSetAdminPassword(p);
     else localStorage.setItem(ADMIN_PASSWORD_KEY,p);
-    centralAuthUpsert("admin",String(p));
+    return true;
   };
 
   const originalSaveDistrictPasswords = window.saveDistrictPasswords;
