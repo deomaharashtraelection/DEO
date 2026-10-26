@@ -806,6 +806,33 @@ window.GOOGLE_SYNC_CONFIG = {
 };
 
 const STATUS_ID = "googleAutoBackupStatus";
+
+/* Email the address entered on a form after an acceptance action. */
+async function sendAcceptedFormEmail(form, acceptedBy){
+  try{
+    if(!form || form.acceptanceEmailSentAt) return;
+    const email = String(form.email || form.personalEmail || form.personal_email || form.emailAddress || "").trim();
+    if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+      console.warn("Accepted-form email skipped: valid email address not found.");
+      return;
+    }
+    const c = window.GOOGLE_SYNC_CONFIG || {};
+    if(!c.enabled || !c.webAppUrl || !c.secret) throw new Error("Google Apps Script configuration is missing.");
+    const payload = {
+      action:"send_form_accepted_email", secret:c.secret, email:email,
+      reference:String(form.reference || form.referenceNumber || "-"),
+      name:String(form.name || form.nameEnglish || form.operatorName || "-"),
+      district:String(form.district || "-"), assembly:String(form.assembly || "-"),
+      taluka:String(form.taluka || "-"),
+      acceptedAt:String(form.approvedAt || form.districtApprovedAt || new Date().toISOString()),
+      acceptedBy:String(acceptedBy || "-")
+    };
+    await fetch(c.webAppUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload),mode:"no-cors"});
+    form.acceptanceEmailSentAt = new Date().toISOString();
+    console.info("Acceptance email request sent to Google Apps Script.");
+  }catch(e){ console.error("Accepted-form email request failed:",e); }
+}
+
 let syncTimer = null;
 let syncing = false;
 
@@ -2143,7 +2170,7 @@ function renderPending(){
  $("pendingBody").innerHTML=p.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+badge(x.status)+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+(session.type==="admin"&&x.status==="Sent for Approval"?("<button class='s' onclick=\"approve('"+x.id+"')\">Approve</button><button class='d' onclick=\"rejectForm('"+x.id+"')\">Reject</button>"):"")+"</td></tr>").join("")||"<tr><td colspan='5'>Approval Pending नाही.</td></tr>"
 }
 function send(id){let a=forms(),x=a.find(z=>z.id===id);if(!x||!(session.type==="admin"||x.district===session.district&&(session.type!=="operator"||x.mobile===session.operatorMobile)))return;if(session.type==="operator"&&x.status==="Correction Requested"){x.status="Correction Approval Pending";x.correctionOperatorSentAt=new Date().toISOString();x.correctionOperatorSentBy=session.username;save(a);renderForms();renderDistrictCorrection();renderAdminCorrection();renderPending();renderSummary();alert("Correction Form District Login कडे Approval साठी पाठवला.");return}x.status="Sent for Approval";save(a);renderForms();alert("Admin Approval साठी पाठवले.")}
-function approve(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x)return;if(x.source==="Operator Registration"&&x.status!=="Forwarded to Admin")return;if(x.status!=="Sent for Approval"&&!(x.source==="Operator Registration"&&x.status==="Forwarded to Admin"))return;if(x.source==="Operator Registration"){const duplicate=a.find(z=>z.id!==x.id&&z.source==="Operator Registration"&&z.mobile===x.mobile&&z.status!=="Rejected"&&z.status!=="Registration Attempts Exhausted");if(duplicate){alert("हा Mobile Number आधीच Operator User ID म्हणून नोंदणीकृत आहे. कृपया User ID Password प्रविष्ट करून लॉगिन करा");return}}let remark=prompt("Admin Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Admin Remark लिहिणे आवश्यक आहे.");return}x.status="Accepted";x.adminRemark=remark;x.approvedAt=new Date().toISOString();x.approvedBy=session.username;save(a);renderAdmin();renderAdminSentByDistrict();renderAccepted();renderPending();renderAdminAccepted();renderAdminCorrection();renderForms();renderSummary();alert("Form Admin कडून Accept करण्यात आला.")}
+function approve(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x)return;if(x.source==="Operator Registration"&&x.status!=="Forwarded to Admin")return;if(x.status!=="Sent for Approval"&&!(x.source==="Operator Registration"&&x.status==="Forwarded to Admin"))return;if(x.source==="Operator Registration"){const duplicate=a.find(z=>z.id!==x.id&&z.source==="Operator Registration"&&z.mobile===x.mobile&&z.status!=="Rejected"&&z.status!=="Registration Attempts Exhausted");if(duplicate){alert("हा Mobile Number आधीच Operator User ID म्हणून नोंदणीकृत आहे. कृपया User ID Password प्रविष्ट करून लॉगिन करा");return}}let remark=prompt("Admin Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Admin Remark लिहिणे आवश्यक आहे.");return}x.status="Accepted";x.adminRemark=remark;x.approvedAt=new Date().toISOString();x.approvedBy=session.username;save(a);sendAcceptedFormEmail(x,session.username);renderAdmin();renderAdminSentByDistrict();renderAccepted();renderPending();renderAdminAccepted();renderAdminCorrection();renderForms();renderSummary();alert("Form Admin कडून Accept करण्यात आला. ई-मेल सूचना पाठवण्याची विनंती केली आहे.")}
 function rejectForm(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x)return;if(x.source==="Operator Registration"&&x.status!=="Forwarded to Admin")return;if(x.status!=="Sent for Approval"&&!(x.source==="Operator Registration"&&x.status==="Forwarded to Admin"))return;let remark=prompt("Admin Remark / Reject Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Reject Remark लिहिणे आवश्यक आहे.");return}x.status="Rejected";x.rejectRemark=remark;x.rejectedAt=new Date().toISOString();x.rejectedBy=session.username;
 if(x.source==="Operator Registration"){
   x.registrationAttempts=getOperatorRegistrationAttempts(x);
@@ -2429,8 +2456,8 @@ function adminFinalApproveOperatorRegistration(id){
   remark=remark.trim();
   if(!remark){alert("Admin Final Decision Remark लिहिणे आवश्यक आहे.");return}
   x.status="Accepted";x.adminRemark=remark;x.approvedAt=new Date().toISOString();x.approvedBy=session.username;
-  save(a);renderAdminSentByDistrict();renderAdmin();renderAccepted();renderPending();renderForms();renderSummary();
-  alert("Admin कडून Final Decision म्हणून Form Accept करण्यात आला.");
+  save(a);sendAcceptedFormEmail(x,session.username);renderAdminSentByDistrict();renderAdmin();renderAccepted();renderPending();renderForms();renderSummary();
+  alert("Admin कडून Final Decision म्हणून Form Accept करण्यात आला. ई-मेल सूचना पाठवण्याची विनंती केली आहे.");
 }
 function adminFinalRejectOperatorRegistration(id){
   if(session.type!=="admin")return;
