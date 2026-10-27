@@ -2404,7 +2404,35 @@ function requestDelete(id){
 function renderAdminDelete(){if(session.type!=="admin")return;let a=forms().filter(x=>x.status==="Delete Requested");$("adminDeleteBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.deleteRemark||"-")+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button><button class='s' onclick=\"approveDelete('"+x.id+"')\">Accept</button><button class='d' onclick=\"rejectDelete('"+x.id+"')\">Reject</button></td></tr>").join("")||"<tr><td colspan='7'>Delete Request उपलब्ध नाही.</td></tr>"}
 function getDeletedForms(){try{const v=JSON.parse(localStorage.getItem("deletedForms")||"[]");return Array.isArray(v)?v:[]}catch(e){return []}}
 function saveDeletedForms(a){localStorage.setItem("deletedForms",JSON.stringify(a))}
-function approveDelete(id){if(session.type!=="admin")return;let a=forms(),i=a.findIndex(x=>x.id===id);if(i<0||a[i].status!=="Delete Requested")return;if(!confirm("ही Delete Request Approve करून Entry कायमची Delete करायची आहे का?"))return;let x=a[i],now=new Date().toISOString(),da=getDeletedForms();let deletedEntry={id:x.id,reference:x.reference,district:x.district,assembly:x.assembly,taluka:x.taluka,name:x.name,mobile:x.mobile,status:"Deleted",deleteRemark:x.deleteRemark||"",deleteRequestedAt:x.deleteRequestedAt||"",deleteRequestedBy:x.deleteRequestedBy||"",deletedAt:now,deletedBy:session.username};try{da.push(deletedEntry);saveDeletedForms(da)}catch(e){alert("Delete Archive सेव्ह करता आले नाही. Entry Delete करण्यात आलेली नाही.");return}a.splice(i,1);save(a);if(x.source==="Operator Registration"&&x.mobile){saveOperatorAccounts(getOperatorAccounts().filter(op=>op.mobile!==x.mobile));}renderAdminDelete();renderAdmin();renderForms();renderAccepted();renderPending();renderAdminAccepted();renderAdminCorrection();renderSummary();alert("Delete Request Accept झाली आणि Entry Delete करण्यात आली.")}
+async function approveDelete(id){
+ if(session.type!=="admin")return;
+ let a=forms(),i=a.findIndex(x=>x.id===id);
+ if(i<0||a[i].status!=="Delete Requested")return;
+ if(!confirm("ही Delete Request Approve करून Entry कायमची Delete करायची आहे का?"))return;
+ const x=a[i];
+ /* Remove the record from Supabase first. Otherwise central refresh can restore it. */
+ if(window.CENTRAL_DB_READY && window.centralDb){
+   try{
+     const {error}=await window.centralDb.from(window.SUPABASE_CONFIG.table)
+       .delete().eq("source","web_portal").eq("reference",String(x.reference||""));
+     if(error)throw error;
+   }catch(e){
+     console.error("Central delete request removal failed:",e);
+     alert("Central Database मधून Delete Request काढता आली नाही. Request पुन्हा दिसू नये म्हणून Entry Delete केलेली नाही. Internet/Database permission तपासा.");
+     return;
+   }
+ }else{
+   alert("Central Database जोडलेले नाही. Delete Request कायमची काढण्यासाठी Internet/Database connection तपासा.");
+   return;
+ }
+ const now=new Date().toISOString(),da=getDeletedForms();
+ const deletedEntry={id:x.id,reference:x.reference,district:x.district,assembly:x.assembly,taluka:x.taluka,name:x.name,mobile:x.mobile,status:"Deleted",deleteRemark:x.deleteRemark||"",deleteRequestedAt:x.deleteRequestedAt||"",deleteRequestedBy:x.deleteRequestedBy||"",deletedAt:now,deletedBy:session.username};
+ try{da.push(deletedEntry);saveDeletedForms(da)}catch(e){alert("Delete Archive सेव्ह करता आले नाही. Central Database मधून request काढली गेली आहे; local archive मध्ये अडचण आली.");return}
+ a.splice(i,1);localStorage.setItem(KEY,JSON.stringify(a));
+ if(x.source==="Operator Registration"&&x.mobile){saveOperatorAccounts(getOperatorAccounts().filter(op=>op.mobile!==x.mobile));}
+ renderAdminDelete();renderAdmin();renderForms();renderAccepted();renderPending();renderAdminAccepted();renderAdminCorrection();renderSummary();
+ alert("Delete Request Accept झाली आणि Central Database मधूनही काढण्यात आली.");
+}
 function rejectDelete(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.status!=="Delete Requested")return;let remark=prompt("Delete Request Reject करण्याचे कारण / Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Reject Remark लिहिणे अनिवार्य आहे.");return}x.status=x.previousStatusBeforeDelete||"Accepted";x.deleteRejectRemark=remark;x.deleteRejectedAt=new Date().toISOString();x.deleteRejectedBy=session.username;save(a);renderAdminDelete();renderAdmin();renderForms();renderAccepted();renderPending();renderAdminAccepted();renderAdminCorrection();renderSummary();alert("Delete Request Reject करण्यात आली. Entry कायम ठेवण्यात आली.")}
 
 function getElectionBranchPasswords(){try{const v=JSON.parse(localStorage.getItem(ELECTION_BRANCH_PASSWORD_KEY)||"{}");return v&&typeof v==="object"?v:{}}catch(e){return {}}}
