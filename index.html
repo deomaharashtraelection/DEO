@@ -1717,7 +1717,7 @@ async function saveOperatorRegistration(){
         alert("Central Database मध्ये Operator Login सेव्ह झाला नाही. Registration पूर्ण झालेली नाही. Internet/Database connection तपासा.");
         return;
       }
-      closeModal();alert("Registration Successful! ✅\n\nUser ID: "+d.mobile+"\nForm Reference: "+form.reference+"\n\nआपला Form District Login User कडे आहे.\nDistrict Login User तपासून Admin कडे Approval साठी Forward करेल.");
+      closeModal();alert("Registration Successful! ✅\n\nUser ID: "+d.mobile+"\n\nForm Reference: "+form.reference+"\n\nआपला Registration Form यशस्वीरीत्या सबमिट झाला आहे.\n\nपुढील प्रक्रिया: आपला फॉर्म District Login User कडून तपासला जाईल.\n\n1. District Login User कडून फॉर्म Accept झाल्यानंतर Registration प्रक्रिया पूर्ण होईल.\n2. फॉर्मची सद्यस्थिती पोर्टलमध्ये तपासता येईल.");
     }
     if(!rollbackSaved){
       closeOperatorRegistration();
