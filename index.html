@@ -827,9 +827,25 @@ async function sendAcceptedFormEmail(form, acceptedBy){
       acceptedAt:String(form.approvedAt || form.districtApprovedAt || new Date().toISOString()),
       acceptedBy:String(acceptedBy || "-")
     };
+    // When the portal is hosted by Apps Script, call the server directly so
+    // the actual MailApp result can be checked instead of using opaque no-cors fetch.
+    if (window.google && google.script && google.script.run) {
+      await new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(result => {
+            if (result && result.ok) resolve(result);
+            else reject(new Error((result && result.error) || "Apps Script did not confirm email delivery."));
+          })
+          .withFailureHandler(err => reject(new Error(err && err.message ? err.message : String(err))))
+          .sendAcceptedFormEmailFromHtml(payload);
+      });
+      form.acceptanceEmailSentAt = new Date().toISOString();
+      console.info("Acceptance email sent successfully by Apps Script.");
+      return;
+    }
+    // Fallback for standalone HTML hosting. no-cors cannot confirm delivery.
     await fetch(c.webAppUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload),mode:"no-cors"});
-    form.acceptanceEmailSentAt = new Date().toISOString();
-    console.info("Acceptance email request sent to Google Apps Script.");
+    console.warn("Acceptance email request submitted through fallback; delivery cannot be confirmed by the browser.");
   }catch(e){ console.error("Accepted-form email request failed:",e); }
 }
 
