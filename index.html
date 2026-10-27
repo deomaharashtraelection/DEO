@@ -837,21 +837,9 @@ let syncTimer = null;
 let syncing = false;
 
 function showBackupStatus(msg, ok){
-  let el = document.getElementById(STATUS_ID);
-  if(!el){
-    el = document.createElement("div");
-    el.id = STATUS_ID;
-    el.style.cssText =
-      "position:fixed;right:16px;bottom:16px;z-index:999999;" +
-      "padding:10px 14px;border-radius:10px;background:#123b68;color:#fff;" +
-      "font:700 13px Arial,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.2)";
-    document.body.appendChild(el);
-  }
-  el.textContent = msg;
-  el.style.background = ok ? "#15803d" : "#b45309";
-  el.style.display = "block";
-  clearTimeout(el._hide);
-  el._hide = setTimeout(()=>el.style.display="none", ok ? 2200 : 3500);
+  // Screen notifications for Google Drive Backup are intentionally suppressed.
+  // Backup process itself continues unchanged; failures remain in the console.
+  return;
 }
 
 function snapshotLocalStorage(){
@@ -903,7 +891,7 @@ async function automaticGoogleBackup(){
     showBackupStatus("✓ Google Drive Backup पूर्ण", true);
   }catch(err){
     console.error("Google Drive Auto Backup:", err);
-    showBackupStatus("⚠ Google Drive Backup झाला नाही", false);
+    /* Failure toast hidden as requested; backup error remains in the console for diagnostics. */
   }finally{
     syncing = false;
   }
