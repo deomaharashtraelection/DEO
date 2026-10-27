@@ -990,6 +990,8 @@ window.CENTRAL_DB_CONNECTION_PROMISE = (async function initCentralDatabase(){
     if(error) throw error;
     window.CENTRAL_DB_READY = true;
     console.info("Supabase Central Database connection verified.");
+    // Start live updates without delaying the initial connection result.
+    setTimeout(()=>{ if(typeof startCentralLiveMode === "function") startCentralLiveMode(); },0);
     return true;
   }catch(e){
     window.CENTRAL_DB_READY = false;
@@ -1021,6 +1023,12 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&
    ============================================================ */
 let centralSyncTimer = null;
 let centralSyncBusy = false;
+// Live Mode: keep one central refresh in flight and share updates across logins.
+let centralFormsRefreshPromise = null;
+let centralFormsRefreshTimer = null;
+let centralLiveChannel = null;
+let centralLivePollTimer = null;
+let centralLastLiveRefreshAt = 0;
 
 function localForms(){
   try{
@@ -1074,6 +1082,7 @@ async function centralLoadForms(){
     if(error) throw error;
     const remote = (data||[]).map(formFromCentralRow).filter(Boolean);
     localStorage.setItem(KEY, JSON.stringify(remote));
+    centralLastLiveRefreshAt = Date.now();
     return remote;
   }catch(e){
     console.error("Central forms load failed:",e);
@@ -1145,20 +1154,61 @@ function save(a){
 }
 
 async function refreshFormsFromCentral(){
-  const a = await centralLoadForms();
-  try{
-    renderForms();
-    renderDistrictOperatorRegistrations();
-    renderAdmin();
-    renderAdminSentByDistrict();
-    renderPending();
-    renderAccepted();
-    renderAdminAccepted();
-    renderAdminCorrection();
-    renderDistrictCorrection();
-    renderSummary();
-  }catch(e){}
-  return a;
+  // Avoid duplicate overlapping full-table requests when several login panels refresh together.
+  if(centralFormsRefreshPromise) return centralFormsRefreshPromise;
+  centralFormsRefreshPromise = (async()=>{
+    const a = await centralLoadForms();
+    try{
+      renderForms();
+      renderDistrictOperatorRegistrations();
+      renderAdmin();
+      renderAdminSentByDistrict();
+      renderPending();
+      renderAccepted();
+      renderAdminAccepted();
+      renderAdminCorrection();
+      renderDistrictCorrection();
+      renderSummary();
+    }catch(e){ console.warn("Central forms render skipped:",e); }
+    return a;
+  })();
+  try{return await centralFormsRefreshPromise;}
+  finally{centralFormsRefreshPromise = null;}
+}
+
+function scheduleCentralLiveRefresh(delay=250){
+  clearTimeout(centralFormsRefreshTimer);
+  centralFormsRefreshTimer = setTimeout(()=>{
+    if(document.visibilityState === "visible") refreshFormsFromCentral().catch(()=>{});
+  }, delay);
+}
+
+function startCentralLiveMode(){
+  if(!window.CENTRAL_DB_READY || !window.centralDb) return;
+  // Supabase Realtime pushes central table changes to every open login.
+  if(!centralLiveChannel){
+    try{
+      centralLiveChannel = window.centralDb.channel("portal-forms-live-mode")
+        .on("postgres_changes", {event:"*", schema:"public", table:window.SUPABASE_CONFIG.table}, payload=>{
+          // The table also contains auth/other rows; refresh only when portal form rows may have changed.
+          const row = payload && (payload.new || payload.old);
+          if(!row || row.source === "web_portal") scheduleCentralLiveRefresh(200);
+        })
+        .subscribe(status=>{
+          if(status === "CHANNEL_ERROR" || status === "TIMED_OUT"){
+            console.warn("Supabase Realtime unavailable; live polling fallback remains active.");
+          }
+        });
+    }catch(e){ console.warn("Supabase Realtime setup failed:",e); }
+  }
+  // Fallback for projects where Realtime replication is not enabled.
+  if(!centralLivePollTimer){
+    centralLivePollTimer = setInterval(()=>{
+      if(document.visibilityState === "visible" && Date.now()-centralLastLiveRefreshAt > 12000){
+        scheduleCentralLiveRefresh(100);
+      }
+    }, 15000);
+  }
 }
 
 function showCentralDbStatus(msg,ok){
@@ -1826,11 +1876,19 @@ async function login(){
   let canonicalAdminPassword=null;
   let centralPasswordLoadSucceeded=false;
   try{
+    // Run central credential lookup and forms refresh concurrently to reduce login wait,
+    // while still ensuring operator/district data is refreshed before credential checks.
+    const tasks=[];
     if(window.centralAuthLoadPublic){
-      canonicalAdminPassword=await window.centralAuthLoadPublic();
-      centralPasswordLoadSucceeded=typeof canonicalAdminPassword==="string";
+      tasks.push(window.centralAuthLoadPublic().then(value=>{
+        canonicalAdminPassword=value;
+        centralPasswordLoadSucceeded=typeof value==="string";
+      }));
     }
-    if(window.CENTRAL_DB_READY && typeof refreshFormsFromCentral==="function") await refreshFormsFromCentral();
+    if(window.CENTRAL_DB_READY && typeof refreshFormsFromCentral==="function"){
+      tasks.push(refreshFormsFromCentral());
+    }
+    await Promise.all(tasks);
   }catch(e){ console.warn("Central login refresh failed.",e); }
   const t=$("loginType").value,u=$("username").value.trim(),p=$("password").value;
   setRegisteredLoginError(t,"");
@@ -2986,6 +3044,7 @@ window.addEventListener("load", async function(){
     dbInfo.textContent = connected ? "☁ Central Database Connected" : "⚠ Central Database Connection Failed";
     dbInfo.style.color = connected ? "#15803d" : "#b45309";
   }
+  if(connected && typeof startCentralLiveMode === "function") startCentralLiveMode();
   if(connected && typeof refreshFormsFromCentral === "function") refreshFormsFromCentral().catch(()=>{});
   const c = window.GOOGLE_SYNC_CONFIG;
   if(c && (!c.webAppUrl || !c.secret)){
