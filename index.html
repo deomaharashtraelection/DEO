@@ -1082,16 +1082,29 @@ async function centralLoadForms(){
   }
 }
 
+/* Sync only records changed on this device. Uploading the entire local cache
+   used to overwrite newer central records with stale data from another login. */
+const centralPendingUpserts = new Map();
+const centralPendingDeletes = new Set();
 async function centralUpsertForms(a){
   if(!window.CENTRAL_DB_READY) return false;
-  const rows = (Array.isArray(a)?a:[]).map(centralRowFromForm);
-  if(!rows.length) return true;
+  const refsToDelete = Array.from(centralPendingDeletes);
+  const changed = Array.from(centralPendingUpserts.values());
+  centralPendingDeletes.clear();
+  centralPendingUpserts.clear();
   try{
-    const {error} = await window.centralDb
-      .from(window.SUPABASE_CONFIG.table)
-      .upsert(rows,{onConflict:"reference"});
-    if(error) throw error;
-    showCentralDbStatus("✓ Central Database Saved",true);
+    if(changed.length){
+      const rows = changed.map(centralRowFromForm);
+      const {error} = await window.centralDb.from(window.SUPABASE_CONFIG.table)
+        .upsert(rows,{onConflict:"reference"});
+      if(error) throw error;
+    }
+    if(refsToDelete.length){
+      const {error} = await window.centralDb.from(window.SUPABASE_CONFIG.table)
+        .delete().eq("source","web_portal").in("reference",refsToDelete);
+      if(error) throw error;
+    }
+    if(changed.length || refsToDelete.length) showCentralDbStatus("✓ Central Database Saved",true);
     return true;
   }catch(e){
     window.CENTRAL_FORMS_LAST_ERROR = String((e && (e.message || e.details || e.hint || e.code)) || e || "Unknown database error");
@@ -1101,14 +1114,34 @@ async function centralUpsertForms(a){
   }
 }
 
-function queueCentralFormsSync(a){
+function queueCentralFormsSync(a, previous){
+  const before = Array.isArray(previous) ? previous : [];
+  const after = Array.isArray(a) ? a : [];
+  const beforeByRef = new Map(before.map(x=>[String(x.reference || x.form_id || x.id || ""),x]));
+  const afterByRef = new Map(after.map(x=>[String(x.reference || x.form_id || x.id || ""),x]));
+  for(const [ref,form] of afterByRef){
+    if(!ref) continue;
+    const old = beforeByRef.get(ref);
+    if(!old || JSON.stringify(old)!==JSON.stringify(form)){
+      centralPendingUpserts.set(ref,form);
+      centralPendingDeletes.delete(ref);
+    }
+  }
+  for(const ref of beforeByRef.keys()){
+    if(ref && !afterByRef.has(ref)){
+      centralPendingUpserts.delete(ref);
+      centralPendingDeletes.add(ref);
+    }
+  }
   clearTimeout(centralSyncTimer);
-  centralSyncTimer = setTimeout(()=>centralUpsertForms(a),250);
+  centralSyncTimer = setTimeout(()=>centralUpsertForms(),250);
 }
 
 function save(a){
+  let previous=[];
+  try{const parsed=JSON.parse(localStorage.getItem(KEY)||"[]");if(Array.isArray(parsed))previous=parsed;}catch(e){}
   localStorage.setItem(KEY,JSON.stringify(a));
-  queueCentralFormsSync(a);
+  queueCentralFormsSync(a,previous);
 }
 
 async function refreshFormsFromCentral(){
