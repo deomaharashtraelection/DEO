@@ -1094,6 +1094,7 @@ async function centralUpsertForms(a){
     showCentralDbStatus("✓ Central Database Saved",true);
     return true;
   }catch(e){
+    window.CENTRAL_FORMS_LAST_ERROR = String((e && (e.message || e.details || e.hint || e.code)) || e || "Unknown database error");
     console.error("Central forms save failed:",e);
     showCentralDbStatus("⚠ Central Database Save झाला नाही",false);
     return false;
@@ -1602,7 +1603,16 @@ async function saveOperatorRegistration(){
     }else{
       if(accounts.some(x=>x.mobile===d.mobile)&&!regEditId){alert("हा Mobile Number आधीच Operator User ID म्हणून नोंदणीकृत आहे. कृपया User ID Password प्रविष्ट करून लॉगिन करा");return}
       const dc=String(DATA[d.district]?.code||"00").padStart(2,"0"),ac=String(assemblyNo(d.assembly)).padStart(3,"0"),dd=String(now.getDate()).padStart(2,"0"),mm=String(now.getMonth()+1).padStart(2,"0"),yyyy=now.getFullYear();
-      const form={id:(window.crypto&&crypto.randomUUID)?crypto.randomUUID():("reg-"+Date.now()+"-"+Math.random().toString(36).slice(2)),reference:"D"+dc+"-"+ac+"-"+dd+"-"+mm+"-"+yyyy,district:d.district,assembly:d.assembly,taluka:d.taluka,name:d.name,nameEnglish:d.nameEnglish,gender:d.gender,education:d.education,dob:d.dob,age:d.age,address:d.address,addressEnglish:d.addressEnglish,officeAddressEnglish:d.officeAddressEnglish,officeAddress:d.officeAddress,pin:d.pin,email:d.email,mobile:d.mobile,whatsapp:d.whatsapp,joiningDate:d.joiningDate,experience:d.experience,photo:d.photo,proof:d.proof,signature:d.signature,status:"Pending at District",createdAt:createdAt,source:"Operator Registration",registrationAttempts:1};
+      const baseReference="D"+dc+"-"+ac+"-"+dd+"-"+mm+"-"+yyyy;
+      /* Keep the existing reference format unless that reference already exists.
+         Supabase upserts use reference as the conflict key, so same-day registrations
+         for the same assembly must have distinct references or one can block/overwrite another. */
+      let uniqueReference=baseReference, referenceSuffix=2;
+      while(a.some(x=>String(x.reference||"")===uniqueReference)){
+        uniqueReference=baseReference+"-"+String(referenceSuffix).padStart(2,"0");
+        referenceSuffix++;
+      }
+      const form={id:(window.crypto&&crypto.randomUUID)?crypto.randomUUID():("reg-"+Date.now()+"-"+Math.random().toString(36).slice(2)),reference:uniqueReference,district:d.district,assembly:d.assembly,taluka:d.taluka,name:d.name,nameEnglish:d.nameEnglish,gender:d.gender,education:d.education,dob:d.dob,age:d.age,address:d.address,addressEnglish:d.addressEnglish,officeAddressEnglish:d.officeAddressEnglish,officeAddress:d.officeAddress,pin:d.pin,email:d.email,mobile:d.mobile,whatsapp:d.whatsapp,joiningDate:d.joiningDate,experience:d.experience,photo:d.photo,proof:d.proof,signature:d.signature,status:"Pending at District",createdAt:createdAt,source:"Operator Registration",registrationAttempts:1};
       if(form.photo&&/^data:image\//i.test(form.photo))form.photo=await compressImageData(form.photo,800,1000,0.78);
       if(form.proof&&/^data:image\//i.test(form.proof))form.proof=await compressImageData(form.proof,1000,1200,0.72);
        if(form.signature&&/^data:image\//i.test(form.signature))form.signature=await compressImageData(form.signature,1000,500,0.80);
