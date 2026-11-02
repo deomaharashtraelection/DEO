@@ -2956,15 +2956,7 @@ function downloadAcceptedCSV(){
 }
 function downloadApprovedExcel(){
  if(!session || session.type!=="admin"){alert("Accepted Forms Excel/PDF Download सुविधा फक्त Admin Login साठी उपलब्ध आहे.");return}
- let a=getAcceptedDownloadRows();
- if(!a || !a.length){if(a && !a.length)alert("Download करण्यासाठी Accepted Forms उपलब्ध नाहीत.");return}
- const headers=["Sr.No.","District","Assembly Constituency","Taluka","Operator Name","Mobile Number"];
- const rows=a.map((x,i)=>[i+1,x.district,x.assembly,x.taluka,x.name,x.mobile]);
- const escX=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
- const title=getAcceptedDownloadTitle();
- const html="<html><head><meta charset='UTF-8'><style>table{border-collapse:collapse;table-layout:auto;width:auto}th,td{white-space:normal;overflow-wrap:break-word;word-wrap:break-word;vertical-align:top;height:auto;mso-wrap-text:yes}th{font-weight:bold}</style></head><body><table border='1' style='table-layout:auto;width:auto'><thead><tr><th colspan='6' style='text-align:center;font-size:16px'>"+escX(title)+"</th></tr><tr>"+headers.map(h=>"<th>"+escX(h)+"</th>").join("")+"</tr></thead><tbody>"+rows.map(r=>"<tr>"+r.map(v=>"<td>"+escX(v)+"</td>").join("")+"</tr>").join("")+"</tbody></table></body></html>";
- const blob=new Blob([html],{type:"application/vnd.ms-excel;charset=utf-8"});
- const url=URL.createObjectURL(blob),aEl=document.createElement("a");aEl.href=url;aEl.download="Accepted_Forms.xls";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
+ downloadAcceptedRegistrationExcel("Accepted_Forms.xls");
 }
 function downloadApprovedPDF(){
  if(!session || session.type!=="admin"){alert("Accepted Forms Excel/PDF Download सुविधा फक्त Admin Login साठी उपलब्ध आहे.");return}
@@ -2977,25 +2969,39 @@ function downloadApprovedPDF(){
 }
 function downloadAcceptedExcel(){
  if(!session || session.type!=="admin"){alert("Accepted Forms Excel/PDF Download सुविधा फक्त Admin Login साठी उपलब्ध आहे.");return}
- let a=getAcceptedDownloadRows();
+ downloadAcceptedRegistrationExcel("Accepted_Forms.xls");
+}
+function downloadAcceptedRegistrationExcel(fileName){
+ if(!session || session.type!=="admin"){alert("Excel Download करण्याचा अधिकार फक्त Admin Login ला आहे.");return}
+ const a=getAcceptedDownloadRows();
  if(!a || !a.length){if(a && !a.length)alert("Download करण्यासाठी Accepted Forms उपलब्ध नाहीत.");return}
- if(session.type!=="admin"){
-   const headers=["Sr.No.","District","Assembly Constituency","Taluka","Operator Name","Mobile Number"];
-   const rows=a.map((x,i)=>[i+1,x.district,x.assembly,x.taluka,x.name,x.mobile]);
-   const escX=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-   const title=getAcceptedDownloadTitle();
-   const xhtml="<html><head><meta charset='UTF-8'><style>table{border-collapse:collapse;table-layout:auto;width:auto}th,td{white-space:normal;overflow-wrap:break-word;word-wrap:break-word;vertical-align:top;height:auto;mso-wrap-text:yes}th{font-weight:bold}</style></head><body><table border='1' style='table-layout:auto;width:auto'><thead><tr><th colspan='6' style='text-align:center;font-size:16px'>"+escX(title)+"</th></tr><tr>"+headers.map(h=>"<th>"+escX(h)+"</th>").join("")+"</tr></thead><tbody>"+rows.map(r=>"<tr>"+r.map(v=>"<td>"+escX(v)+"</td>").join("")+"</tr>").join("")+"</tbody></table></body></html>";
-   const blob=new Blob([xhtml],{type:"application/vnd.ms-excel;charset=utf-8"});
-   const url=URL.createObjectURL(blob),aEl=document.createElement("a");aEl.href=url;aEl.download="Accepted_Forms.xls";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
-   return;
- }
- const headers=["District","Assembly Constituency","Taluka","Operator Name","DOB","Age","Address","PIN","Mobile","WhatsApp"];
- const rows=a.map(x=>[x.district,x.assembly,x.taluka,x.name,x.dob,x.age,x.address,x.pin,x.mobile,x.whatsapp]);
+ const headers=[
+  "Sr.No.","Reference No.","District","Assembly Constituency","Taluka",
+  "Office Address (English)","Office Address (Marathi)",
+  "Full Name (English)","Full Name (Marathi)","Gender","Education",
+  "Date of Birth","Age","Joining Date","Experience (Year, Month, Days)",
+  "Home Address (English)","Home Address (Marathi)","PIN Code",
+  "Email","Mobile Number","WhatsApp Number",
+  "Passport Size Photo","Identity Proof","Upload Signature",
+  "Status","Registration Date"
+ ];
+ const rows=a.map((x,i)=>[
+  i+1,x.reference,x.district,x.assembly,x.taluka,
+  x.officeAddressEnglish,x.officeAddress,
+  x.nameEnglish,x.name,x.gender,x.education,
+  x.dob,x.age,x.joiningDate,x.experience,
+  x.addressEnglish,x.address,x.pin,
+  x.email,x.mobile,x.whatsapp,
+  x.photo?"Uploaded":"Not uploaded",
+  x.proof?"Uploaded":"Not uploaded",
+  x.signature?"Uploaded":"Not uploaded",
+  x.status,x.createdAt
+ ]);
  const escX=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
  const title=getAcceptedDownloadTitle();
- const xhtml="<html><head><meta charset='UTF-8'><style>table{border-collapse:collapse;table-layout:auto;width:auto}th,td{white-space:normal;overflow-wrap:break-word;word-wrap:break-word;vertical-align:top;height:auto;mso-wrap-text:yes}th{font-weight:bold}</style></head><body><table border='1' style='table-layout:auto;width:auto'><thead><tr><th colspan='10' style='text-align:center;font-size:16px'>"+escX(title)+"</th></tr><tr>"+headers.map(h=>"<th>"+escX(h)+"</th>").join("")+"</tr></thead><tbody>"+rows.map(r=>"<tr>"+r.map(v=>"<td>"+escX(v)+"</td>").join("")+"</tr>").join("")+"</tbody></table></body></html>";
- const blob=new Blob([xhtml],{type:"application/vnd.ms-excel;charset=utf-8"});
- const url=URL.createObjectURL(blob),aEl=document.createElement("a");aEl.href=url;aEl.download="Accepted_Forms.xls";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
+ const xhtml="<html><head><meta charset='UTF-8'><style>table{border-collapse:collapse;table-layout:auto;width:auto}th,td{white-space:normal;overflow-wrap:break-word;word-wrap:break-word;vertical-align:top;height:auto;mso-wrap-text:yes}th{font-weight:bold}</style></head><body><table border='1' style='border-collapse:collapse;table-layout:auto;width:auto'><thead><tr><th colspan='"+headers.length+"' style='text-align:center;font-size:16px'>"+escX(title)+"</th></tr><tr>"+headers.map(h=>"<th>"+escX(h)+"</th>").join("")+"</tr></thead><tbody>"+rows.map(r=>"<tr>"+r.map(v=>"<td>"+escX(v)+"</td>").join("")+"</tr>").join("")+"</tbody></table></body></html>";
+ const blob=new Blob(["\ufeff"+xhtml],{type:"application/vnd.ms-excel;charset=utf-8"});
+ const url=URL.createObjectURL(blob),aEl=document.createElement("a");aEl.href=url;aEl.download=fileName||"Accepted_Forms.xls";document.body.appendChild(aEl);aEl.click();aEl.remove();URL.revokeObjectURL(url);
 }
 function downloadAcceptedPDF(){
  if(!session || session.type!=="admin"){alert("Accepted Forms Excel/PDF Download सुविधा फक्त Admin Login साठी उपलब्ध आहे.");return}
