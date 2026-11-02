@@ -2080,7 +2080,6 @@ function updatePresidentButtons(){
   if(el){el.classList.remove("hidden");el.style.setProperty("display","block","important")}
 }
 function enter(){
- if(window.CENTRAL_DB_READY&&typeof startCentralLiveMode==="function")startCentralLiveMode();
  document.body.classList.toggle("district-login",session.type==="district");
  document.body.classList.toggle("operator-login",session.type==="operator");
  document.body.classList.toggle("admin-login",session.type==="admin");
@@ -2486,81 +2485,51 @@ function renderDistrictOperatorRegistrations(){
   $("districtOperatorRegBody").innerHTML=a.map((x,i)=>{
     const attempts=getOperatorRegistrationAttempts(x);
     const statusText=x.status==="Rejected"?(x.status+" • "+attempts+"/3"):(x.status==="Pending at District"?(x.status+" • "+attempts+"/3"):(x.status+" • 3/3"));
-    const id=String(x.id).replace(/\\/g,"\\\\").replace(/'/g,"\\'");
-    const actions=x.status==="Pending at District"
-      ? "<button class='p' onclick=\"view('"+id+"')\">View</button> <button class='s' onclick=\"districtApproveOperatorRegistration('"+id+"')\">Accept</button> <button class='w' onclick=\"rollbackOperatorRegistration('"+id+"')\">Roll Back</button> <button class='d' onclick=\"districtRejectOperatorRegistration('"+id+"')\">Reject</button>"
-      : "<button class='p' onclick=\"view('"+id+"')\">View</button>";
+    const actions="<button class='p' type='button' onclick=\"view('"+x.id+"')\">View</button>";
     return "<tr><td>"+(i+1)+"</td><td>"+esc(x.reference)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.mobile)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+badge(statusText)+"</td><td>"+actions+"</td></tr>";
   }).join("")||"<tr><td colspan='8'>Operator Registration Request उपलब्ध नाही.</td></tr>";
 }
-
-/* Persist a District Registration decision to the shared database before showing success.
-   Browser storage is only a cache and must not block live-mode workflow when quota is full. */
-async function persistDistrictRegistrationDecision(allForms, reference){
-  if(!window.CENTRAL_DB_READY||!window.centralDb){
-    alert("Central Database जोडलेले नाही. Accept / Reject / Roll Back सेव्ह झालेले नाही. Internet/Database connection तपासून पुन्हा प्रयत्न करा.");
-    return false;
-  }
-  const row=allForms.find(z=>String(z.reference||z.id)===String(reference)||String(z.id)===String(reference));
-  if(!row)return false;
-  const previous=Array.isArray(centralFormsMemoryCache)?centralFormsMemoryCache.slice():localForms();
-  centralFormsMemoryCache=allForms;
-  queueCentralFormsSync(allForms,previous);
-  clearTimeout(centralSyncTimer);
-  try{localStorage.setItem(KEY,JSON.stringify(allForms));}
-  catch(storageError){console.warn("District decision saved in memory; localStorage cache skipped:",storageError);}
-  const saved=await centralUpsertForms();
-  if(!saved){
-    alert("Central Database मध्ये बदल सेव्ह झाला नाही. कृपया पुन्हा प्रयत्न करा. कारण: "+String(window.CENTRAL_FORMS_LAST_ERROR||"Database save failed"));
-    return false;
-  }
-  centralLastLiveRefreshAt=Date.now();
-  scheduleCentralLiveRefresh(250);
+async function persistDistrictOperatorRegistration(a,x){
+  const ref=String(x.reference||x.form_id||x.id||"");
+  if(!ref) throw new Error("Registration Form Reference उपलब्ध नाही.");
+  centralFormsMemoryCache=Array.isArray(a)?a.slice():forms();
+  try{localStorage.setItem(KEY,JSON.stringify(centralFormsMemoryCache));}
+  catch(storageError){console.warn("District action local cache skipped because browser storage is full:",storageError);}
+  const ready=await ensureCentralDatabaseReadyForRegistration();
+  if(!ready) throw new Error("Central Database Live connection उपलब्ध नाही. बदल सेव्ह झालेला नाही; पुन्हा प्रयत्न करा.");
+  centralPendingUpserts.set(ref,x);
+  const ok=await retryRegistrationCentralSave(()=>centralUpsertForms());
+  if(!ok) throw new Error("Central Database मध्ये बदल सेव्ह झाला नाही: "+(window.CENTRAL_REGISTRATION_LAST_ERROR||window.CENTRAL_FORMS_LAST_ERROR||"Unknown error"));
+  centralFormsMemoryCache=Array.isArray(a)?a.slice():centralFormsMemoryCache;
+  scheduleCentralLiveRefresh(100);
   return true;
 }
 async function districtApproveOperatorRegistration(id){
   if(session.type!=="district")return;
-  let a=forms().map(z=>({...z})),x=a.find(z=>z.id===id);
+  let a=forms(),x=a.find(z=>z.id===id);
   if(!x||x.source!=="Operator Registration"||x.district!==session.district||x.status!=="Pending at District")return;
   const duplicate=a.find(z=>z.id!==x.id&&z.source==="Operator Registration"&&z.mobile===x.mobile&&z.status==="Accepted");
   if(duplicate){alert("हा Mobile Number असलेला Registration Form आधीच Accept झाला आहे.");return;}
-  if(!confirm("हा Registration Form District Login मधून Approve करायचा आहे का?"))return;
+  if(!confirm("हा Registration Form District Login मधून Accept करायचा आहे का?"))return;
   let remark=prompt("Registration Form Accept करण्यासाठी Remark लिहा (अनिवार्य):");
-  if(remark===null)return;
-  remark=remark.trim();
-  if(!remark){alert("Accept करण्यासाठी Remark लिहिणे अनिवार्य आहे. Remark शिवाय Form Accept होणार नाही.");return;}
+  if(remark===null)return; remark=remark.trim();
+  if(!remark){alert("Accept करण्यासाठी Remark लिहिणे अनिवार्य आहे.");return;}
   const now=new Date().toISOString();
-  x.status="Accepted";
-  x.districtAcceptRemark=remark;
-  x.districtRemark=remark;
-  x.districtReviewedAt=now;
-  x.districtReviewedBy=session.username;
-  x.districtApprovedAt=now;
-  x.districtApprovedBy=session.username;
-  x.approvedAt=now;
-  x.approvedBy=session.username;
-  x.adminRemark=remark;
-  if(!(await persistDistrictRegistrationDecision(a,x.reference||x.id)))return;
-  closeModal();
-  renderDistrictOperatorRegistrations();renderAdmin();renderAdminSentByDistrict();renderAccepted();renderPending();renderAdminAccepted();renderForms();renderSummary();
-  alert("Registration Form District Login मधून Approve करण्यात आला.");
+  x.status="Accepted";x.districtAcceptRemark=remark;x.districtRemark=remark;
+  x.districtReviewedAt=now;x.districtReviewedBy=session.username;x.districtApprovedAt=now;
+  x.districtApprovedBy=session.username;x.approvedAt=now;x.approvedBy=session.username;x.adminRemark=remark;
+  try{await persistDistrictOperatorRegistration(a,x);closeModal();renderDistrictOperatorRegistrations();renderAdmin();renderAdminSentByDistrict();renderAccepted();renderPending();renderAdminAccepted();renderForms();renderSummary();alert("Registration Form District Login मधून Accept करण्यात आला आणि Central Database मध्ये सेव्ह झाला.");}
+  catch(e){x.status="Pending at District";delete x.districtAcceptRemark;delete x.districtRemark;delete x.districtReviewedAt;delete x.districtReviewedBy;delete x.districtApprovedAt;delete x.districtApprovedBy;delete x.approvedAt;delete x.approvedBy;delete x.adminRemark;alert("Accept प्रक्रिया पूर्ण झाली नाही. Form पुन्हा प्रयत्नासाठी उपलब्ध आहे.\nकारण: "+(e.message||e));}
 }
 async function rollbackOperatorRegistration(id){
   if(session.type!=="district")return;
-  let a=forms().map(z=>({...z})),x=a.find(z=>z.id===id);
+  let a=forms(),x=a.find(z=>z.id===id);
   if(!x||x.source!=="Operator Registration"||x.district!==session.district||x.status!=="Pending at District")return;
-  let remark=prompt("Roll Back Remark लिहा (अनिवार्य):");
-  if(remark===null)return;
-  remark=remark.trim();
+  let remark=prompt("Roll Back Remark लिहा (अनिवार्य):");if(remark===null)return;remark=remark.trim();
   if(!remark){alert("Roll Back Remark लिहिणे अनिवार्य आहे.");return;}
-  x.status="Rollback to Operator";
-  x.districtRollbackRemark=remark;
-  x.districtRollbackAt=new Date().toISOString();
-  x.districtRollbackBy=session.username;
-  if(!(await persistDistrictRegistrationDecision(a,x.reference||x.id)))return;
-  closeModal();
-  renderDistrictOperatorRegistrations();renderForms();renderAdmin();renderAdminSentByDistrict();renderPending();renderSummary();
-  alert("Registration Form Remark सहित Operator Login कडे दुरुस्तीसाठी परत पाठविला.\nCentral Database मध्ये Live Save झाले.");
+  const oldStatus=x.status;x.status="Rollback to Operator";x.districtRollbackRemark=remark;x.districtRollbackAt=new Date().toISOString();x.districtRollbackBy=session.username;
+  try{await persistDistrictOperatorRegistration(a,x);closeModal();renderDistrictOperatorRegistrations();renderForms();renderAdmin();renderAdminSentByDistrict();renderPending();renderSummary();alert("Registration Form Central Database मध्ये सेव्ह करून Operator Login कडे दुरुस्तीसाठी परत पाठविला.");}
+  catch(e){x.status=oldStatus;delete x.districtRollbackRemark;delete x.districtRollbackAt;delete x.districtRollbackBy;alert("Rollback पूर्ण झाला नाही. Form पुन्हा प्रयत्नासाठी उपलब्ध आहे.\nकारण: "+(e.message||e));}
 }
 function startRollbackRegistration(id){
   if(session.type!=="operator")return;
@@ -2597,23 +2566,13 @@ function forwardOperatorRegistration(id){
 }
 async function districtRejectOperatorRegistration(id){
   if(session.type!=="district")return;
-  let a=forms().map(z=>({...z})),x=a.find(z=>z.id===id);
+  let a=forms(),x=a.find(z=>z.id===id);
   if(!x||x.source!=="Operator Registration"||x.district!==session.district||x.status!=="Pending at District")return;
-  let remark=prompt("Reject करण्याचे कारण / Remark लिहा:");
-  if(remark===null)return;
-  remark=remark.trim();
-  if(!remark){alert("Reject Remark लिहिणे आवश्यक आहे.");return}
-  x.status="Rejected";
-  x.rejectRemark=remark;
-  x.rejectedAt=new Date().toISOString();
-  x.rejectedBy=session.username;
-  x.districtRejectRemark=remark;
-  x.districtRejectedAt=x.rejectedAt;
-  x.districtRejectedBy=session.username;
-  if(!(await persistDistrictRegistrationDecision(a,x.reference||x.id)))return;
-  closeModal();
-  renderDistrictOperatorRegistrations(); renderAdmin(); renderAdminSentByDistrict(); renderForms(); renderPending(); renderSummary();
-  alert("Registration Form Reject करण्यात आला.\nCentral Database मध्ये Live Save झाले.");
+  let remark=prompt("Reject करण्याचे कारण / Remark लिहा:");if(remark===null)return;remark=remark.trim();
+  if(!remark){alert("Reject Remark लिहिणे आवश्यक आहे.");return;}
+  const oldStatus=x.status,now=new Date().toISOString();x.status="Rejected";x.rejectRemark=remark;x.rejectedAt=now;x.rejectedBy=session.username;x.districtRejectRemark=remark;x.districtRejectedAt=now;x.districtRejectedBy=session.username;
+  try{await persistDistrictOperatorRegistration(a,x);closeModal();renderDistrictOperatorRegistrations();renderAdmin();renderAdminSentByDistrict();renderForms();renderPending();renderSummary();alert("Registration Form Reject करून Central Database मध्ये सेव्ह करण्यात आला.");}
+  catch(e){x.status=oldStatus;delete x.rejectRemark;delete x.rejectedAt;delete x.rejectedBy;delete x.districtRejectRemark;delete x.districtRejectedAt;delete x.districtRejectedBy;alert("Reject प्रक्रिया पूर्ण झाली नाही. Form पुन्हा प्रयत्नासाठी उपलब्ध आहे.\nकारण: "+(e.message||e));}
 }
 function renderDistrictCorrection(){if(session.type!=="district")return;let a=forms().filter(x=>x.district===session.district&&(x.status==="Correction Requested"||x.status==="Correction Approval Pending"));$("districtCorrectionBody").innerHTML=a.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.name)+"</td><td>"+esc(x.assembly)+"</td><td>"+esc(x.taluka)+"</td><td>"+esc(x.correctionRemark||"Operator ने केलेली दुरुस्ती")+"</td><td>"+(x.status==="Correction Approval Pending"?"<button class='s' onclick=\"sendCorrectionToAdmin('"+x.id+"')\">Send to Admin</button>":"<span class='badge'>Operator Approval Pending</span>")+"<button class='p' onclick=\"view('"+x.id+"')\">View</button></td></tr>").join("")||"<tr><td colspan='6'>Correction Request उपलब्ध नाही.</td></tr>"}
 function sendCorrectionToAdmin(id){if(session.type!=="district")return;let a=forms(),x=a.find(z=>z.id===id);if(!x||x.district!==session.district||x.status!=="Correction Approval Pending")return;x.status="Correction Sent for Approval";x.correctionSentAt=new Date().toISOString();x.correctionSentBy=session.username;save(a);renderDistrictCorrection();renderAdminCorrection();renderPending();renderForms();renderSummary();alert("Correction Request Admin कडे approval साठी पाठवण्यात आली.")}
