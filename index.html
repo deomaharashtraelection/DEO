@@ -361,9 +361,9 @@ body.district-login #dashboardButtons > .dash-action:not(#dashWrap_districtOpera
 </style>
 
 <style id="operator-login-only-two-buttons">
-body.operator-login #dashboardButtons > .dash-action:not(#dashWrap_operatorPresidentList):not(#dashWrap_adminAccepted):not(#dashWrap_acceptedSummary):not(#dashWrap_formTracking):not(#dashWrap_operatorRollback){display:none!important}
-body.operator-login.operator-pending #dashboardButtons > .dash-action:not(#dashWrap_formTracking):not(#dashWrap_operatorRollback):not(#dashWrap_acceptedSummary){display:none!important}
-body.operator-login #dashWrap_formTracking,body.operator-login #dashWrap_operatorRollback{display:block!important}
+body.operator-login #dashboardButtons > .dash-action:not(#dashWrap_operatorDrafts):not(#dashWrap_operatorPresidentList):not(#dashWrap_adminAccepted):not(#dashWrap_acceptedSummary):not(#dashWrap_formTracking):not(#dashWrap_operatorRollback){display:none!important}
+body.operator-login.operator-pending #dashboardButtons > .dash-action:not(#dashWrap_operatorDrafts):not(#dashWrap_formTracking):not(#dashWrap_operatorRollback):not(#dashWrap_acceptedSummary){display:none!important}
+body.operator-login #dashWrap_operatorDrafts,body.operator-login #dashWrap_formTracking,body.operator-login #dashWrap_operatorRollback{display:block!important}
 </style>
 
 <style id="district-only-delete-requests-removed">body.district-login #dashWrap_adminDelete,body.district-login #dashWrap_deleteRequests,body.district-login #adminDelete,body.district-login #deleteRequests{display:none!important}</style>
@@ -628,6 +628,7 @@ body.admin-login #approvedExcelDownload,body.admin-login #approvedPDFDownload,bo
 <div class="dash-action" id="dashWrap_dse"><button id="dseBtn" class="w dashboard-btn" onclick="tab('dse')"><span class="dashboard-btn-icon" aria-hidden="true">🔎</span><span>DSE</span></button></div>
 <div class="dash-action" id="dashWrap_adminPresidentList"><button id="adminPresidentBtn" class="p dashboard-btn" onclick="tab('adminPresidentList')"><span class="dashboard-btn-icon" aria-hidden="true">👤</span><span>अध्यक्ष यादी</span></button></div>
 <div class="dash-action" id="dashWrap_operatorPresidentList"><button id="operatorPresidentBtn" class="p dashboard-btn" onclick="tab('operatorPresidentList')"><span class="dashboard-btn-icon" aria-hidden="true">👤</span><span>अध्यक्ष यादी</span></button></div>
+<div class="dash-action" id="dashWrap_operatorDrafts"><button id="operatorDraftsBtn" class="w dashboard-btn" onclick="tab('operatorDrafts')"><span class="dashboard-btn-icon" aria-hidden="true">📥</span><span>Draft Forms</span></button></div>
 <div class="dash-action" id="dashWrap_formTracking"><button id="formTrackingBtn" class="w dashboard-btn" onclick="tab('formTracking')"><span class="dashboard-btn-icon" aria-hidden="true">🔎</span><span>Form Tracking</span></button></div>
 <div class="dash-action" id="dashWrap_operatorRollback"><button id="operatorRollbackBtn" class="w dashboard-btn" onclick="tab('operatorRollback')"><span class="dashboard-btn-icon" aria-hidden="true">↩️</span><span>Roll Back</span></button></div>
 <div class="dash-action" id="dashWrap_districtPresidentList"><button id="districtPresidentBtn" class="p dashboard-btn" onclick="tab('districtPresidentList')"><span class="dashboard-btn-icon" aria-hidden="true">👤</span><span>अध्यक्ष यादी</span></button></div>
@@ -669,6 +670,7 @@ body.admin-login #approvedExcelDownload,body.admin-login #approvedPDFDownload,bo
 </section>
 
 <section id="forms" class="card hidden"><h2>Entered Forms</h2><input id="formSearch" placeholder="Reference / नाव / मोबाईल" oninput="renderForms()"><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Status</th><th>Reject Remark</th><th>Action</th></tr></thead><tbody id="formsBody"></tbody></table></div></section>
+<section id="operatorDrafts" class="card hidden"><h2>Draft Forms</h2><p class="notice">Central Database किंवा Browser Storage अडचणीमुळे अपूर्ण राहिलेले Registration Forms येथे सुरक्षित राहतील. तपासून Submit करा.</p><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference No.</th><th>Operator Name</th><th>District</th><th>Saved Date</th><th>Action</th></tr></thead><tbody id="operatorDraftsBody"></tbody></table></div></section>
 <section id="formTracking" class="card hidden"><h2>Form Tracking</h2><p class="notice">आपल्या Registration Form ची सद्यस्थिती येथे तपासा.</p><div class="wrap"><table><thead><tr><th>Reference No.</th><th>Registration Date</th><th>District</th><th>स्थिती</th><th>Remark</th><th>Last Updated</th><th>Action</th></tr></thead><tbody id="formTrackingBody"></tbody></table></div></section>
 <section id="operatorRollback" class="card hidden"><h2>Roll Back</h2><p class="notice">District Login कडून दुरुस्तीसाठी परत पाठविलेले Registration Forms येथे उपलब्ध होतील.</p><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Reference No.</th><th>Operator Name</th><th>District</th><th>District Remark</th><th>Roll Back Date</th><th>Action</th></tr></thead><tbody id="operatorRollbackBody"></tbody></table></div></section>
 <section id="pending" class="card hidden"><h2>Approval Pending</h2><div class="grid"><div class="card">Total Forms<br><span class="stat" id="total">0</span></div><div class="card">Approval Pending<br><span class="stat" id="pend">0</span></div><div class="card">Accepted<br><span class="stat" id="appv">0</span></div><div class="card">Delete Requests<br><span class="stat" id="delReqTotal">0</span></div><div class="card">Correction Requests<br><span class="stat" id="adminCorrectionTotal">0</span></div></div><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Status</th><th>Action</th></tr></thead><tbody id="pendingBody"></tbody></table></div></section>
@@ -1714,6 +1716,15 @@ async function retryRegistrationCentralSave(saveFn){
   return false;
 }
 
+const OPERATOR_DRAFT_DB_NAME="MaharashtraOperatorDraftsDB";
+function openOperatorDraftDB(){return new Promise((resolve,reject)=>{if(!window.indexedDB){reject(new Error("IndexedDB उपलब्ध नाही"));return;}const req=indexedDB.open(OPERATOR_DRAFT_DB_NAME,1);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains("drafts"))db.createObjectStore("drafts",{keyPath:"reference"});};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||new Error("Draft DB उघडता आले नाही"));});}
+async function saveOperatorDraft(form){const db=await openOperatorDraftDB();return new Promise((resolve,reject)=>{const tx=db.transaction("drafts","readwrite");tx.objectStore("drafts").put({...form,_draftSavedAt:new Date().toISOString(),_draftMobile:String(form.mobile||"")});tx.oncomplete=()=>{db.close();resolve(true)};tx.onerror=()=>{const e=tx.error;db.close();reject(e||new Error("Draft सेव्ह झाला नाही"))};tx.onabort=()=>{const e=tx.error;db.close();reject(e||new Error("Draft सेव्ह रद्द झाला"))};});}
+async function getOperatorDrafts(){const db=await openOperatorDraftDB();return new Promise((resolve,reject)=>{const tx=db.transaction("drafts","readonly"),req=tx.objectStore("drafts").getAll();req.onsuccess=()=>{const rows=(req.result||[]).filter(x=>String(x._draftMobile||x.mobile||"")===String(session.operatorMobile||""));db.close();resolve(rows)};req.onerror=()=>{const e=req.error;db.close();reject(e||new Error("Draft वाचता आले नाहीत"))};});}
+async function deleteOperatorDraft(reference){const db=await openOperatorDraftDB();return new Promise((resolve,reject)=>{const tx=db.transaction("drafts","readwrite");tx.objectStore("drafts").delete(reference);tx.oncomplete=()=>{db.close();resolve(true)};tx.onerror=()=>{const e=tx.error;db.close();reject(e||new Error("Draft delete झाला नाही"))};});}
+async function renderOperatorDrafts(){const body=$("operatorDraftsBody");if(!body)return;if(session.type!=="operator"){body.innerHTML="<tr><td colspan='6'>Operator Login आवश्यक आहे.</td></tr>";return;}try{const rows=await getOperatorDrafts();body.innerHTML=rows.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.reference||"-")+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.district||"-")+"</td><td>"+(x._draftSavedAt?new Date(x._draftSavedAt).toLocaleString("en-IN"):"-")+"</td><td><button class='p' onclick=\"submitOperatorDraft('"+String(x.reference).replace(/'/g,"\\'")+"')\">Submit</button> <button class='m' onclick=\"viewOperatorDraft('"+String(x.reference).replace(/'/g,"\\'")+"')\">View</button></td></tr>").join("")||"<tr><td colspan='6'>Draft Forms उपलब्ध नाहीत.</td></tr>";}catch(e){body.innerHTML="<tr><td colspan='6'>Draft Forms वाचता आले नाहीत: "+esc(e.message||e)+"</td></tr>";}}
+async function viewOperatorDraft(reference){const rows=await getOperatorDrafts(),x=rows.find(z=>z.reference===reference);if(!x)return;alert("Draft Form\nReference: "+x.reference+"\nनाव: "+x.name+"\nजिल्हा: "+x.district+"\nमतदारसंघ: "+x.assembly+"\nमोबाईल: "+x.mobile+"\n\nSubmit करण्यासाठी Draft Forms मधील Submit बटन वापरा.");}
+async function submitOperatorDraft(reference){if(session.type!=="operator")return;try{const rows=await getOperatorDrafts(),draft=rows.find(x=>x.reference===reference);if(!draft){alert("Draft उपलब्ध नाही.");return;}if(!window.CENTRAL_DB_READY){const ready=await ensureCentralDatabaseReadyForRegistration();if(!ready){alert("Central Database जोडणी उपलब्ध नाही. Draft सुरक्षित आहे. कृपया पुन्हा प्रयत्न करा.");return;}}const clean={...draft,status:"Pending at District",source:"Operator Registration"};delete clean._draftSavedAt;delete clean._draftMobile;centralPendingUpserts.set(String(clean.reference),clean);const ok=await retryRegistrationCentralSave(()=>centralUpsertForms());if(!ok){alert("Draft Central Database मध्ये Submit झाला नाही. Draft सुरक्षित ठेवला आहे.\nतपशील: "+(window.CENTRAL_REGISTRATION_LAST_ERROR||window.CENTRAL_FORMS_LAST_ERROR||"Save failed"));return;}try{const all=forms(),idx=all.findIndex(z=>z.reference===clean.reference);if(idx>=0)all[idx]=clean;else all.push(clean);localStorage.setItem(KEY,JSON.stringify(all));}catch(storageError){console.warn("Submitted draft cache skipped due to storage quota",storageError);}await deleteOperatorDraft(reference);alert("Draft Form यशस्वीरीत्या Central Database मध्ये Submit झाला आहे. Reference: "+clean.reference);await refreshFormsFromCentral();renderOperatorDrafts();renderFormTracking();}catch(e){alert("Draft Submit करता आला नाही. Draft सुरक्षित आहे.\nकारण: "+(e.message||e));}}
+
 async function saveOperatorRegistration(){
   if(window.__operatorRegistrationSaving) return;
   window.__operatorRegistrationSaving=true;
@@ -1773,13 +1784,23 @@ async function saveOperatorRegistration(){
       /* Keep the exact same reference on retries; this makes a timed-out request idempotent. */
       const existingIndex=a.findIndex(z=>z.reference===form.reference);
       if(existingIndex>=0)a[existingIndex]=form;else a.push(form);
-      localStorage.setItem(KEY,JSON.stringify(a));
-      centralPendingUpserts.set(String(form.reference),form);
-      registrationStage="Registration Form Central Database मध्ये सेव्ह करणे";
-      const centralFormSaved=await retryRegistrationCentralSave(()=>centralUpsertForms(a));
-      if(!centralFormSaved){
-        alert("Registration Form Central Database मध्ये सेव्ह होण्याची पुष्टी मिळाली नाही. फॉर्म या ब्राउझरमध्ये सुरक्षित ठेवला आहे. कृपया Internet तपासून Confirm & Register पुन्हा करा.\n\nतपशील: "+(window.CENTRAL_REGISTRATION_LAST_ERROR||window.CENTRAL_FORMS_LAST_ERROR||"Save confirmation unavailable"));
-        return;
+      let useDraftFallback=false;
+      try{localStorage.setItem(KEY,JSON.stringify(a));}
+      catch(storageError){
+        if(!(storageError&&(/quota|exceeded|storage/i.test(String(storageError.name||"")+" "+String(storageError.message||storageError)))))throw storageError;
+        registrationStage="Browser Storage मर्यादा — Draft Forms मध्ये सुरक्षित करणे";
+        await saveOperatorDraft(form);
+        useDraftFallback=true;
+      }
+      if(!useDraftFallback){
+        centralPendingUpserts.set(String(form.reference),form);
+        registrationStage="Registration Form Central Database मध्ये सेव्ह करणे";
+        const centralFormSaved=await retryRegistrationCentralSave(()=>centralUpsertForms(a));
+        if(!centralFormSaved){
+          registrationStage="Central Database अडचण — Draft Forms मध्ये सुरक्षित करणे";
+          await saveOperatorDraft(form);
+          useDraftFallback=true;
+        }
       }
       registrationStage="Operator Login माहिती Central Database मध्ये सेव्ह करणे";
       let account=accounts.find(x=>String(x.mobile)===String(d.mobile));
@@ -1787,19 +1808,24 @@ async function saveOperatorRegistration(){
       else{account.password=d.password;account.district=d.district;account.name=d.name;}
       /* Local cache is updated without uploading a shared all-operators snapshot.
          Each new Operator credential is saved under its own mobile-specific key. */
-      localStorage.setItem(OPERATOR_KEY,JSON.stringify(accounts));
+      try{localStorage.setItem(OPERATOR_KEY,JSON.stringify(accounts));}catch(storageError){console.warn("Operator account local cache skipped due to storage quota",storageError);}
       const centralAccountSaved=await retryRegistrationCentralSave(()=>window.centralAuthUpsertPublic?window.centralAuthUpsertPublic("operator:"+String(d.mobile),account):false);
       if(!centralAccountSaved){
         alert("Registration Form Central Database मध्ये सेव्ह झाला आहे; मात्र Operator Login माहितीची पुष्टी मिळाली नाही. ती माहिती स्थानिकरीत्या सुरक्षित ठेवली आहे. कृपया Internet तपासून Confirm & Register पुन्हा करा.\n\nतपशील: "+(window.CENTRAL_REGISTRATION_LAST_ERROR||window.CENTRAL_AUTH_LAST_ERROR||"Credential save confirmation unavailable"));
         return;
       }
       regPreviewData._pendingRegistrationForm=null;
-      closeModal();alert("Registration Successful! ✅\n\nUser ID: "+d.mobile+"\n\nForm Reference: "+form.reference+"\n\nआपला Registration Form यशस्वीरीत्या सबमिट झाला आहे.\n\nपुढील प्रक्रिया: आपला फॉर्म District Login User कडून तपासला जाईल.\n\n1. District Login User कडून फॉर्म Accept झाल्यानंतर Registration प्रक्रिया पूर्ण होईल.\n2. फॉर्मची सद्यस्थिती पोर्टलमध्ये तपासता येईल.");
+      closeModal();
+      if(useDraftFallback){
+        alert("Operator Registration माहिती सेव्ह झाली आहे. मात्र Form सध्या Draft Forms मध्ये सुरक्षित ठेवला आहे.\n\nUser ID: "+d.mobile+"\nReference: "+form.reference+"\n\nOperator Login करा → Draft Forms → Submit. Central Database उपलब्ध झाल्यावर तेथून फॉर्म सबमिट करा.");
+      }else{
+        alert("Registration Successful! ✅\n\nUser ID: "+d.mobile+"\n\nForm Reference: "+form.reference+"\n\nआपला Registration Form यशस्वीरीत्या सबमिट झाला आहे.\n\nपुढील प्रक्रिया: आपला फॉर्म District Login User कडून तपासला जाईल.\n\n1. District Login User कडून फॉर्म Accept झाल्यानंतर Registration प्रक्रिया पूर्ण होईल.\n2. फॉर्मची सद्यस्थिती पोर्टलमध्ये तपासता येईल.");
+      }
     if(!rollbackSaved){
       closeOperatorRegistration();
       $("loginType").value="operator";toggleLogin();$("username").value=d.mobile;$("password").value=d.password;
       session={type:"operator",district:d.district,username:d.mobile,operatorMobile:d.mobile};enter();
-      tab("formTracking");
+      tab(useDraftFallback?"operatorDrafts":"formTracking");
     }
     }
     renderForms();renderDistrictOperatorRegistrations();renderAdmin();renderAdminSentByDistrict();renderPending();renderSummary();
@@ -2091,7 +2117,7 @@ function logout(auto=false){
   $("loginMsg").textContent=auto?"30 मिनिटांचा Login कालावधी संपला आहे. कृपया पुन्हा Login करा.":"";
   $("password").value="";
 }
-const APP_ROUTES=["home","dashboard","entry","forms","formTracking","operatorRollback","pending","approved","districtOperatorReg","districtCorrection","admin","adminAccepted","dse","adminPresidentList","operatorPresidentList","districtPresidentList","adminSentByDistrict","adminCorrection","adminDelete","adminPasswordMenu","adminPasswordRequests","adminOperatorPassword","adminDistrictPassword","adminElectionBranchPassword","adminSummaryMenu","adminDistrictSummary","summary","acceptedSummary"];
+const APP_ROUTES=["home","dashboard","entry","forms","formTracking","operatorDrafts","operatorRollback","pending","approved","districtOperatorReg","districtCorrection","admin","adminAccepted","dse","adminPresidentList","operatorPresidentList","districtPresidentList","adminSentByDistrict","adminCorrection","adminDelete","adminPasswordMenu","adminPasswordRequests","adminOperatorPassword","adminDistrictPassword","adminElectionBranchPassword","adminSummaryMenu","adminDistrictSummary","summary","acceptedSummary"];
 
 function tab(t,options){
   if(!APP_ROUTES.includes(t))return;
@@ -2116,6 +2142,7 @@ function tab(t,options){
   el.classList.remove("hidden");
   if(t==="forms")renderForms();
   if(t==="formTracking")renderFormTracking();
+  if(t==="operatorDrafts")renderOperatorDrafts();
   if(t==="operatorRollback")renderOperatorRollback();
   if(t==="pending")renderPending();
   if(t==="approved"){loadAcceptedDistricts();renderAccepted();}
