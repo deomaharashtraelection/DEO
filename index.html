@@ -1036,8 +1036,9 @@ function localForms(){
   }catch(e){ return []; }
 }
 
+let centralFormsMemoryCache = null;
 function forms(){
-  return localForms();
+  return Array.isArray(centralFormsMemoryCache) ? centralFormsMemoryCache : localForms();
 }
 
 function centralRowFromForm(x){
@@ -1096,7 +1097,11 @@ async function centralLoadForms(){
     const allForms=Array.from(merged.values()).sort((a,b)=>
       new Date(b.createdAt || b.updated_at || 0)-new Date(a.createdAt || a.updated_at || 0)
     );
-    localStorage.setItem(KEY, JSON.stringify(allForms));
+    /* The central records must remain visible even when the browser's localStorage
+       quota is full. Cache the merged result in memory first; localStorage is optional. */
+    centralFormsMemoryCache = allForms;
+    try{ localStorage.setItem(KEY, JSON.stringify(allForms)); }
+    catch(cacheError){ console.warn("Central forms loaded; localStorage cache skipped:",cacheError); }
     centralLastLiveRefreshAt = Date.now();
     return allForms;
   }catch(e){
@@ -1723,7 +1728,7 @@ async function getOperatorDrafts(){const db=await openOperatorDraftDB();return n
 async function deleteOperatorDraft(reference){const db=await openOperatorDraftDB();return new Promise((resolve,reject)=>{const tx=db.transaction("drafts","readwrite");tx.objectStore("drafts").delete(reference);tx.oncomplete=()=>{db.close();resolve(true)};tx.onerror=()=>{const e=tx.error;db.close();reject(e||new Error("Draft delete झाला नाही"))};});}
 async function renderOperatorDrafts(){const body=$("operatorDraftsBody");if(!body)return;if(session.type!=="operator"){body.innerHTML="<tr><td colspan='6'>Operator Login आवश्यक आहे.</td></tr>";return;}try{const rows=await getOperatorDrafts();body.innerHTML=rows.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.reference||"-")+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.district||"-")+"</td><td>"+(x._draftSavedAt?new Date(x._draftSavedAt).toLocaleString("en-IN"):"-")+"</td><td><button class='p' onclick=\"submitOperatorDraft('"+String(x.reference).replace(/'/g,"\\'")+"')\">Submit</button> <button class='m' onclick=\"viewOperatorDraft('"+String(x.reference).replace(/'/g,"\\'")+"')\">View</button></td></tr>").join("")||"<tr><td colspan='6'>Draft Forms उपलब्ध नाहीत.</td></tr>";}catch(e){body.innerHTML="<tr><td colspan='6'>Draft Forms वाचता आले नाहीत: "+esc(e.message||e)+"</td></tr>";}}
 async function viewOperatorDraft(reference){const rows=await getOperatorDrafts(),x=rows.find(z=>z.reference===reference);if(!x)return;alert("Draft Form\nReference: "+x.reference+"\nनाव: "+x.name+"\nजिल्हा: "+x.district+"\nमतदारसंघ: "+x.assembly+"\nमोबाईल: "+x.mobile+"\n\nSubmit करण्यासाठी Draft Forms मधील Submit बटन वापरा.");}
-async function submitOperatorDraft(reference){if(session.type!=="operator")return;try{const rows=await getOperatorDrafts(),draft=rows.find(x=>x.reference===reference);if(!draft){alert("Draft उपलब्ध नाही.");return;}if(!window.CENTRAL_DB_READY){const ready=await ensureCentralDatabaseReadyForRegistration();if(!ready){alert("Central Database जोडणी उपलब्ध नाही. Draft सुरक्षित आहे. कृपया पुन्हा प्रयत्न करा.");return;}}const clean={...draft,status:"Pending at District",source:"Operator Registration"};delete clean._draftSavedAt;delete clean._draftMobile;centralPendingUpserts.set(String(clean.reference),clean);const ok=await retryRegistrationCentralSave(()=>centralUpsertForms());if(!ok){alert("Draft Central Database मध्ये Submit झाला नाही. Draft सुरक्षित ठेवला आहे.\nतपशील: "+(window.CENTRAL_REGISTRATION_LAST_ERROR||window.CENTRAL_FORMS_LAST_ERROR||"Save failed"));return;}try{const all=forms(),idx=all.findIndex(z=>z.reference===clean.reference);if(idx>=0)all[idx]=clean;else all.push(clean);localStorage.setItem(KEY,JSON.stringify(all));}catch(storageError){console.warn("Submitted draft cache skipped due to storage quota",storageError);}await deleteOperatorDraft(reference);alert("Draft Form यशस्वीरीत्या Central Database मध्ये Submit झाला आहे. Reference: "+clean.reference);await refreshFormsFromCentral();renderOperatorDrafts();renderFormTracking();}catch(e){alert("Draft Submit करता आला नाही. Draft सुरक्षित आहे.\nकारण: "+(e.message||e));}}
+async function submitOperatorDraft(reference){if(session.type!=="operator")return;try{const rows=await getOperatorDrafts(),draft=rows.find(x=>x.reference===reference);if(!draft){alert("Draft उपलब्ध नाही.");return;}if(!window.CENTRAL_DB_READY){const ready=await ensureCentralDatabaseReadyForRegistration();if(!ready){alert("Central Database जोडणी उपलब्ध नाही. Draft सुरक्षित आहे. कृपया पुन्हा प्रयत्न करा.");return;}}const clean={...draft,status:"Pending at District",source:"Operator Registration"};delete clean._draftSavedAt;delete clean._draftMobile;centralPendingUpserts.set(String(clean.reference),clean);const ok=await retryRegistrationCentralSave(()=>centralUpsertForms());if(!ok){alert("Draft Central Database मध्ये Submit झाला नाही. Draft सुरक्षित ठेवला आहे.\nतपशील: "+(window.CENTRAL_REGISTRATION_LAST_ERROR||window.CENTRAL_FORMS_LAST_ERROR||"Save failed"));return;}try{const all=forms(),idx=all.findIndex(z=>z.reference===clean.reference);if(idx>=0)all[idx]=clean;else all.push(clean);centralFormsMemoryCache=all;try{localStorage.setItem(KEY,JSON.stringify(all));}catch(storageError){console.warn("Submitted draft localStorage cache skipped due to storage quota",storageError);}}catch(cacheError){console.warn("Submitted draft memory cache update skipped",cacheError);}await deleteOperatorDraft(reference);alert("Draft Form यशस्वीरीत्या Central Database मध्ये Submit झाला आहे. तो संबंधित जिल्ह्याच्या District Login → Registration Forms मध्ये पुढील प्रक्रियेसाठी दिसेल. Reference: "+clean.reference);await refreshFormsFromCentral();renderOperatorDrafts();renderFormTracking();}catch(e){alert("Draft Submit करता आला नाही. Draft सुरक्षित आहे.\nकारण: "+(e.message||e));}}
 
 async function saveOperatorRegistration(){
   if(window.__operatorRegistrationSaving) return;
