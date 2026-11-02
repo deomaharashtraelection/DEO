@@ -1078,9 +1078,25 @@ async function centralLoadForms(){
       .order("updated_at",{ascending:false});
     if(error) throw error;
     const remote = (data||[]).map(formFromCentralRow).filter(Boolean);
-    localStorage.setItem(KEY, JSON.stringify(remote));
+    /* Preserve every locally cached historical form. Central copies take precedence
+       only for the same reference; loading a new HTML version must not erase a
+       device's existing records that have not yet reached the central table. */
+    const local = localForms();
+    const merged = new Map();
+    local.forEach(form=>{
+      const ref=String(form && (form.reference || form.form_id || form.id) || "");
+      if(ref) merged.set(ref,form);
+    });
+    remote.forEach(form=>{
+      const ref=String(form && (form.reference || form.form_id || form.id) || "");
+      if(ref) merged.set(ref,form);
+    });
+    const allForms=Array.from(merged.values()).sort((a,b)=>
+      new Date(b.createdAt || b.updated_at || 0)-new Date(a.createdAt || a.updated_at || 0)
+    );
+    localStorage.setItem(KEY, JSON.stringify(allForms));
     centralLastLiveRefreshAt = Date.now();
-    return remote;
+    return allForms;
   }catch(e){
     console.error("Central forms load failed:",e);
     showCentralDbStatus("⚠ Central Database Load झाला नाही",false);
@@ -2297,7 +2313,13 @@ function renderPending(){
  $("pendingBody").innerHTML=p.map(x=>"<tr><td>"+esc(x.reference)+"</td><td>"+esc(x.district)+"</td><td>"+esc(x.name)+"</td><td>"+badge(x.status)+"</td><td><button class='p' onclick=\"view('"+x.id+"')\">View</button>"+(session.type==="admin"&&x.status==="Sent for Approval"?("<button class='s' onclick=\"approve('"+x.id+"')\">Approve</button><button class='d' onclick=\"rejectForm('"+x.id+"')\">Reject</button>"):"")+"</td></tr>").join("")||"<tr><td colspan='5'>Approval Pending नाही.</td></tr>"
 }
 function send(id){let a=forms(),x=a.find(z=>z.id===id);if(!x||!(session.type==="admin"||x.district===session.district&&(session.type!=="operator"||x.mobile===session.operatorMobile)))return;if(session.type==="operator"&&x.status==="Correction Requested"){x.status="Correction Approval Pending";x.correctionOperatorSentAt=new Date().toISOString();x.correctionOperatorSentBy=session.username;save(a);renderForms();renderDistrictCorrection();renderAdminCorrection();renderPending();renderSummary();alert("Correction Form District Login कडे Approval साठी पाठवला.");return}x.status="Sent for Approval";save(a);renderForms();alert("Admin Approval साठी पाठवले.")}
-function approve(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x)return;if(x.source==="Operator Registration"&&x.status!=="Forwarded to Admin")return;if(x.status!=="Sent for Approval"&&!(x.source==="Operator Registration"&&x.status==="Forwarded to Admin"))return;if(x.source==="Operator Registration"){const duplicate=a.find(z=>z.id!==x.id&&z.source==="Operator Registration"&&z.mobile===x.mobile&&z.status!=="Rejected"&&z.status!=="Registration Attempts Exhausted");if(duplicate){alert("हा Mobile Number आधीच Operator User ID म्हणून नोंदणीकृत आहे. कृपया User ID Password प्रविष्ट करून लॉगिन करा");return}}let remark=prompt("Admin Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Admin Remark लिहिणे आवश्यक आहे.");return}x.status="Accepted";x.adminRemark=remark;x.approvedAt=new Date().toISOString();x.approvedBy=session.username;save(a);sendAcceptedFormEmail(x,session.username);renderAdmin();renderAdminSentByDistrict();renderAccepted();renderPending();renderAdminAccepted();renderAdminCorrection();renderForms();renderSummary();alert("Form Admin कडून Accept करण्यात आला. ई-मेल सूचना पाठवण्याची विनंती केली आहे.")}
+function approve(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x)return;if(x.source==="Operator Registration"&&x.status!=="Forwarded to Admin")return;if(x.status!=="Sent for Approval"&&!(x.source==="Operator Registration"&&x.status==="Forwarded to Admin"))return;if(x.source==="Operator Registration"){
+  const duplicate=a.find(z=>z.id!==x.id&&z.source==="Operator Registration"&&z.mobile===x.mobile&&z.status!=="Rejected"&&z.status!=="Registration Attempts Exhausted");
+  if(duplicate){alert("हा Mobile Number आधीच Operator User ID म्हणून नोंदणीकृत आहे. कृपया User ID Password प्रविष्ट करून लॉगिन करा");return}
+  const credential=getOperatorAccounts().find(op=>String(op.mobile)===String(x.mobile)&&String(op.password||"")!=="");
+  if(!credential){alert("या Operator चा Login Password उपलब्ध नाही. Admin Login → User Management → Operator Login येथे Password सेट करून पुन्हा Accept करा.");return}
+}
+let remark=prompt("Admin Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Admin Remark लिहिणे आवश्यक आहे.");return}x.status="Accepted";x.adminRemark=remark;x.approvedAt=new Date().toISOString();x.approvedBy=session.username;save(a);sendAcceptedFormEmail(x,session.username);renderAdmin();renderAdminSentByDistrict();renderAccepted();renderPending();renderAdminAccepted();renderAdminCorrection();renderForms();renderSummary();alert("Form Admin कडून Accept करण्यात आला. ई-मेल सूचना पाठवण्याची विनंती केली आहे.")}
 function rejectForm(id){if(session.type!=="admin")return;let a=forms(),x=a.find(z=>z.id===id);if(!x)return;if(x.source==="Operator Registration"&&x.status!=="Forwarded to Admin")return;if(x.status!=="Sent for Approval"&&!(x.source==="Operator Registration"&&x.status==="Forwarded to Admin"))return;let remark=prompt("Admin Remark / Reject Remark लिहा:");if(remark===null)return;remark=remark.trim();if(!remark){alert("Reject Remark लिहिणे आवश्यक आहे.");return}x.status="Rejected";x.rejectRemark=remark;x.rejectedAt=new Date().toISOString();x.rejectedBy=session.username;
 if(x.source==="Operator Registration"){
   x.registrationAttempts=getOperatorRegistrationAttempts(x);
@@ -2567,15 +2589,20 @@ function renderAdminPasswordAll(){
   const opDistrictFilter=$("userManagementOperatorDistrictFilter");
   if(opDistrictFilter){
     const selectedDistrict=opDistrictFilter.value;
-    const districtNames=Array.from(new Set(getOperatorAccounts().map(x=>x.district).filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),"mr"));
+    const districtNames=Array.from(new Set(getOperatorManagementAccounts().map(x=>x.district).filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),"mr"));
     opDistrictFilter.innerHTML='<option value="">-- सर्व जिल्हे --</option>'+districtNames.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join("");
     if(districtNames.includes(selectedDistrict))opDistrictFilter.value=selectedDistrict;
   }
-  let operators=getOperatorAccounts().map(x=>{
-    let f=allForms.filter(z=>z.source==="Operator Registration"&&z.mobile===x.mobile).sort((p,q)=>new Date(q.createdAt||0)-new Date(p.createdAt||0))[0];
-    return Object.assign({},x,{assemblyName:x.assembly||f?.assembly||"-"});
-  }).filter(x=>!opDistrictFilter||!opDistrictFilter.value||x.district===opDistrictFilter.value).slice().sort((x,y)=>String(x.district||"").localeCompare(String(y.district||""),"mr")||String(x.assemblyName||"").localeCompare(String(y.assemblyName||""),"mr"));
-  $("adminAllOperatorPasswordBody").innerHTML=operators.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.mobile)}</td><td>${esc(x.name||"-")}</td><td>${esc(x.district||"-")}</td><td>${esc(x.assemblyName||"-")}</td><td><input id="allOpPass_${esc(x.mobile)}" value="${esc(x.password||"")}" type="text" style="min-width:180px"></td><td>${loginEnabled("operator:"+x.mobile)?"Enabled":"Disabled"}</td><td><button class="s" onclick="setOperatorPasswordAll('${esc(x.mobile)}')">Set Password</button> <button class="${loginEnabled("operator:"+x.mobile)?"d":"s"}" onclick="toggleLoginStatus('operator:${esc(x.mobile)}');renderAdminPasswordAll()">${loginEnabled("operator:"+x.mobile)?"Disable":"Enable"}</button> <button class="d" onclick="deleteOperatorAccountAll('${esc(x.mobile)}')">Delete User</button></td></tr>`).join("")||'<tr><td colspan="8">Operator Account उपलब्ध नाही.</td></tr>';
+  const operators=getOperatorManagementAccounts()
+    .filter(x=>!opDistrictFilter||!opDistrictFilter.value||x.district===opDistrictFilter.value)
+    .sort((x,y)=>String(x.district||"").localeCompare(String(y.district||""),"mr")||String(x.assembly||"").localeCompare(String(y.assembly||""),"mr")||String(x.mobile||"").localeCompare(String(y.mobile||"")));
+  $("adminAllOperatorPasswordBody").innerHTML=operators.map((x,i)=>{
+    const missing=!String(x.password||"");
+    const passwordInput=`<input id="allOpPass_${esc(x.mobile)}" value="${esc(x.password||"")}" type="text" placeholder="${missing?"नवीन Password प्रविष्ट करा":"Password"}" style="min-width:180px">`;
+    const status=missing?'<span style="color:#b45309;font-weight:700">Credential उपलब्ध नाही</span>':(loginEnabled("operator:"+x.mobile)?"Enabled":"Disabled");
+    const controls=`<button class="s" onclick="setOperatorPasswordAll('${esc(x.mobile)}')">${missing?"Set Password":"Update Password"}</button>`+(missing?"":` <button class="${loginEnabled("operator:"+x.mobile)?"d":"s"}" onclick="toggleLoginStatus('operator:${esc(x.mobile)}');renderAdminPasswordAll()">${loginEnabled("operator:"+x.mobile)?"Disable":"Enable"}</button> <button class="d" onclick="deleteOperatorAccountAll('${esc(x.mobile)}')">Delete User</button>`);
+    return `<tr><td>${i+1}</td><td>${esc(x.mobile)}</td><td>${esc(x.name||"-")}</td><td>${esc(x.district||"-")}</td><td>${esc(x.assemblyName||x.assembly||"-")}</td><td>${passwordInput}</td><td>${status}</td><td>${controls}</td></tr>`;
+  }).join("")||'<tr><td colspan="8">Operator Account / Accepted Operator Form उपलब्ध नाही.</td></tr>';
 
   let ep=getElectionBranchPasswords();
   let branchDistricts=new Set(allForms.filter(x=>x.source==="Operator Registration"&&x.assembly==="जिल्हा निवडणूक शाखा").map(x=>x.district));
@@ -2583,7 +2610,18 @@ function renderAdminPasswordAll(){
   $("adminAllElectionBranchPasswordBody").innerHTML=branchRows.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.username)}</td><td>जिल्हा निवडणूक शाखा</td><td>${esc(x.district)}</td><td>जिल्हा निवडणूक शाखा</td><td><input id="allBranchPass_${esc(x.district_code)}" value="${esc(ep[x.district]||"")}" type="text" style="min-width:180px"></td><td>${loginEnabled("electionBranch:"+x.district)?"Enabled":"Disabled"}</td><td><button class="s" onclick="setElectionBranchPasswordAll('${esc(x.district)}','${esc(x.district_code)}')">Set Password</button> <button class="${loginEnabled("electionBranch:"+x.district)?"d":"s"}" onclick="toggleLoginStatus('electionBranch:${esc(x.district)}');renderAdminPasswordAll()">${loginEnabled("electionBranch:"+x.district)?"Disable":"Enable"}</button></td></tr>`).join("")||'<tr><td colspan="8">जिल्हा निवडणूक शाखा निवडून Registration केलेले User उपलब्ध नाहीत.</td></tr>';
 }
 function setDistrictPasswordAll(district,code){if(session.type!=="admin")return;let input=$("allDistPass_"+code);if(!input)return;let p=input.value.trim();if(!isStrongPassword(p)){alert("Strong Password आवश्यक आहे: किमान 8 characters, 1 uppercase, 1 lowercase, 1 number आणि 1 special character.");return}let a=getDistrictPasswords();a[district]=p;saveDistrictPasswords(a);alert("District Password यशस्वीरीत्या सेट केला. Password: "+p);renderAdminPasswordAll()}
-function setOperatorPasswordAll(mobile){if(session.type!=="admin")return;let input=$("allOpPass_"+mobile);if(!input)return;let p=input.value.trim();if(!isStrongPassword(p)){alert("Strong Password आवश्यक आहे: किमान 8 characters, 1 uppercase, 1 lowercase, 1 number आणि 1 special character.");return}let a=getOperatorAccounts(),x=a.find(z=>z.mobile===mobile);if(!x)return;x.password=p;saveOperatorAccounts(a);alert("Operator Password यशस्वीरीत्या सेट केला. Password: "+p);renderAdminPasswordAll()}
+async function setOperatorPasswordAll(mobile){
+  if(session.type!=="admin")return;
+  let input=$("allOpPass_"+mobile);if(!input)return;
+  let p=input.value.trim();
+  if(!isStrongPassword(p)){alert("Strong Password आवश्यक आहे: किमान 8 characters, 1 uppercase, 1 lowercase, 1 number आणि 1 special character.");return}
+  let a=getOperatorAccounts(),x=a.find(z=>String(z.mobile)===String(mobile));
+  if(!x){const f=forms().find(z=>z.source==="Operator Registration"&&z.status==="Accepted"&&String(z.mobile)===String(mobile));if(!f){alert("Accepted Operator Registration Form उपलब्ध नाही.");return;}x={mobile:String(f.mobile),name:f.name||"",district:f.district||"",assembly:f.assembly||"",createdAt:f.createdAt||new Date().toISOString()};a.push(x);}
+  x.password=p;saveOperatorAccounts(a);
+  const ok=window.centralAuthUpsertPublic?await window.centralAuthUpsertPublic("operators",a):false;
+  if(!ok){alert("Password Central Database मध्ये सेव्ह झाल्याची पुष्टी मिळाली नाही. पुन्हा प्रयत्न करा.");return;}
+  alert("Operator Password Central Database मध्ये सेव्ह झाला.");renderAdminPasswordAll();
+}
 function setElectionBranchPasswordAll(district,code){if(session.type!=="admin")return;let input=$("allBranchPass_"+code);if(!input)return;let p=input.value.trim();if(!isStrongPassword(p)){alert("Strong Password आवश्यक आहे: किमान 8 characters, 1 uppercase, 1 lowercase, 1 number आणि 1 special character.");return}let a=getElectionBranchPasswords();a[district]=p;saveElectionBranchPasswords(a);alert("जिल्हा निवडणूक शाखेचा Password यशस्वीरीत्या सेट केला. Password: "+p);renderAdminPasswordAll()}
 function deleteOperatorAccountAll(mobile){if(session.type!=="admin")return;if(!confirm("हा Operator User Delete करायचा आहे का?"))return;let a=getOperatorAccounts(),idx=a.findIndex(x=>x.mobile===mobile);if(idx<0)return;let name=a[idx].name||mobile;a.splice(idx,1);saveOperatorAccounts(a);alert("Operator User "+name+" यशस्वीरीत्या Delete केला.");renderAdminPasswordAll()}
 
@@ -2594,8 +2632,79 @@ function renderAdminDistrictPassword(){if(session.type!=="admin")return;let a=ge
 function setDistrictPassword(district,code){if(session.type!=="admin")return;let input=$("distPass_"+code);if(!input)return;let p=input.value.trim();if(!isStrongPassword(p)){alert("Strong Password आवश्यक आहे: किमान 8 characters, 1 uppercase, 1 lowercase, 1 number आणि 1 special character.");return}let a=getDistrictPasswords();a[district]=p;saveDistrictPasswords(a);alert("District Password यशस्वीरीत्या सेट केला. Password: "+p);renderAdminDistrictPassword()}
 function deleteOperatorAccount(mobile){if(session.type!=="admin")return;if(!confirm("हा Operator User Delete करायचा आहे का?"))return;let a=getOperatorAccounts();let idx=a.findIndex(x=>x.mobile===mobile);if(idx<0)return;let name=a[idx].name||mobile;a.splice(idx,1);saveOperatorAccounts(a);alert("Operator User "+name+" यशस्वीरीत्या Delete केला.");renderAdminOperatorPassword()}
 function deleteOperatorAccount(mobile){if(session.type!=="admin")return;if(!confirm("हा Operator User Delete करायचा आहे का?"))return;let a=getOperatorAccounts(),idx=a.findIndex(x=>x.mobile===mobile);if(idx<0)return;let name=a[idx].name||mobile;a.splice(idx,1);saveOperatorAccounts(a);alert("Operator User "+name+" यशस्वीरीत्या Delete केला.");renderAdminOperatorPassword()}
-function renderAdminOperatorPassword(){if(session.type!=="admin")return;let sel=$("adminOperatorPasswordDistrict");if(sel&&sel.options.length===1){let ds=LOGINS.slice().sort((x,y)=>Number(x.district_code)-Number(y.district_code));sel.innerHTML="<option value=\"\">-- सर्व जिल्हे --</option>"+ds.map(x=>"<option value=\""+esc(x.district)+"\">"+esc(x.district)+"</option>").join("")}let district=sel?sel.value:"";let allForms=forms();let a=getOperatorAccounts().map(x=>{let f=allForms.filter(z=>z.source==="Operator Registration"&&z.mobile===x.mobile).sort((p,q)=>new Date(q.createdAt||0)-new Date(p.createdAt||0))[0];return Object.assign({},x,{assemblyName:x.assembly||f?.assembly||"-"})}).filter(x=>!district||x.district===district).slice().sort((x,y)=>{let ax=parseInt(String(x.assemblyName||"").match(/[0-9]+/)?.[0]||9999,10),ay=parseInt(String(y.assemblyName||"").match(/[0-9]+/)?.[0]||9999,10);return ax-ay});$("adminOperatorPasswordBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.mobile)+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.district||"-")+"</td><td>"+esc(x.assemblyName||"-")+"</td><td><input id=\"opPass_"+esc(x.mobile)+"\" value=\""+esc(x.password||"")+"\" type=\"text\" style=\"min-width:180px\"></td><td>"+(loginEnabled("operator:"+x.mobile)?"Enabled":"Disabled")+"</td><td><button class=\"s\" onclick=\"setOperatorPassword('"+esc(x.mobile)+"')\">Set Password</button> "+loginStatusButton("operator:"+x.mobile)+" <button class=\"d\" onclick=\"deleteOperatorAccount('"+esc(x.mobile)+"')\">Delete User</button></td></tr>").join("")||"<tr><td colspan=\"8\">Operator Account उपलब्ध नाही.</td></tr>"}
-function setOperatorPassword(mobile){if(session.type!=="admin")return;let input=$("opPass_"+mobile);if(!input)return;let p=input.value.trim();if(!isStrongPassword(p)){alert("Strong Password आवश्यक आहे: किमान 8 characters, 1 uppercase, 1 lowercase, 1 number आणि 1 special character.");return}let a=getOperatorAccounts(),x=a.find(z=>z.mobile===mobile);if(!x)return;x.password=p;saveOperatorAccounts(a);alert("Operator Password यशस्वीरीत्या सेट केला. Password: "+p);renderAdminOperatorPassword()}
+function getOperatorManagementAccounts(){
+  const byMobile=new Map();
+  /* Existing accounts (including older local/central credentials) remain visible. */
+  getOperatorAccounts().forEach(x=>{
+    if(x && x.mobile) byMobile.set(String(x.mobile),Object.assign({},x));
+  });
+  /* Accepted registration forms are also shown, even if their password row is missing. */
+  forms().filter(x=>x && x.source==="Operator Registration" && x.status==="Accepted" && x.mobile).forEach(f=>{
+    const mobile=String(f.mobile);
+    const old=byMobile.get(mobile)||{};
+    byMobile.set(mobile,Object.assign({},f,old,{
+      mobile:mobile,
+      name:old.name||f.name||"-",
+      district:old.district||f.district||"-",
+      assembly:old.assembly||f.assembly||"-",
+      password:old.password||"",
+      credentialMissing:!String(old.password||"")
+    }));
+  });
+  return Array.from(byMobile.values());
+}
+function renderAdminOperatorPassword(){
+  if(session.type!=="admin")return;
+  let sel=$("adminOperatorPasswordDistrict");
+  if(sel&&sel.options.length===1){
+    let ds=LOGINS.slice().sort((x,y)=>Number(x.district_code)-Number(y.district_code));
+    sel.innerHTML="<option value=\"\">-- सर्व जिल्हे --</option>"+ds.map(x=>"<option value=\""+esc(x.district)+"\">"+esc(x.district)+"</option>").join("");
+  }
+  let district=sel?sel.value:"";
+  let allForms=forms();
+  let a=getOperatorManagementAccounts().map(x=>{
+    let f=allForms.filter(z=>z.source==="Operator Registration"&&z.mobile===x.mobile).sort((p,q)=>new Date(q.createdAt||0)-new Date(p.createdAt||0))[0];
+    return Object.assign({},x,{assemblyName:x.assembly||f?.assembly||"-"});
+  }).filter(x=>!district||x.district===district).sort((x,y)=>{
+    let ax=parseInt(String(x.assemblyName||"").match(/[0-9]+/)?.[0]||9999,10),ay=parseInt(String(y.assemblyName||"").match(/[0-9]+/)?.[0]||9999,10);
+    return ax-ay;
+  });
+  $("adminOperatorPasswordBody").innerHTML=a.map((x,i)=>{
+    const missing=!String(x.password||"");
+    const passwordCell="<input id=\"opPass_"+esc(x.mobile)+"\" value=\""+esc(x.password||"")+"\" type=\"text\" placeholder=\""+(missing?"नवीन Password प्रविष्ट करा":"Password")+"\" style=\"min-width:180px\">";
+    const setButton="<button class=\"s\" onclick=\"setOperatorPassword('"+esc(x.mobile)+"')\">"+(missing?"Set Password":"Update Password")+"</button>";
+    const deleteButton=getOperatorAccounts().some(z=>String(z.mobile)===String(x.mobile))?" <button class=\"d\" onclick=\"deleteOperatorAccount('"+esc(x.mobile)+"')\">Delete User</button>":"";
+    return "<tr><td>"+(i+1)+"</td><td>"+esc(x.mobile)+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.district||"-")+"</td><td>"+esc(x.assemblyName||"-")+"</td><td>"+passwordCell+"</td><td>"+(loginEnabled("operator:"+x.mobile)?"Enabled":"Disabled")+(missing?"<br><small style=\"color:#b45309\">Credential नोंद सापडली नाही</small>":"")+"</td><td>"+setButton+" "+loginStatusButton("operator:"+x.mobile)+deleteButton+"</td></tr>";
+  }).join("")||"<tr><td colspan=\"8\">Operator Account / Accepted Operator Form उपलब्ध नाही.</td></tr>";
+}
+async function setOperatorPassword(mobile){
+  if(session.type!=="admin")return;
+  let input=$("opPass_"+mobile);
+  let p=input?input.value.trim():"";
+  if(!isStrongPassword(p)){
+    alert("Strong Password आवश्यक आहे: किमान 8 characters, 1 uppercase, 1 lowercase, 1 number आणि 1 special character.");
+    return;
+  }
+  let a=getOperatorAccounts();
+  let x=a.find(z=>String(z.mobile)===String(mobile));
+  if(!x){
+    const f=forms().filter(z=>z.source==="Operator Registration"&&z.status==="Accepted"&&String(z.mobile)===String(mobile)).sort((u,v)=>new Date(v.createdAt||0)-new Date(u.createdAt||0))[0];
+    if(!f){alert("या Mobile Number साठी Accepted Operator Registration Form उपलब्ध नाही.");return;}
+    x={mobile:String(f.mobile),name:f.name||"",district:f.district||"",assembly:f.assembly||"",createdAt:f.createdAt||new Date().toISOString()};
+    a.push(x);
+  }
+  x.password=p;
+  if(!x.name||x.name==="-")x.name=forms().find(z=>z.source==="Operator Registration"&&String(z.mobile)===String(mobile))?.name||x.name;
+  if(!x.district||x.district==="-")x.district=forms().find(z=>z.source==="Operator Registration"&&String(z.mobile)===String(mobile))?.district||x.district;
+  saveOperatorAccounts(a);
+  const centralSaved=window.centralAuthUpsertPublic?await window.centralAuthUpsertPublic("operators",a):false;
+  if(!centralSaved){
+    alert("Password या संगणकावर सेव्ह झाला आहे; मात्र Central Database मध्ये पुष्टी मिळाली नाही. पुन्हा प्रयत्न करा.\n"+(window.CENTRAL_AUTH_LAST_ERROR||""));
+    return;
+  }
+  alert("Operator Password Central Database मध्ये यशस्वीरीत्या सेव्ह झाला.");
+  renderAdminOperatorPassword();
+}
 function renderAdminSentByDistrict(){
   if(session.type!=="admin")return;
   let a=forms().filter(x=>x.source==="Operator Registration"&&x.status==="Forwarded to Admin");
@@ -2606,6 +2715,8 @@ function adminFinalApproveOperatorRegistration(id){
   if(session.type!=="admin")return;
   let a=forms(),x=a.find(z=>z.id===id);
   if(!x||x.source!=="Operator Registration"||x.status!=="Forwarded to Admin")return;
+  const credential=getOperatorAccounts().find(op=>String(op.mobile)===String(x.mobile)&&String(op.password||"")!=="");
+  if(!credential){alert("या Operator चा Login Password उपलब्ध नाही. Admin Login → User Management → Operator Login येथे Password सेट करून पुन्हा Accept करा.");return;}
   let remark=prompt("Admin Final Decision Remark लिहा:");
   if(remark===null)return;
   remark=remark.trim();
@@ -3247,22 +3358,37 @@ window.addEventListener("load", async function(){
         await centralAuthUpsert("electionBranches",localBranch);
       }
 
-      /* Operator accounts: central accounts are merged by mobile number. */
+      /* Operator accounts: preserve device-only credentials and merge central rows safely.
+         Legacy shared `operators` data is read for backward compatibility; new
+         mobile-specific rows take precedence so one old shared snapshot cannot
+         overwrite a newer password for the same Operator. */
       let localOps=[];
       try{ localOps=JSON.parse(localStorage.getItem(OPERATOR_KEY)||"[]"); }catch(e){ localOps=[]; }
       if(!Array.isArray(localOps)) localOps=[];
-
-      if(Array.isArray(remote.operators) || remote.operatorAccounts.length){
-        /* Read both the legacy shared array and the new per-mobile rows.
-           Per-mobile rows win for the same User ID; separate registrations never
-           overwrite accounts created by another district/device. */
-        const mergedOps=new Map();
-        (Array.isArray(remote.operators)?remote.operators:[]).forEach(x=>{if(x && x.mobile)mergedOps.set(String(x.mobile),x);});
-        remote.operatorAccounts.forEach(x=>{if(x && x.mobile)mergedOps.set(String(x.mobile),x);});
-        localOps=Array.from(mergedOps.values());
-        localStorage.setItem(OPERATOR_KEY,JSON.stringify(localOps));
-      }else if(localOps.length){
-        await centralAuthUpsert("operators",localOps);
+      const centralMobileSet=new Set();
+      (Array.isArray(remote.operators)?remote.operators:[]).forEach(x=>{
+        if(x && x.mobile) centralMobileSet.add(String(x.mobile));
+      });
+      remote.operatorAccounts.forEach(x=>{
+        if(x && x.mobile) centralMobileSet.add(String(x.mobile));
+      });
+      const localOnlyOperatorAccounts=localOps.filter(x=>x && x.mobile && !centralMobileSet.has(String(x.mobile)));
+      const mergedOps=new Map();
+      localOps.forEach(x=>{ if(x && x.mobile) mergedOps.set(String(x.mobile),x); });
+      (Array.isArray(remote.operators)?remote.operators:[]).forEach(x=>{
+        if(x && x.mobile && !mergedOps.has(String(x.mobile))) mergedOps.set(String(x.mobile),x);
+      });
+      /* Per-mobile central rows are the latest authoritative credential for that user. */
+      remote.operatorAccounts.forEach(x=>{
+        if(x && x.mobile) mergedOps.set(String(x.mobile),x);
+      });
+      localOps=Array.from(mergedOps.values());
+      localStorage.setItem(OPERATOR_KEY,JSON.stringify(localOps));
+      /* Restore credentials that exist only in this browser to Central Database.
+         Never replace an existing central account/password with an empty value. */
+      if(localOnlyOperatorAccounts.length){
+        const safeLocalOnly=localOnlyOperatorAccounts.filter(x=>x && x.mobile && String(x.password||"")!="");
+        if(safeLocalOnly.length) await centralAuthUpsert("operators",safeLocalOnly);
       }
 
       /* Refresh visible password/admin lists if the dashboard is already open. */
