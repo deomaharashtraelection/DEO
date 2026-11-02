@@ -3003,11 +3003,36 @@ function renderDistrictPresidentList(){
  let a=forms().filter(x=>x.status==="Accepted"&&x.isPresident);
  $("districtPresidentBody").innerHTML=a.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(x.district||"-")+"</td><td>"+esc(x.assembly||"-")+"</td><td>"+esc(x.taluka||"-")+"</td><td>"+(x.photo?"<img src='"+x.photo+"' style=\"width:55px;height:68px;object-fit:cover;border:1px solid #aaa;border-radius:5px\">":"-")+"</td><td>"+esc(x.name||"-")+"</td><td>"+esc(x.mobile||"-")+"</td></tr>").join("")||"<tr><td colspan='7'>अध्यक्ष यादीमध्ये माहिती उपलब्ध नाही.</td></tr>";
 }
-function togglePresidentMark(id){
- if(session.type!=="admin")return;
+async function togglePresidentMark(id){
+ if(!session || session.type!=="admin")return;
  let a=forms(),x=a.find(z=>z.id===id);if(!x||x.status!=="Accepted")return;
- if(x.isPresident){if(!confirm("या Operator ला अध्यक्ष यादीतून काढायचे आहे का?"))return;delete x.isPresident;delete x.presidentMarkedAt;delete x.presidentMarkedBy;save(a);updatePresidentButtons();renderAdminAccepted();renderAdminPresidentList();alert("Operator अध्यक्ष यादीतून काढण्यात आला.");}
- else{if(!confirm("या Operator ला अध्यक्ष म्हणून Mark करायचे आहे का?"))return;x.isPresident=true;x.presidentMarkedAt=new Date().toISOString();x.presidentMarkedBy=session.username;save(a);updatePresidentButtons();renderAdminAccepted();renderAdminPresidentList();alert("Operator अध्यक्ष म्हणून Mark करण्यात आला.");}
+ const removing=!!x.isPresident;
+ if(!confirm(removing?"या Operator ला अध्यक्ष यादीतून काढायचे आहे का?":"या Operator ला अध्यक्ष म्हणून Mark करायचे आहे का?"))return;
+ const before=JSON.parse(JSON.stringify(x));
+ if(removing){delete x.isPresident;delete x.presidentMarkedAt;delete x.presidentMarkedBy;}
+ else{x.isPresident=true;x.presidentMarkedAt=new Date().toISOString();x.presidentMarkedBy=session.username;}
+ /* Keep the current UI responsive, but confirm the change in the central database. */
+ centralFormsMemoryCache=a;
+ try{localStorage.setItem(KEY,JSON.stringify(a));}catch(storageError){console.warn("President mark local cache skipped",storageError);}
+ centralPendingUpserts.set(String(x.reference||x.form_id||x.id),x);
+ let saved=false;
+ for(let attempt=1;attempt<=3&&!saved;attempt++){
+   if(!window.CENTRAL_DB_READY && typeof ensureCentralDatabaseReadyForRegistration==="function"){
+     try{await ensureCentralDatabaseReadyForRegistration();}catch(connectionError){console.warn(connectionError);}
+   }
+   saved=await centralUpsertForms();
+   if(!saved && attempt<3) await new Promise(resolve=>setTimeout(resolve,700*attempt));
+ }
+ updatePresidentButtons();renderAdminAccepted();renderAdminPresidentList();
+ if(saved){alert(removing?"Operator ला अध्यक्ष यादीतून काढण्यात आले आहे.":"Operator अध्यक्ष म्हणून Mark करण्यात आला आहे.");}
+ else{
+   /* Restore the prior UI state; keep the failed write queued for the normal sync retry. */
+   Object.keys(x).forEach(k=>delete x[k]);Object.assign(x,before);centralFormsMemoryCache=a;
+   try{localStorage.setItem(KEY,JSON.stringify(a));}catch(storageError){}
+   centralPendingUpserts.delete(String(x.reference||x.form_id||x.id));
+   updatePresidentButtons();renderAdminAccepted();renderAdminPresidentList();
+   alert("बदल Central Database मध्ये सेव्ह झाला नाही. कोणताही बदल लागू केलेला नाही. कृपया Live Database जोडणी तपासून पुन्हा प्रयत्न करा.\nतपशील: "+(window.CENTRAL_FORMS_LAST_ERROR||"Database save failed"));
+ }
 }
 function loadAdminPresidentDistricts(){
  if(session.type!=="admin")return;let sel=$("adminPresidentDistrict");if(!sel)return;
