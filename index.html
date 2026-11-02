@@ -1670,6 +1670,8 @@ function previewOperatorRegistration(){
   $("modal").classList.remove("hidden");
 }
 async function saveOperatorRegistration(){
+  if(window.__operatorRegistrationSaving) return;
+  window.__operatorRegistrationSaving=true;
   try{
     let d=regPreviewData;if(!d)return;
     const accounts=getOperatorAccounts(), now=new Date(), createdAt=now.toISOString();
@@ -1702,13 +1704,15 @@ async function saveOperatorRegistration(){
       if(accounts.some(x=>x.mobile===d.mobile)&&!regEditId){alert("हा Mobile Number आधीच Operator User ID म्हणून नोंदणीकृत आहे. कृपया User ID Password प्रविष्ट करून लॉगिन करा");return}
       const dc=String(DATA[d.district]?.code||"00").padStart(2,"0"),ac=String(assemblyNo(d.assembly)).padStart(3,"0"),dd=String(now.getDate()).padStart(2,"0"),mm=String(now.getMonth()+1).padStart(2,"0"),yyyy=now.getFullYear();
       const baseReference="D"+dc+"-"+ac+"-"+dd+"-"+mm+"-"+yyyy;
-      /* Keep the existing reference format unless that reference already exists.
-         Supabase upserts use reference as the conflict key, so same-day registrations
-         for the same assembly must have distinct references or one can block/overwrite another. */
-      let uniqueReference=baseReference, referenceSuffix=2;
+      /* Supabase uses reference as its unique conflict key. A local-only suffix
+         cannot prevent collisions when several districts/devices submit at once;
+         add a random token so simultaneous forms receive different references. */
+      const referenceToken=(window.crypto&&typeof crypto.randomUUID==="function")
+        ? crypto.randomUUID().replace(/-/g,"").slice(0,8).toUpperCase()
+        : Math.random().toString(36).slice(2,10).toUpperCase();
+      let uniqueReference=baseReference+"-"+referenceToken;
       while(a.some(x=>String(x.reference||"")===uniqueReference)){
-        uniqueReference=baseReference+"-"+String(referenceSuffix).padStart(2,"0");
-        referenceSuffix++;
+        uniqueReference=baseReference+"-"+Math.random().toString(36).slice(2,10).toUpperCase();
       }
       const form={id:(window.crypto&&crypto.randomUUID)?crypto.randomUUID():("reg-"+Date.now()+"-"+Math.random().toString(36).slice(2)),reference:uniqueReference,district:d.district,assembly:d.assembly,taluka:d.taluka,name:d.name,nameEnglish:d.nameEnglish,gender:d.gender,education:d.education,dob:d.dob,age:d.age,address:d.address,addressEnglish:d.addressEnglish,officeAddressEnglish:d.officeAddressEnglish,officeAddress:d.officeAddress,pin:d.pin,email:d.email,mobile:d.mobile,whatsapp:d.whatsapp,joiningDate:d.joiningDate,experience:d.experience,photo:d.photo,proof:d.proof,signature:d.signature,status:"Pending at District",createdAt:createdAt,source:"Operator Registration",registrationAttempts:1};
       if(form.photo&&/^data:image\//i.test(form.photo))form.photo=await compressImageData(form.photo,800,1000,0.78);
@@ -1745,6 +1749,7 @@ async function saveOperatorRegistration(){
     renderForms();renderDistrictOperatorRegistrations();renderAdmin();renderAdminSentByDistrict();renderPending();renderSummary();
     if(rollbackSaved)tab("forms");
   }catch(e){console.error(e);alert("Operator Registration करता आले नाही. कृपया पुन्हा प्रयत्न करा.")}
+  finally{window.__operatorRegistrationSaving=false;}
 }
 function clearRegistrationForm(){
   const f=$("operatorRegistrationForm");if(f)f.reset();
@@ -3129,34 +3134,46 @@ window.addEventListener("load", async function(){
       return centralAuthUpsert(key,data);
     }
     const request = (async function(){
-    if(!authReady()){
-      window.CENTRAL_AUTH_LAST_ERROR = "Central Database connection is not ready.";
-      return false;
-    }
-    try{
-      const db = window.centralDb;
-      const table = window.SUPABASE_CONFIG.table;
-      const row = authRow(key,data);
-      /* Use the unique reference as the conflict target so a previously-created
-         row is updated instead of failing with a duplicate-key error. */
-      const {data:savedRows,error} = await db
-        .from(table)
-        .upsert(row,{onConflict:"reference"})
-        .select("id,reference,source,form_id");
-      if(error) throw error;
-      const verified = Array.isArray(savedRows) && savedRows.some(r =>
-        r && r.reference === row.reference &&
-        r.source === AUTH_SOURCE && r.form_id === key
-      );
-      if(!verified) throw new Error("Database did not confirm the saved password row.");
-      window.CENTRAL_AUTH_LAST_ERROR = "";
-      return true;
-    }catch(e){
-      window.CENTRAL_AUTH_LAST_ERROR = (e && (e.message || e.details || e.hint || e.code)) ?
-        String(e.message || e.details || e.hint || e.code) : "Unknown database error.";
-      console.error("Central password save failed:",e);
-      return false;
-    }
+      if(!authReady()){
+        window.CENTRAL_AUTH_LAST_ERROR = "Central Database connection is not ready.";
+        return false;
+      }
+      try{
+        const db = window.centralDb;
+        const table = window.SUPABASE_CONFIG.table;
+        let rowsToSave=[];
+        if(key==="operators" && Array.isArray(data)){
+          /* Store each operator under a stable, mobile-specific unique reference.
+             A single shared operators-array row caused concurrent districts/devices
+             to overwrite one another during simultaneous registrations. */
+          const byMobile=new Map();
+          data.forEach(account=>{
+            const mobile=String(account && account.mobile || "").trim();
+            if(mobile) byMobile.set(mobile,account);
+          });
+          rowsToSave=Array.from(byMobile.entries()).map(([mobile,account])=>
+            authRow("operator:"+mobile,account)
+          );
+          if(!rowsToSave.length) return true;
+        }else{
+          rowsToSave=[authRow(key,data)];
+        }
+        const {data:savedRows,error} = await db
+          .from(table)
+          .upsert(rowsToSave,{onConflict:"reference"})
+          .select("id,reference,source,form_id");
+        if(error) throw error;
+        const savedRefs=new Set((savedRows||[]).map(r=>r && r.reference).filter(Boolean));
+        const verified=rowsToSave.every(row=>savedRefs.has(row.reference));
+        if(!verified) throw new Error("Database did not confirm every saved account/password row.");
+        window.CENTRAL_AUTH_LAST_ERROR = "";
+        return true;
+      }catch(e){
+        window.CENTRAL_AUTH_LAST_ERROR = (e && (e.message || e.details || e.hint || e.code)) ?
+          String(e.message || e.details || e.hint || e.code) : "Unknown database error.";
+        console.error("Central password save failed:",e);
+        return false;
+      }
     })();
     const entry={signature:signature,promise:request};
     centralAuthUpsertInFlight.set(requestKey,entry);
@@ -3184,10 +3201,13 @@ window.addEventListener("load", async function(){
 
       if(error) throw error;
 
-      const remote = {};
+      const remote = { operatorAccounts: [] };
       (data||[]).forEach(row=>{
         const p=row && row.payload;
-        if(p && p.kind==="password_sync" && p.key) remote[p.key]=p.data;
+        if(p && p.kind==="password_sync" && p.key){
+          if(String(p.key).startsWith("operator:")) remote.operatorAccounts.push(p.data);
+          else remote[p.key]=p.data;
+        }
       });
 
       /* Admin User Management PIN: central value wins; otherwise migrate local value. */
@@ -3232,9 +3252,14 @@ window.addEventListener("load", async function(){
       try{ localOps=JSON.parse(localStorage.getItem(OPERATOR_KEY)||"[]"); }catch(e){ localOps=[]; }
       if(!Array.isArray(localOps)) localOps=[];
 
-      if(Array.isArray(remote.operators)){
-        /* Use the central account list as-is; stale local passwords must not authenticate. */
-        localOps=remote.operators.filter(x=>x && x.mobile);
+      if(Array.isArray(remote.operators) || remote.operatorAccounts.length){
+        /* Read both the legacy shared array and the new per-mobile rows.
+           Per-mobile rows win for the same User ID; separate registrations never
+           overwrite accounts created by another district/device. */
+        const mergedOps=new Map();
+        (Array.isArray(remote.operators)?remote.operators:[]).forEach(x=>{if(x && x.mobile)mergedOps.set(String(x.mobile),x);});
+        remote.operatorAccounts.forEach(x=>{if(x && x.mobile)mergedOps.set(String(x.mobile),x);});
+        localOps=Array.from(mergedOps.values());
         localStorage.setItem(OPERATOR_KEY,JSON.stringify(localOps));
       }else if(localOps.length){
         await centralAuthUpsert("operators",localOps);
