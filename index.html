@@ -460,15 +460,12 @@ body.admin-login #approvedExcelDownload,body.admin-login #approvedPDFDownload,bo
 </head>
 <body>
 <script id="one-time-form-data-cleanup">
-/* One-time cleanup of this portal's local form records only. Other settings and login data remain untouched. */
+/* DATA-SAFETY CHANGE: Do not delete or clear any existing portal data.
+   Existing forms, user credentials, settings and login records are preserved. */
 (function(){
   try {
-    const cleanupFlag = "__maharashtraPortalFormsCleared_20261023_v1";
-    if (localStorage.getItem(cleanupFlag) !== "1") {
-      localStorage.removeItem("maharashtraDistrictFormsV1");
-      localStorage.setItem(cleanupFlag, "1");
-    }
-  } catch (e) { console.warn("Local form cleanup could not run:", e); }
+    // Intentionally no cleanup or localStorage removal here.
+  } catch (e) { console.warn("Data preservation check:", e); }
 })();
 </script>
 
