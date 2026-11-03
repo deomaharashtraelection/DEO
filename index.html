@@ -520,7 +520,7 @@ body.admin-login #approvedExcelDownload,body.admin-login #approvedPDFDownload,bo
    <label for="operatorLoginUser">Operator User ID (Mobile Number)</label><input id="operatorLoginUser" autocomplete="username" placeholder="Enter Operator User ID">
    <label for="operatorLoginPass">Password</label><div class="registered-password-wrap"><input id="operatorLoginPass" type="password" autocomplete="current-password" placeholder="Password"><button type="button" class="m" onclick="toggleRegisteredPassword('operatorLoginPass',this)" aria-pressed="false">Show</button></div><div id="operatorLoginError" class="registered-login-error" role="alert"></div>
    <button type="button" class="p" onclick="event.stopPropagation();submitRegisteredLogin('operator')">Sign In</button>
-   <button type="button" class="m" onclick="event.stopPropagation();forgotRegisteredLogin('operator')">Forgot Password?</button>
+   <button type="button" class="m" onclick="forgotRegisteredLogin('operator')">Forgot Password?</button>
   </div>
  </section>
  <section class="registered-login-card" onclick="activateRegisteredLogin('district')">
@@ -531,7 +531,7 @@ body.admin-login #approvedExcelDownload,body.admin-login #approvedPDFDownload,bo
    <label for="districtLoginUser">Username</label><input id="districtLoginUser" autocomplete="username" placeholder="Username">
    <label for="districtLoginPass">Password</label><div class="registered-password-wrap"><input id="districtLoginPass" type="password" autocomplete="current-password" placeholder="Password"><button type="button" class="m" onclick="toggleRegisteredPassword('districtLoginPass',this)" aria-pressed="false">Show</button></div><div id="districtLoginError" class="registered-login-error" role="alert"></div>
    <button type="button" class="p" onclick="event.stopPropagation();submitRegisteredLogin('district')">Sign In</button>
-   <button type="button" class="m" onclick="event.stopPropagation();forgotRegisteredLogin('district')">Forgot Password?</button>
+   <button type="button" class="m" onclick="forgotRegisteredLogin('district')">Forgot Password?</button>
   </div>
  </section>
  <section class="registered-login-card" onclick="activateRegisteredLogin('admin')">
@@ -1968,41 +1968,9 @@ function submitRegisteredLogin(type){
   toggleLogin(); login();
 }
 function forgotRegisteredLogin(type){
-  /* Keep the Forgot Password action inside its own login card. */
-  if(type!=="operator" && type!=="district"){
-    alert("Forgot Password सुविधा Operator आणि District Login साठी उपलब्ध आहे.");
-    return;
-  }
-  const typeEl=document.getElementById("loginType");
-  const userEl=document.getElementById("username");
-  const passEl=document.getElementById("password");
-  if(!typeEl || !userEl || !passEl){
-    alert("Login माहिती उपलब्ध नाही. कृपया पेज Refresh करून पुन्हा प्रयत्न करा.");
-    return;
-  }
-  typeEl.value=type;
-  if(type==="operator"){
-    const visibleUser=document.getElementById("operatorLoginUser");
-    userEl.value=visibleUser ? visibleUser.value.trim() : "";
-    if(!userEl.value){
-      alert("कृपया Operator User ID (Mobile Number) प्रविष्ट करा.");
-      if(visibleUser) visibleUser.focus();
-      return;
-    }
-  } else {
-    syncDistrictLoginSelection();
-    const visibleUser=document.getElementById("districtLoginUser");
-    userEl.value=visibleUser ? visibleUser.value.trim() : "";
-    const visibleDistrict=document.getElementById("districtLoginSelect");
-    const originalDistrict=document.getElementById("loginDistrict");
-    if(visibleDistrict && originalDistrict) originalDistrict.value=visibleDistrict.value;
-    if(!originalDistrict || !originalDistrict.value || !userEl.value){
-      alert("कृपया District निवडा आणि Username तपासा.");
-      if(visibleDistrict) visibleDistrict.focus();
-      return;
-    }
-  }
-  passEl.value="";
+  document.getElementById("loginType").value=type;
+  if(type==="operator"){document.getElementById("username").value=document.getElementById("operatorLoginUser").value.trim();}
+  else if(type==="district"){syncDistrictLoginSelection();document.getElementById("username").value=document.getElementById("districtLoginUser").value.trim();}
   forgotPassword();
 }
 function populateRegisteredDistrictOptions(){
