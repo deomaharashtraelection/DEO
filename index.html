@@ -493,7 +493,7 @@ body.admin-login #approvedExcelDownload,body.admin-login #approvedPDFDownload,bo
 #registeredLoginCards .registered-login-error{display:none;margin-top:8px;padding:8px 10px;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:6px;font-size:12px;font-weight:700}
 #registeredLoginCards .registered-login-error.show{display:block}
 @media(max-width:760px){#registeredLoginCards{grid-template-columns:1fr}}
-</style>
+#registeredLoginCards button.p[disabled]{opacity:.75;cursor:wait}</style>
 <style id="registered-login-full-screen-only">
 /* Expand only the Registered User login view to the full computer screen. */
 @media (min-width: 761px){
@@ -1020,7 +1020,7 @@ function getAdminPassword(){return localStorage.getItem(ADMIN_PASSWORD_KEY)||"ad
 function setAdminPassword(p){localStorage.setItem(ADMIN_PASSWORD_KEY,p)}
 const ADMIN={username:"admin",get password(){return getAdminPassword()}};
 const KEY="maharashtraDistrictFormsV1";
-const SESSION_TIMEOUT_MS=30*60*1000;
+const SESSION_TIMEOUT_MS=5*60*1000;
 let session={type:"",district:"",username:""},photoData="",proofData="",previewData=null;
 let sessionTimeoutTimer=null;
 let regPhotoData="",regProofData="",regSignatureData="",regPreviewData=null,registrationCropMode=false,registrationSignatureCropMode=false,regSignatureCropped=false,regPhotoCropped=false,photoCropped=false;
@@ -1985,13 +1985,30 @@ function syncDistrictLoginSelection(){
   const item=LOGINS.find(z=>z.district===visible.value);
   if(item)document.getElementById("districtLoginUser").value=item.username;
 }
-function submitRegisteredLogin(type){
+async function submitRegisteredLogin(type){
   const typeEl=document.getElementById("loginType"), user=document.getElementById("username"), pass=document.getElementById("password");
+  const button=document.querySelector('#registeredLoginCards .registered-login-card:nth-child('+(type==="operator"?1:type==="district"?2:3)+') button.p');
+  if(button && button.disabled)return;
+  const originalLabel=button?button.textContent:"Sign In";
+  if(button){button.disabled=true;button.textContent="लॉगीन होत आहे...";button.setAttribute("aria-busy","true");}
+  setRegisteredLoginError(type,"लॉगीन होत आहे... कृपया प्रतीक्षा करा.");
   typeEl.value=type;
   if(type==="operator") {user.value=document.getElementById("operatorLoginUser").value.trim();pass.value=document.getElementById("operatorLoginPass").value;}
   else if(type==="district") {syncDistrictLoginSelection();user.value=document.getElementById("districtLoginUser").value.trim();pass.value=document.getElementById("districtLoginPass").value;}
   else {user.value=document.getElementById("adminLoginUser").value.trim();pass.value=document.getElementById("adminLoginPass").value;}
-  toggleLogin(); login();
+  toggleLogin();
+  try{
+    await login();
+  }catch(e){
+    console.error("Login failed:",e);
+    setRegisteredLoginError(type,"लॉगीन करता आले नाही. कृपया पुन्हा प्रयत्न करा.");
+  }finally{
+    if(button){
+      button.disabled=false;
+      button.textContent=originalLabel;
+      button.removeAttribute("aria-busy");
+    }
+  }
 }
 function forgotRegisteredLogin(type){
   document.getElementById("loginType").value=type;
@@ -2235,6 +2252,7 @@ function restoreRoute(){
     }
     return;
   }
+  startSessionTimeout();
   $("loginPage").classList.add("hidden");
   $("operatorRegistrationPage").classList.add("hidden");
   $("app").classList.remove("hidden");
