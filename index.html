@@ -457,6 +457,46 @@ body.admin-login #acceptedSummaryExcelDownload{display:inline-block!important}
 #approvedExcelDownload,#approvedPDFDownload,#acceptedExcelDownloadButton,#acceptedPDFDownloadButton{display:none!important}
 body.admin-login #approvedExcelDownload,body.admin-login #approvedPDFDownload,body.admin-login #acceptedExcelDownloadButton,body.admin-login #acceptedPDFDownloadButton{display:inline-block!important}
 </style>
+
+<style id="login-page-no-scroll-footer-spacing-fix">
+/* Login screen only: fit the existing layout to the viewport and remove page scrolling. */
+html:has(body #loginPage:not(.hidden)),
+body:has(#loginPage:not(.hidden)){
+  width:100%;
+  height:100%;
+  overflow:hidden!important;
+}
+body:has(#loginPage:not(.hidden)){
+  min-height:0!important;
+}
+#loginPage.container{
+  height:100vh!important;
+  height:100svh!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  display:flex;
+  flex-direction:column;
+}
+#loginPage .ecinet-hero{
+  flex:1 1 auto;
+  height:auto!important;
+  min-height:0!important;
+  padding:12px 20px 8px!important;
+  overflow:hidden!important;
+}
+#loginPage .ecinet-footer{
+  flex:0 0 58px;
+  height:58px!important;
+  min-height:58px!important;
+  padding:0 22px 26px!important;
+  overflow:hidden;
+}
+#loginPage .ecinet-footer .copyright{bottom:0;height:26px;}
+@media(max-width:650px){
+  #loginPage .ecinet-hero{padding:10px 12px 6px!important;gap:10px!important;}
+  #loginPage .ecinet-footer{padding:0 10px 26px!important;}
+}
+</style>
 </head>
 <body>
 <script id="one-time-form-data-cleanup">
@@ -567,7 +607,7 @@ body.admin-login #approvedExcelDownload,body.admin-login #approvedPDFDownload,bo
     <form id="operatorRegistrationForm" onsubmit="event.preventDefault();previewOperatorRegistration()">
       <div class="grid">
         <div style="grid-column:1/-1;padding:10px 12px;background:#e8f5e9;border-left:4px solid #2e7d32;border-radius:6px;font-weight:800;font-size:17px"><span aria-hidden="true" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;margin-right:9px;background:#fff;border-radius:50%;box-shadow:0 2px 6px rgba(18,59,104,.16);font-size:19px;vertical-align:middle">🏢</span>1. कार्यालयाची माहिती</div>
-        <div><label>जिल्हा *</label><select id="regDistrict" required onchange="loadRegistrationAssemblies()"></select></div>
+        <div><label>जिल्हा *</label><select id="regDistrict" required onchange="loadRegistrationAssemblies();renderSelectedRegistrationDistrictStatus()"></select><div id="registrationDistrictStatusNotice" class="small" style="margin-top:6px;font-weight:700"></div></div>
         <div><label>विधानसभा मतदार संघ *</label><select id="regAssembly" required onchange="loadRegistrationTalukas()"></select></div>
         <div><label>तालुका *</label><select id="regTaluka" required></select></div>
         <div><label>कार्यालयाचा पत्ता (English) *</label><textarea id="regOfficeAddressEnglish" required lang="en" spellcheck="false" oninput="sanitizeAddressEnglish(this);autoFillMarathiAddress('regOfficeAddressEnglish','regOfficeAddress')"></textarea></div>
@@ -602,7 +642,7 @@ body.admin-login #approvedExcelDownload,body.admin-login #approvedPDFDownload,bo
       <div><img id="regPhotoPreview" class="photo hidden"><button id="regCropPhotoBtn" class="p hidden" type="button" onclick="openRegistrationPhotoCrop()">Crop Photo</button></div>
       <div id="regProofName" class="small"></div>
       <div id="regSignatureName" class="small"></div>
-      <button class="p" type="submit">Preview & Submit</button>
+      <button id="registrationSubmitButton" class="p" type="submit">Preview & Submit</button>
       <button class="w" type="button" onclick="loadRejectedOperatorRegistration()">Rejected Form / Re-Registration</button>
        <button class="m" type="button" onclick="clearRegistrationForm()">Clear</button>
     </form>
@@ -736,7 +776,7 @@ body.admin-login #approvedExcelDownload,body.admin-login #approvedPDFDownload,bo
 <section id="adminDelete" class="card hidden"><h2>→ Delete Requests</h2><div class="wrap"><table><thead><tr><th>Reference</th><th>District</th><th>Operator</th><th>Assembly</th><th>Taluka</th><th>Delete Remark</th><th>Action</th></tr></thead><tbody id="adminDeleteBody"></tbody></table></div></section>
 <section id="adminPasswordMenu" class="card hidden">
 <h2>→ User Management</h2>
-<div style="margin:10px 0"><button class="p" onclick="changeAdminPassword()">Admin Password Change</button> <button class="p" onclick="toggleRegistrationFormStatus()">Registration Form: <span id="registrationFormStatus">Enabled</span></button> <button class="p" onclick="tab('adminPasswordRequests')">Password Change Requests</button></div>
+<div style="margin:10px 0"><button class="p" onclick="changeAdminPassword()">Admin Password Change</button> <button class="p" onclick="openRegistrationFormSettings()">Registration Form: District-wise Enabled / Disabled</button> <button class="p" onclick="tab('adminPasswordRequests')">Password Change Requests</button></div>
 <div style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0"><button class="p" onclick="showUserManagementGroup('district')">District Login</button><button class="p" onclick="showUserManagementGroup('operator')">Operator Login</button><button class="p" onclick="showUserManagementGroup('branch')">जिल्हा निवडणूक शाखा</button></div>
 
 <div id="userManagementDistrictGroup" class="wrap" style="margin-top:14px">
@@ -754,6 +794,17 @@ body.admin-login #approvedExcelDownload,body.admin-login #approvedPDFDownload,bo
 <h3 style="margin:8px 0;color:#123b68">जिल्हा निवडणूक शाखा</h3>
 <table><thead><tr><th>Sr.No.</th><th>Username</th><th>Operator</th><th>District</th><th>Assembly Constituency Name</th><th>Password</th><th>Status</th><th>Action</th></tr></thead><tbody id="adminAllElectionBranchPasswordBody"></tbody></table>
 </div>
+</section>
+<section id="registrationFormSettings" class="card hidden">
+  <div class="top">
+    <h2 style="margin:0">→ Registration Form : जिल्हानिहाय Enabled / Disabled</h2>
+    <button class="m" type="button" onclick="tab('adminPasswordMenu')">Back to User Management</button>
+  </div>
+  <div class="notice">प्रत्येक जिल्ह्यासाठी Registration Form स्वतंत्रपणे सुरू किंवा बंद करता येईल. Disabled जिल्ह्यातील अर्जदारांना नवीन Registration करता येणार नाही.</div>
+  <div class="wrap"><table>
+    <thead><tr><th>Sr.No.</th><th>District</th><th>Registration Form Status</th><th>Action</th></tr></thead>
+    <tbody id="registrationFormDistrictSettingsBody"></tbody>
+  </table></div>
 </section>
 <section id="adminPasswordRequests" class="card hidden"><h2>→ Password Change Requests</h2><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Login Type</th><th>District</th><th>Username</th><th>New Password</th><th>Requested Date</th><th>Status</th><th>Action</th></tr></thead><tbody id="adminPasswordRequestsBody"></tbody></table></div></section>
 <section id="adminOperatorPassword" class="card hidden"><h2>→ Operator Login</h2><div style="margin:10px 0"><label>District</label> <select id="adminOperatorPasswordDistrict" onchange="renderAdminOperatorPassword()"><option value="">-- सर्व जिल्हे --</option></select></div><div class="wrap"><table><thead><tr><th>Sr.No.</th><th>Username</th><th>Operator</th><th>District</th><th>Assembly Constituency Name</th><th>Password</th><th>Status</th><th>Action</th></tr></thead><tbody id="adminOperatorPasswordBody"></tbody></table></div></section>
@@ -1011,6 +1062,32 @@ window.retryCentralDatabaseConnection = async function(){
   }
 };
 window.CENTRAL_DB_CONNECTION_PROMISE = window.retryCentralDatabaseConnection();
+/* Keep the Central Database connection healthy across startup, tab resume,
+   and network recovery. Reconnect attempts are serialized to avoid races. */
+window.ensureCentralDatabaseConnection = async function(){
+  if(window.CENTRAL_DB_READY && window.centralDb) return true;
+  if(window._CENTRAL_DB_RECONNECT_PROMISE) return window._CENTRAL_DB_RECONNECT_PROMISE;
+  window._CENTRAL_DB_RECONNECT_PROMISE = (async function(){
+    try{
+      return await window.retryCentralDatabaseConnection();
+    }finally{
+      window._CENTRAL_DB_RECONNECT_PROMISE = null;
+    }
+  })();
+  return window._CENTRAL_DB_RECONNECT_PROMISE;
+};
+window.addEventListener("online", function(){
+  window.ensureCentralDatabaseConnection();
+});
+document.addEventListener("visibilitychange", function(){
+  if(!document.hidden) window.ensureCentralDatabaseConnection();
+});
+window.setInterval(function(){
+  if(!navigator.onLine || !window.CENTRAL_DB_READY){
+    window.ensureCentralDatabaseConnection();
+  }
+}, 30000);
+
 </script>
 <script>
 const DATA={"अकोला": {"code": "5", "assemblies": ["२८- अकोट", "२९- बाळापूर", "३०- अकोला पश्चिम", "३१- अकोला पूर्व", "३२- मूर्तिजापूर (अ.जा.)"], "talukas": ["अकोट", "अकोला", "तेल्हारा", "पातूर", "बार्शीटाकळी", "बाळापूर", "मुर्तिजापूर"]}, "अमरावती": {"code": "7", "assemblies": ["३६- धामणगाव रेल्वे", "३७- बडनेरा", "३८- अमरावती", "३९- तिवसा", "४०- दर्यापूर (अ.जा.)", "४१- मेळघाट (अ.ज.)", "४२- अचलपूर", "४३- मोर्शी"], "talukas": ["अंजनगाव सुर्जी", "अचलपूर", "अमरावती", "चांदुर बाजार", "चांदुर रेल्वे", "चिखलदरा", "तिवसा", "दर्यापूर", "धामणगाव रेल्वे", "धारणी", "नांदगाव खंडेश्वर", "भातकुली", "मोर्शी", "वरुड"]}, "अहमदनगर": {"code": "27", "assemblies": ["२१६- अकोले (अ.ज.)", "२१७- संगमनेर", "२१८- शिर्डी", "२१९- कोपरगाव", "२२०- श्रीरामपूर (अ.जा.)", "२२१- नेवासा", "२२२- शेवगाव", "२२३- राहुरी", "२२४- पारनेर", "२२५- अहमदनगर शहर", "२२६- श्रीगोंदा", "२२७- कर्जत जामखेड"], "talukas": ["अकोले", "कर्जत", "कोपरगाव", "जामखेड", "नगर", "नेवासा", "पाथर्डी", "पारनेर", "राहाता", "राहुरी", "शेवगाव", "श्रीगोंदा", "श्रीरामपूर", "संगमनेर"]}, "उस्मानाबाद": {"code": "30", "assemblies": ["२४०- उमरगा (अ.जा.)", "२४१- तुळजापूर", "२४२- उस्मानाबाद", "२४३- परंडा"], "talukas": ["उमरगा", "कळंब", "तुळजापूर", "धाराशिव", "परांडा", "भूम", "लोहारा", "वाशी"]}, "औरंगाबाद": {"code": "19", "assemblies": ["१०४- सिल्लोड", "१०५- कन्नड", "१०६- फुलंब्री", "१०७- औरंगाबाद (मध्य)", "१०८- औरंगाबाद (पश्चिम) (अ.जा.)", "१०९- औरंगाबाद (पूर्व)", "११०- पैठण", "१११- गंगापूर", "११२- वैजापूर"], "talukas": ["कन्नड", "खुलताबाद", "गंगापूर", "छत्रपती संभाजीनगर", "पैठण", "फुलंब्री", "वैजापूर", "सिल्लोड", "सोयगाव"]}, "कोल्हापूर": {"code": "35", "assemblies": ["२७१- चंदगड", "२७२- राधानगरी", "२७३- कागल", "२७४- कोल्हापूर दक्षिण", "२७५- करवीर", "२७६- कोल्हापूर उत्तर", "२७७- शाहूवाडी", "२७८- हातकणंगले (अ.जा.)", "२७९- इचलकरंजी", "२८०- शिरोळ"], "talukas": ["आजरा", "करवीर", "कागल", "गगनबावडा", "गडहिंग्लज", "चंदगड", "पन्हाळा", "भुदरगड", "राधानगरी", "शाहूवाडी", "शिरोळ", "हातकणंगले"]}, "गडचिरोली": {"code": "12", "assemblies": ["६७- आरमोरी (अ.ज.)", "६८- गडचिरोली (अ.ज.)", "६९- अहेरी (अ.ज.)"], "talukas": ["अहेरी", "आरमोरी", "एटापल्ली", "कुरखेडा", "कोरची", "गडचिरोली", "चामोर्शी", "देसाईगंज (वडसा)", "धानोरा", "भामरागड", "मुलचेरा", "सिरोंचा"]}, "गोंदिया": {"code": "11", "assemblies": ["६३- अर्जुनी मोरगाव (अ.जा.)", "६४- तिरोरा", "६५- गोंदिया", "६६- आमगाव (अ.ज.)"], "talukas": ["अर्जुनी मोरगाव", "आमगाव", "गोंदिया", "गोरेगाव", "तिरोडा", "देवरी", "सडक अर्जुनी", "सालेकसा"]}, "चंद्रपूर": {"code": "13", "assemblies": ["७०- राजुरा", "७१- चंद्रपूर (अ.जा.)", "७२- बल्लारपूर", "७३- ब्रह्मपुरी", "७४- चिमूर", "७५- वरोरा"], "talukas": ["कोरपना", "गोंडपिपरी", "चंद्रपूर", "चिमूर", "जिवती", "नागभीड", "पोंभुर्णा", "बल्लारपूर", "ब्रह्मपुरी", "भद्रावती", "मूल", "राजुरा", "वरोरा", "सावली", "सिंदेवाही"]}, "जळगाव": {"code": "3", "assemblies": ["१०- चोपडा (अ.ज.)", "११- रावेर", "१२- भुसावळ (अ.जा.)", "१३- जळगाव शहर", "१४- जळगाव ग्रामीण", "१५- अमळनेर", "१६- एरंडोल", "१७- चाळीसगाव", "१८- पाचोरा", "१९- जामनेर", "२०- मुक्ताईनगर"], "talukas": ["अमळनेर", "एरंडोल", "चाळीसगाव", "चोपडा", "जळगाव", "जामनेर", "धरणगाव", "पाचोरा", "पारोळा", "बोदवड", "भडगाव", "भुसावळ", "मुक्ताईनगर", "यावल", "रावेर"]}, "जालना": {"code": "18", "assemblies": ["१००- घनसावंगी", "१०१- जालना", "१०२- बदनापूर (अ.जा.)", "१०३- भोकरदन", "९९- परतूर"], "talukas": ["अंबड", "घनसावंगी", "जाफ्राबाद", "जालना", "परतूर", "बदनापूर", "भोकरदन", "मंठा"]}, "ठाणे": {"code": "22", "assemblies": ["१३४- भिवंडी ग्रामीण (अ.ज.)", "१३५- शहापूर (अ.ज.)", "१३६- भिवंडी पश्चिम", "१३७- भिवंडी पूर्व", "१३८- कल्याण पश्चिम", "१३९- मुरबाड", "१४०- अंबरनाथ (अ.जा.)", "१४१- उल्हासनगर", "१४२- कल्याण पूर्व", "१४३- डोंबिवली", "१४४- कल्याण ग्रामीण", "१४५- मीरा भाईंदर", "१४६- ओवळा-माजिवडा", "१४७- कोपरी-पाचपाखाडी", "१४८- ठाणे", "१४९- मुंब्रा-कलवा", "१५०- ऐरोली", "१५१- बेलापूर"], "talukas": ["अंबरनाथ", "उल्हासनगर", "कल्याण", "ठाणे", "भिवंडी", "मुरबाड", "शहापूर"]}, "धुळे": {"code": "2", "assemblies": ["५- साक्री (अ.ज.)", "६- धुळे ग्रामीण", "७- धुळे शहर", "८- शिंदखेडा", "९- शिरपूर (अ.ज.)"], "talukas": ["धुळे", "शिंदखेडा", "शिरपूर", "साक्री"]}, "नंदुरबार": {"code": "1", "assemblies": ["१- अक्कलकुवा (अ.ज.)", "२- शहादा (अ.ज.)", "३- नंदुरबार (अ.ज.)", "४- नवापूर (अ.ज.)"], "talukas": ["अक्कलकुवा", "अक्राणी", "तळोदे", "नंदुरबार", "नवापूर", "शहादा"]}, "नांदेड": {"code": "15", "assemblies": ["८३- किनवट", "८४- हदगाव", "८५- भोकर", "८६- नांदेड उत्तर", "८७- नांदेड दक्षिण", "८८- लोहा", "८९- नायगाव", "९०- देगलूर (अ.जा.)", "९१- मुखेड"], "talukas": ["अर्धापूर", "उमरी", "कंधार", "किनवट", "देगलूर", "धर्माबाद", "नांदेड", "नायगाव", "बिलोली", "भोकर", "माहूर", "मुखेड", "मुदखेड", "लोहा", "हदगाव", "हिमायतनगर"]}, "नागपूर": {"code": "9", "assemblies": ["४८- काटोल", "४९- सावनेर", "५०- हिंगणा", "५१- उमरेड (अ.जा.)", "५२- नागपूर दक्षिण पश्चिम", "५३- नागपूर दक्षिण", "५४- नागपूर पूर्व", "५५- नागपूर मध्य", "५६- नागपूर पश्चिम", "५७- नागपूर उत्तर (अ.जा.)", "५८- कामठी", "५९- रामटेक"], "talukas": ["उमरेड", "कळमेश्वर", "काटोल", "कामठी", "कुही", "नरखेड", "नागपूर ग्रामीण", "नागपूर शहर", "पारशिवनी", "भिवापूर", "मौदा", "रामटेक", "सावनेर", "हिंगणा"]}, "नाशिक": {"code": "20", "assemblies": ["११३- नांदगाव", "११४- मालेगाव (मध्य)", "११५- मालेगाव (बाह्य)", "११६- बागलाण (अ.ज.)", "११७- कळवण (अ.ज.)", "११८- चांदवड", "११९- येवला", "१२०- सिन्नर", "१२१- निफाड", "१२२- दिंडोरी (अ.ज.)", "१२३- नाशिक पूर्व", "१२४- नाशिक (मध्य)", "१२५- नाशिक पश्चिम", "१२६- देवळाली (अ.जा.)", "१२७- इगतपुरी (अ.ज.)"], "talukas": ["इगतपुरी", "कळवण", "चांदवड", "त्र्यंबकेश्वर", "दिंडोरी", "देवळा", "नांदगाव", "नाशिक", "निफाड", "पेठ", "मालेगाव", "येवला", "सटाणा", "सिन्नर", "सुरगाणा"]}, "परभणी": {"code": "17", "assemblies": ["९५- जिंतूर", "९६- परभणी", "९७- गंगाखेड", "९८- पाथरी"], "talukas": ["गंगाखेड", "जिंतूर", "परभणी", "पाथरी", "पालम", "पूर्णा", "मानवत", "सेलू", "सोनपेठ"]}, "पालघर": {"code": "21", "assemblies": ["१२८- डहाणू (अ.ज.)", "१२९- विक्रमगड (अ.ज.)", "१३०- पालघर (अ.ज.)", "१३१- बोईसर (अ.ज.)", "१३२- नालासोपारा", "१३३- वसई"], "talukas": ["जव्हार", "डहाणू", "तलासरी", "पालघर", "मोखाडा", "वसई", "वाडा", "विक्रमगड"]}, "पुणे": {"code": "26", "assemblies": ["१९५- जुन्नर", "१९६- आंबेगाव", "१९७- खेड आळंदी", "१९८- शिरूर", "१९९- दौंड", "२००- इंदापूर", "२०१- बारामती", "२०२- पुरंदर", "२०३- भोर", "२०४- मावळ", "२०५- चिंचवड", "२०६- पिंपरी (अ.जा.)", "२०७- भोसरी", "२०८- वडगाव शेरी", "२०९- शिवाजीनगर", "२१०- कोथरूड", "२११- खडकवासला", "२१२- पर्वती", "२१३- हडपसर", "२१४- पुणे कॅन्टोन्मेंट (अ.जा.)", "२१५- कसबा पेठ"], "talukas": ["आंबेगाव", "इंदापूर", "खेड", "जुन्नर", "दौंड", "पुणे शहर", "पुरंदर", "बारामती", "भोर", "मावळ", "मुळशी", "राजगड", "शिरूर जिल्हा", "हवेली"]}, "बीड": {"code": "28", "assemblies": ["२२८- गेवराई", "२२९- माझलगाव", "२३०- बीड", "२३१- आष्टी", "२३२- केज (अ.जा.)", "२३३- परळी"], "talukas": ["अंबेजोगाई", "आष्टी", "केज", "गेवराई", "धारूर", "परळी वैजनाथ", "पाटोदा", "बीड", "माजलगाव", "वडवणी", "शिरूर"]}, "बुलढाणा": {"code": "4", "assemblies": ["२१- मलकापूर", "२२- बुलढाणा", "२३- चिखली", "२४- सिंदखेड राजा", "२५- मेहकर (अ.जा.)", "२६- खामगाव", "२७- जळगाव (जामोड)"], "talukas": ["खामगाव", "चिखली", "जळगाव जामोद", "देउळगाव राजा", "नांदुरा", "बुलढाणा", "मलकापूर", "मेहकर", "मोताळा", "लोणार", "शेगाव", "संग्रामपूर", "सिंदखेड राजा"]}, "भंडारा": {"code": "10", "assemblies": ["६०- तुमसर", "६१- भंडारा (अ.जा.)", "६२- साकोली"], "talukas": ["तुमसर", "पवनी", "भंडारा", "मोहाडी", "लाखनी", "लाखांदूर", "साकोली"]}, "मुंबई उपनगर": {"code": "23", "assemblies": ["१५२- बोरिवली", "१५३- दहिसर", "१५४- मागठाणे", "१५५- मुलुंड", "१५६- विक्रोळी", "१५७- भांडुप पश्चिम", "१५८- जोगेश्वरी पूर्व", "१५९- दिंडोशी", "१६०- कांदिवली पूर्व", "१६१- चारकोप", "१६२- मलाड पश्चिम", "१६३- गोरेगाव", "१६४- वर्सोवा", "१६५- अंधेरी पश्चिम", "१६६- अंधेरी पूर्व", "१६७- विलेपारले", "१६८- चांदिवली", "१६९- घाटकोपर पश्चिम", "१७०- घाटकोपर पूर्व", "१७१- मानखुर्द शिवाजीनगर", "१७२- अणुशक्ती नगर", "१७३- चेंबूर", "१७४- कुर्ला (अ.जा.)", "१७५- कलिना", "१७६- वांद्रे पूर्व", "१७७- वांद्रे पश्चिम"], "talukas": ["अंधेरी", "कुर्ला", "बोरीवली"]}, "मुंबई शहर": {"code": "24", "assemblies": ["१७८- धारावी (अ.जा.)", "१७९- सायन कोळीवाडा", "१८०- वडाळा", "१८१- माहिम", "१८२- वरळी", "१८३- शिवडी", "१८४- बायकुला", "१८५- मलबार हिल", "१८६- मुंबादेवी", "१८७- कुलाबा"], "talukas": []}, "यवतमाळ": {"code": "14", "assemblies": ["७६- वणी", "७७- राळेगाव (अ.ज.)", "७८- यवतमाळ", "७९- दिग्रस", "८०- आर्णी (अ.ज.)", "८१- पुसद", "८२- उमरखेड (अ.जा.)"], "talukas": ["आर्णी", "उमरखेड", "कळंब", "केळापूर", "घाटंजी", "झरी जामणी", "दारव्हा", "दिग्रस", "नेर", "पुसद", "बाभुळगाव", "महागाव", "मारेगाव", "यवतमाळ", "राळेगाव", "वणी"]}, "रत्‍नागिरी": {"code": "33", "assemblies": ["२६३- दापोली", "२६४- गुहागर", "२६५- चिपळूण", "२६६- रत्नागिरी", "२६७- राजापूर"], "talukas": ["खेड", "गुहागर", "चिपळूण", "दापोली", "मंडणगड", "रत्‍नागिरी", "राजापूर", "लांजा", "संगमेश्वर"]}, "रायगड": {"code": "25", "assemblies": ["१८८- पनवेल", "१८९- कर्जत", "१९०- उरण", "१९१- पेण", "१९२- अलिबाग", "१९३- श्रीवर्धन", "१९४- महाड"], "talukas": ["अलिबाग", "उरण", "कर्जत", "खालापूर", "तळा", "पनवेल", "पेण", "पोलादपूर", "महाड", "माणगाव", "मुरूड", "म्हसळा", "रोहा", "श्रीवर्धन", "सुधागड"]}, "लातूर": {"code": "29", "assemblies": ["२३४- लातूर ग्रामीण", "२३५- लातूर शहर", "२३६- अहमदपूर", "२३७- उदगीर (अ.जा.)", "२३८- निलंगा", "२३९- औसा"], "talukas": ["अहमदपूर", "उदगीर", "औसा", "चाकूर", "जळकोट", "देवणी", "निलंगा", "रेणापूर", "लातूर", "शिरूर अनंतपाळ"]}, "वर्धा": {"code": "8", "assemblies": ["४४- आर्वी", "४५- देवळी", "४६- हिंगणघाट", "४७- वर्धा"], "talukas": ["आर्वी", "आष्टी", "कारंजा घाडगे", "देवळी", "वर्धा", "समुद्रपूर", "सेलू", "हिंगणघाट"]}, "वाशिम": {"code": "6", "assemblies": ["३३- रिसोड", "३४- वाशीम (अ.जा.)", "३५- कारंजा"], "talukas": ["कारंजा लाड", "मंगरुळपीर", "मानोरा", "मालेगाव", "रिसोड", "वाशिम"]}, "सांगली": {"code": "36", "assemblies": ["२८१- मिरज (अ.जा.)", "२८२- सांगली", "२८३- इस्लामपूर", "२८४- शिराळा", "२८५- पलूस-कडेगाव", "२८६- खानापूर", "२८७- तासगाव-कवठे महांकाळ", "२८८- जत"], "talukas": ["आटपाडी", "कडेगाव", "कवठेमहांकाळ", "खानापूर (विटा)", "जत", "तासगाव", "पलुस", "मिरज", "वाळवा", "शिराळा"]}, "सातारा": {"code": "32", "assemblies": ["२५५- फलटण (अ.जा.)", "२५६- वाई", "२५७- कोरेगाव", "२५८- माण", "२५९- कराड उत्तर", "२६०- कराड दक्षिण", "२६१- पाटण", "२६२- सातारा"], "talukas": ["कराड", "कोरेगाव", "खंडाळा", "खटाव", "जावळी", "पाटण", "फलटण", "महाबळेश्वर", "माण", "वाई", "सातारा"]}, "सिंधुदुर्ग": {"code": "34", "assemblies": ["२६८- कणकवली", "२६९- कुडाळ", "२७०- सावंतवाडी"], "talukas": ["कणकवली", "कुडाळ", "देवगड", "दोडामार्ग", "मालवण", "वेंगुर्ला", "वैभववाडी", "सावंतवाडी"]}, "सोलापूर": {"code": "31", "assemblies": ["२४४- करमाळा", "२४५- माढा", "२४६- बार्शी", "२४७- मोहोळ (अ.जा.)", "२४८- सोलापूर शहर उत्तर", "२४९- सोलापूर शहर मध्य", "२५०- अक्कलकोट", "२५१- सोलापूर दक्षिण", "२५२- पंढरपूर", "२५३- सांगोला", "२५४- माळशिरस (अ.जा.)"], "talukas": ["अक्कलकोट", "करमाळा", "पंढरपूर", "बार्शी", "मंगळवेढा", "माढा", "माळशिरस", "मोहोळ", "सांगोला", "सोलापूर उत्तर", "सोलापूर दक्षिण"]}, "हिंगोली": {"code": "16", "assemblies": ["९२- बसमत", "९३- कळमनुरी", "९४- हिंगोली"], "talukas": ["औंढा नागनाथ", "कळमनुरी", "वसमत", "सेनगाव", "हिंगोली"]}};
@@ -1020,9 +1097,9 @@ function getAdminPassword(){return localStorage.getItem(ADMIN_PASSWORD_KEY)||"ad
 function setAdminPassword(p){localStorage.setItem(ADMIN_PASSWORD_KEY,p)}
 const ADMIN={username:"admin",get password(){return getAdminPassword()}};
 const KEY="maharashtraDistrictFormsV1";
-const SESSION_TIMEOUT_MS=5*60*1000;
+const SESSION_TIMEOUT_MS=10*60*1000;
 let session={type:"",district:"",username:""},photoData="",proofData="",previewData=null;
-let sessionTimeoutTimer=null;
+let sessionTimeoutTimer=null,sessionCountdownTimer=null;
 let regPhotoData="",regProofData="",regSignatureData="",regPreviewData=null,registrationCropMode=false,registrationSignatureCropMode=false,regSignatureCropped=false,regPhotoCropped=false,photoCropped=false;
 const OPERATOR_KEY="maharashtraOperatorAccountsV1";const DISTRICT_PASSWORD_KEY="maharashtraDistrictPasswordsV1";const ELECTION_BRANCH_PASSWORD_KEY="maharashtraElectionBranchPasswordsV1";
 const $=id=>document.getElementById(id);
@@ -1390,18 +1467,69 @@ async function changeAdminPassword(){
   localStorage.setItem(ADMIN_PASSWORD_KEY, np);
   alert("Admin Password Central Database मध्ये यशस्वीरीत्या बदलला आहे. आता सर्व ठिकाणी नवीन Password वापरा.");
 }
-function toggleRegistrationFormStatus(){if(session.type!=="admin")return;let a=getLoginStatuses();a.registrationForm=a.registrationForm===false;saveLoginStatuses(a);renderRegistrationFormStatus()}
-function renderRegistrationFormStatus(){let el=$("registrationFormStatus");if(el)el.textContent=loginEnabled("registrationForm")?"Enabled":"Disabled";let b=document.querySelector("button[onclick=\"showOperatorRegistration()\"]");if(b)b.style.display=loginEnabled("registrationForm")?"":"none"}
+const REGISTRATION_FORM_DISTRICT_KEY="maharashtraRegistrationFormDistrictStatusV1";
+function getRegistrationFormDistrictStatuses(){
+  try{const v=JSON.parse(localStorage.getItem(REGISTRATION_FORM_DISTRICT_KEY)||"{}");return v&&typeof v==="object"&&!Array.isArray(v)?v:{}}catch(e){return {}}
+}
+function saveRegistrationFormDistrictStatuses(v){localStorage.setItem(REGISTRATION_FORM_DISTRICT_KEY,JSON.stringify(v))}
+function registrationFormEnabledForDistrict(d){
+  const a=getRegistrationFormDistrictStatuses();
+  return Object.prototype.hasOwnProperty.call(a,d)?a[d]!==false:loginEnabled("registrationForm");
+}
+function registrationDistrictNames(){return Object.keys(DATA||{}).sort((a,b)=>a.localeCompare(b,"mr"))}
+async function openRegistrationFormSettings(){
+  if(session.type!=="admin")return;
+  /* Load any previously saved district settings. Opening this page is read-only:
+     do not attempt to write default values merely to display the district list. */
+  if(typeof window.centralAuthLoadPublic==="function"){
+    try{await window.centralAuthLoadPublic();}
+    catch(e){console.warn("Registration settings read failed:",e);}
+  }
+  const statuses=getRegistrationFormDistrictStatuses();
+  const defaultEnabled=loginEnabled("registrationForm");
+  registrationDistrictNames().forEach(d=>{
+    if(!Object.prototype.hasOwnProperty.call(statuses,d))statuses[d]=defaultEnabled;
+  });
+  /* Defaults are only an in-memory display fallback. Persist only when Admin
+     explicitly changes a district's status. */
+  window._registrationFormDistrictDisplayStatuses=statuses;
+  tab("registrationFormSettings");
+  renderRegistrationFormDistrictSettings();
+}
+function renderRegistrationFormDistrictSettings(){
+  if(session.type!=="admin")return;
+  const body=$("registrationFormDistrictSettingsBody");if(!body)return;
+  const a=Object.assign({},window._registrationFormDistrictDisplayStatuses||{},getRegistrationFormDistrictStatuses());
+  body.innerHTML=registrationDistrictNames().map((d,i)=>{
+    const enabled=Object.prototype.hasOwnProperty.call(a,d)?a[d]!==false:loginEnabled("registrationForm");
+    return `<tr><td>${i+1}</td><td>${esc(d)}</td><td><strong style="color:${enabled?"#15803d":"#b91c1c"}">${enabled?"Enabled":"Disabled"}</strong></td><td><button class="${enabled?"d":"s"}" onclick="setRegistrationFormDistrictStatus('${esc(d)}',${enabled?"false":"true"})">${enabled?"Disable":"Enable"}</button></td></tr>`;
+  }).join("")||'<tr><td colspan="4">जिल्ह्यांची माहिती उपलब्ध नाही.</td></tr>';
+}
+async function setRegistrationFormDistrictStatus(d,enabled){
+  if(session.type!=="admin")return;
+  const a=getRegistrationFormDistrictStatuses();a[d]=Boolean(enabled);
+  if(typeof window.centralAuthUpsertPublic!=="function"){alert("Central Database उपलब्ध नाही. बदल केलेले नाहीत.");return}
+  const ok=await window.centralAuthUpsertPublic("registrationFormDistricts",a);
+  if(!ok){const detail=window.CENTRAL_AUTH_LAST_ERROR?"\\nतपशील: "+window.CENTRAL_AUTH_LAST_ERROR:"";alert("Central Database मध्ये बदल सेव्ह झाला नाही. जुनी स्थिती कायम आहे."+detail);return}
+  saveRegistrationFormDistrictStatuses(a);
+  window._registrationFormDistrictDisplayStatuses=Object.assign({},a);
+  renderRegistrationFormDistrictSettings();
+}
+function renderRegistrationFormStatus(){
+  const b=document.querySelector('button[onclick="showOperatorRegistration()"]');
+  if(b)b.style.display=registrationDistrictNames().some(d=>registrationFormEnabledForDistrict(d))?"":"none";
+}
 function getDistrictPasswords(){try{const v=JSON.parse(localStorage.getItem(DISTRICT_PASSWORD_KEY)||"{}");return v&&typeof v==="object"?v:{}}catch(e){return {}}}function getDistrictPassword(d){const a=getDistrictPasswords();return a[d]||LOGINS.find(x=>x.district===d)?.password||""}function saveDistrictPasswords(a){localStorage.setItem(DISTRICT_PASSWORD_KEY,JSON.stringify(a))}
 
 
 function getOperatorAccounts(){try{const v=JSON.parse(localStorage.getItem(OPERATOR_KEY)||"[]");return Array.isArray(v)?v:[]}catch(e){return []}}
 function saveOperatorAccounts(a){localStorage.setItem(OPERATOR_KEY,JSON.stringify(a))}
-function showOperatorRegistration(){
-  if(!loginEnabled("registrationForm")){alert("Registration Form सध्या Disable आहे.");return;}
+async function showOperatorRegistration(){
+  if(typeof window.centralAuthLoadPublic==="function"){try{await window.centralAuthLoadPublic()}catch(e){console.warn("Registration status refresh failed:",e)}}
+  if(!registrationDistrictNames().some(d=>registrationFormEnabledForDistrict(d))){alert("सर्व जिल्ह्यांसाठी Registration Form सध्या Disabled आहे.");return}
   $("loginPage").classList.add("hidden");$("operatorRegistrationPage").classList.remove("hidden");
   const registrationLogo=$("registrationOrganizationLogo");if(registrationLogo)registrationLogo.src=ASSOCIATION_LOGO_DATA;
-  regEditId="";loadRegistrationDistricts();clearRegistrationForm();
+  regEditId="";loadRegistrationDistricts();clearRegistrationForm();renderSelectedRegistrationDistrictStatus();
 }
 function closeOperatorRegistration(){$("operatorRegistrationPage").classList.add("hidden");$("loginPage").classList.remove("hidden")}
 function loadRegistrationDistricts(){
@@ -1416,6 +1544,16 @@ function loadRegistrationAssemblies(){
   $("regTaluka").innerHTML='<option value="">-- निवडा --</option>';
   $("regTaluka").required=d!=="मुंबई शहर";
   $("regTaluka").previousElementSibling.textContent=d==="मुंबई शहर"?"तालुका":"तालुका *";
+  renderSelectedRegistrationDistrictStatus();
+}
+function renderSelectedRegistrationDistrictStatus(){
+  const d=$("regDistrict")?.value||"",notice=$("registrationDistrictStatusNotice"),submit=$("registrationSubmitButton");
+  const enabled=!!d&&registrationFormEnabledForDistrict(d);
+  if(notice){
+    notice.textContent=!d?"Registration करण्यासाठी प्रथम जिल्हा निवडा.":enabled?"या जिल्ह्यासाठी Registration Form सुरू आहे.":"या जिल्ह्यासाठी Registration Form सध्या बंद आहे. कृपया Admin शी संपर्क साधा.";
+    notice.style.color=!d?"#475569":enabled?"#15803d":"#b91c1c";
+  }
+  if(submit)submit.disabled=!!d&&!enabled;
 }
 function loadRegistrationTalukas(){
   const d=$("regDistrict").value,a=$("regAssembly").value;
@@ -1684,6 +1822,12 @@ function viewRegistrationPreviewDocuments(){
 }
 
 function previewOperatorRegistration(){
+  const selectedDistrict=$("regDistrict")?.value||"";
+  if(!selectedDistrict||!registrationFormEnabledForDistrict(selectedDistrict)){
+    renderSelectedRegistrationDistrictStatus();
+    alert("निवडलेल्या जिल्ह्यासाठी Registration Form सध्या उपलब्ध नाही.");
+    return;
+  }
   if(!$("operatorRegistrationForm").reportValidity())return;
   if(!regPhotoData||!regPhotoCropped){alert("कृपया पुढे जाण्यापूर्वी Crop Photo करणे अनिवार्य आहे.");$("regCropPhotoBtn").classList.remove("hidden");$("regCropPhotoBtn").focus();return;}
   if(!regSignatureData||!regSignatureCropped){alert("कृपया पुढे जाण्यापूर्वी Crop Signature (256 × 64) करणे अनिवार्य आहे.");$("regCropSignatureBtn").classList.remove("hidden");$("regCropSignatureBtn").focus();return;}
@@ -1907,8 +2051,19 @@ function toggleLogin(){
   const b=$("forgotPasswordBtn");if(b)b.classList.toggle("hidden",t==="admin");
 }
 function getPasswordChangeRequests(){try{const v=JSON.parse(localStorage.getItem("maharashtraPasswordChangeRequestsV1")||"[]");return Array.isArray(v)?v:[]}catch(e){return []}}
-function savePasswordChangeRequests(a){localStorage.setItem("maharashtraPasswordChangeRequestsV1",JSON.stringify(a))}
-function forgotPassword(){
+function savePasswordChangeRequests(a){
+  const safe=Array.isArray(a)?a:[];
+  localStorage.setItem("maharashtraPasswordChangeRequestsV1",JSON.stringify(safe));
+  /* Keep Forgot Password requests available to Admin on every device. */
+  if(typeof window.centralAuthUpsertPublic==="function"){
+    return window.centralAuthUpsertPublic("passwordChangeRequests",safe);
+  }
+  return Promise.resolve(false);
+}
+async function forgotPassword(){
+  if(typeof window.centralAuthLoadPublic==="function"){
+    try{await window.centralAuthLoadPublic();}catch(e){console.warn("Account refresh before password recovery failed:",e);}
+  }
   const t=$("loginType").value,u=$("username").value.trim(),d=$("loginDistrict")?$("loginDistrict").value:"";
   if(t==="admin"){alert("Admin Password विसरल्यास Admin Password बदलण्यासाठी स्वतंत्र Administrator आवश्यक आहे.");return}
   if(t==="district"&&(!d||!u)){alert("कृपया District, Username आणि Password माहिती भरा.");return}
@@ -1924,23 +2079,45 @@ function forgotPassword(){
   const pending=a.find(x=>x.status==="Pending"&&x.loginType===loginType&&x.username===u);
   if(pending){alert("या Login साठी Password Change Request आधीच Admin कडे प्रलंबित आहे.");return}
   a.push({id:"PCR-"+Date.now(),loginType:loginType,district:district,username:u,newPassword:np,createdAt:new Date().toISOString(),status:"Pending"});
-  savePasswordChangeRequests(a);
-  alert("Password Change Request Admin कडे पाठविण्यात आली आहे. Admin ने Accept केल्यानंतरच Password बदलेल.");
+  const saved=await savePasswordChangeRequests(a);
+  if(!saved){
+    alert("Password Change Request Central Database मध्ये पाठविता आली नाही. Internet / Database connection तपासून पुन्हा प्रयत्न करा.\n\nतपशील: "+(window.CENTRAL_AUTH_LAST_ERROR||"Central Database connection उपलब्ध नाही."));
+    return;
+  }
+  alert("Password Change Request Central Database द्वारे Admin कडे पाठविण्यात आली आहे. Admin ने Accept केल्यानंतर नवीन Password लागू होईल.");
 }
-function renderAdminPasswordRequests(){
+async function renderAdminPasswordRequests(){
   if(session.type!=="admin")return;
+  /* Refresh centrally before showing the Admin approval queue. */
+  if(typeof window.centralAuthLoadPublic==="function"){
+    try{await window.centralAuthLoadPublic();}catch(e){console.warn("Password request refresh failed:",e);}
+  }
   const a=getPasswordChangeRequests().slice().sort((x,y)=>new Date(y.createdAt)-new Date(x.createdAt));
   $("adminPasswordRequestsBody").innerHTML=a.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.loginType==="district"?"District Login":"Operator Login")}</td><td>${esc(x.district||"-")}</td><td>${esc(x.username||"-")}</td><td><input value="${esc(x.newPassword||"")}" type="text" readonly style="min-width:180px"></td><td>${esc(x.createdAt?new Date(x.createdAt).toLocaleString("en-IN"):"-")}</td><td>${esc(x.status||"Pending")}</td><td>${x.status==="Pending"?`<button class="s" onclick="approvePasswordChange('${esc(x.id)}')">Accept</button> <button class="d" onclick="rejectPasswordChange('${esc(x.id)}')">Reject</button>`:"-"}</td></tr>`).join("")||'<tr><td colspan="8">Password Change Request उपलब्ध नाही.</td></tr>'
 }
-function approvePasswordChange(id){
+async function approvePasswordChange(id){
   if(session.type!=="admin")return;
   let a=getPasswordChangeRequests(),r=a.find(x=>x.id===id);if(!r||r.status!=="Pending")return;
   if(!confirm("या Password Change Request ला Accept करायचे आहे का?"))return;
-  if(r.loginType==="operator"){let ops=getOperatorAccounts(),x=ops.find(z=>z.mobile===r.username);if(!x){alert("Operator Account उपलब्ध नाही.");return}x.password=r.newPassword;saveOperatorAccounts(ops)}
-  else if(r.loginType==="district"){let dp=getDistrictPasswords();dp[r.district]=r.newPassword;saveDistrictPasswords(dp)}
-  else return;
-  r.status="Accepted";r.acceptedAt=new Date().toISOString();r.acceptedBy=session.username;savePasswordChangeRequests(a);
-  renderAdminPasswordRequests();renderAdminOperatorPassword();renderAdminDistrictPassword();alert("Password Change Request Accept झाली. Password बदलण्यात आला आहे.");
+  if(r.loginType==="operator"){
+    let ops=getOperatorAccounts(),x=ops.find(z=>z.mobile===r.username);
+    if(!x){alert("Operator Account उपलब्ध नाही.");return}
+    x.password=r.newPassword;
+    if(typeof window.centralAuthUpsertPublic!=="function" || !(await window.centralAuthUpsertPublic("operator:"+String(r.username),x))){
+      alert("Operator Password Central Database मध्ये सेव्ह झाला नाही. जुना Password कायम आहे. Connection तपासा.");return;
+    }
+    saveOperatorAccounts(ops);
+  }else if(r.loginType==="district"){
+    let dp=getDistrictPasswords();dp[r.district]=r.newPassword;
+    if(typeof window.centralAuthUpsertPublic!=="function" || !(await window.centralAuthUpsertPublic("districts",dp))){
+      alert("District Password Central Database मध्ये सेव्ह झाला नाही. जुना Password कायम आहे. Connection तपासा.");return;
+    }
+    saveDistrictPasswords(dp);
+  }else return;
+  r.status="Accepted";r.acceptedAt=new Date().toISOString();r.acceptedBy=session.username;
+  const requestSaved=await savePasswordChangeRequests(a);
+  if(!requestSaved){alert("Password बदलला आहे; मात्र Request Status Central Database मध्ये सेव्ह झाला नाही. कृपया Admin कडून पुन्हा तपासणी करा.");return;}
+  renderAdminPasswordRequests();renderAdminOperatorPassword();renderAdminDistrictPassword();alert("Password Change Request Accept झाली. Password Central Database मध्ये बदलण्यात आला आहे.");
 }
 function rejectPasswordChange(id){if(session.type!=="admin")return;let a=getPasswordChangeRequests(),r=a.find(x=>x.id===id);if(!r||r.status!=="Pending")return;if(!confirm("ही Password Change Request Reject करायची आहे का?"))return;r.status="Rejected";r.rejectedAt=new Date().toISOString();r.rejectedBy=session.username;savePasswordChangeRequests(a);renderAdminPasswordRequests();}
 
@@ -2086,16 +2263,31 @@ function persistSession(){
   try{
     if(session.type){
       if(!session.loginAt)session.loginAt=Date.now();
+      if(!session.lastActivityAt)session.lastActivityAt=Date.now();
       localStorage.setItem("maharashtraSessionV1",JSON.stringify(session));
     }
   }catch(e){console.warn("Session persist failed",e)}
 }
+function updateSessionCountdown(){
+  if(!session.type)return;
+  const started=Number(session.lastActivityAt)||Number(session.loginAt)||Date.now();
+  const remaining=Math.max(0,SESSION_TIMEOUT_MS-(Date.now()-started));
+  const minutes=Math.floor(remaining/60000);
+  const seconds=Math.floor((remaining%60000)/1000);
+  const role=session.type==="admin"?"Login":session.type==="operator"?"Operator Login":"District Login";
+  const sessionEl=$("session");
+  if(sessionEl)sessionEl.textContent=role+" • "+session.username+" • शिल्लक वेळ: "+String(minutes).padStart(2,"0")+":"+String(seconds).padStart(2,"0");
+  if(remaining<=0)logout(true);
+}
 function startSessionTimeout(){
   if(sessionTimeoutTimer)clearTimeout(sessionTimeoutTimer);
+  if(sessionCountdownTimer)clearInterval(sessionCountdownTimer);
   if(!session.type)return;
-  const started=Number(session.loginAt)||Date.now();
+  const started=Number(session.lastActivityAt)||Number(session.loginAt)||Date.now();
   const remaining=SESSION_TIMEOUT_MS-(Date.now()-started);
   if(remaining<=0){logout(true);return}
+  updateSessionCountdown();
+  sessionCountdownTimer=setInterval(updateSessionCountdown,1000);
   sessionTimeoutTimer=setTimeout(()=>logout(true),remaining);
 }
 function clearPersistedSession(){
@@ -2107,8 +2299,8 @@ function restoreSession(){
     if(!raw)return false;
     const saved=JSON.parse(raw);
     if(!saved||!["admin","district","operator"].includes(saved.type)||!saved.username)return false;
-    const loginAt=Number(saved.loginAt)||0;
-    if(!loginAt || Date.now()-loginAt>=SESSION_TIMEOUT_MS){clearPersistedSession();return false}
+    const lastActivityAt=Number(saved.lastActivityAt)||Number(saved.loginAt)||0;
+    if(!lastActivityAt || Date.now()-lastActivityAt>=SESSION_TIMEOUT_MS){clearPersistedSession();return false}
     session=saved;
     return true;
   }catch(e){clearPersistedSession();return false}
@@ -2132,7 +2324,7 @@ function enter(){
  startSessionTimeout();
  $("loginPage").classList.add("hidden");$("app").classList.remove("hidden");
  $("currentDistrict").textContent=session.type==="admin"?"सर्व 36 जिल्हे":session.district;
- $("session").textContent=(session.type==="admin"?"Login":session.type==="operator"?"Operator Login":"District Login")+" • "+session.username;
+ updateSessionCountdown();
  
  $("district").value=session.type==="admin"?"Admin":session.district;
  loadAssemblies();updatePresidentButtons();
@@ -2167,6 +2359,7 @@ function enter(){
 }
 function logout(auto=false){
  if(sessionTimeoutTimer){clearTimeout(sessionTimeoutTimer);sessionTimeoutTimer=null;}
+ if(sessionCountdownTimer){clearInterval(sessionCountdownTimer);sessionCountdownTimer=null;}
  document.body.classList.remove("district-login");
  document.body.classList.remove("operator-login");
  document.body.classList.remove("admin-login");
@@ -2177,16 +2370,17 @@ function logout(auto=false){
   $("app").classList.add("hidden");
   $("operatorRegistrationPage").classList.add("hidden");
   $("loginPage").classList.remove("hidden");
-  $("loginMsg").textContent=auto?"30 मिनिटांचा Login कालावधी संपला आहे. कृपया पुन्हा Login करा.":"";
+  $("loginMsg").textContent=auto?"आपला 10 मिनिटांचा Login कालावधी संपला आहे. कृपया पुन्हा Login करा.":"";
   $("password").value="";
 }
-const APP_ROUTES=["home","dashboard","entry","forms","formTracking","operatorDrafts","operatorRollback","pending","approved","districtOperatorReg","districtCorrection","admin","adminAccepted","dse","adminPresidentList","operatorPresidentList","districtPresidentList","adminSentByDistrict","adminCorrection","adminDelete","adminPasswordMenu","adminPasswordRequests","adminOperatorPassword","adminDistrictPassword","adminElectionBranchPassword","adminSummaryMenu","adminDistrictSummary","summary","acceptedSummary"];
+const APP_ROUTES=["home","dashboard","entry","forms","formTracking","operatorDrafts","operatorRollback","pending","approved","districtOperatorReg","districtCorrection","admin","adminAccepted","dse","adminPresidentList","operatorPresidentList","districtPresidentList","adminSentByDistrict","adminCorrection","adminDelete","adminPasswordMenu","registrationFormSettings","adminPasswordRequests","adminOperatorPassword","adminDistrictPassword","adminElectionBranchPassword","adminSummaryMenu","adminDistrictSummary","summary","acceptedSummary"];
 
 function tab(t,options){
   if(!APP_ROUTES.includes(t))return;
   if(t==="entry" && (session.type==="admin"||session.type==="district")){
     t="dashboard";
   }
+  if(t==="registrationFormSettings" && session.type!=="admin")return;
   if(!session.type)return;
   const fromHistory=options&&options.fromHistory;
   if(!fromHistory){
@@ -2221,6 +2415,7 @@ function tab(t,options){
   if(t==="adminCorrection"){renderAdminCorrection()}
   if(t==="adminDelete"){renderAdminDelete()}
   if(t==="adminPasswordMenu"){renderAdminPasswordAll()}
+  if(t==="registrationFormSettings"){renderRegistrationFormDistrictSettings()}
   if(t==="adminPasswordRequests"){renderAdminPasswordRequests()}
   if(t==="adminOperatorPassword"){renderAdminOperatorPassword()}
   if(t==="adminDistrictPassword"){renderAdminDistrictPassword()}
@@ -2262,7 +2457,7 @@ function restoreRoute(){
   const operatorRegistrationStatus=session.type==="operator"?forms().find(x=>x.source==="Operator Registration"&&x.mobile===session.operatorMobile&&x.district===session.district)?.status:"";
   document.body.classList.toggle("operator-pending",session.type==="operator"&&operatorRegistrationStatus!=="Accepted");
   $("currentDistrict").textContent=session.type==="admin"?"सर्व 36 जिल्हे":session.district;
-  $("session").textContent=(session.type==="admin"?"Login":session.type==="operator"?"Operator Login":"District Login")+" • "+session.username;
+  updateSessionCountdown();
   
   
   
@@ -3315,6 +3510,60 @@ restoreRoute();
 
 
 <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+<script id="session-idle-timeout-reset">
+/* Session expires after 10 minutes of inactivity.
+   Genuine portal activity restarts the full 10-minute countdown. */
+(function(){
+  let lastActivityWrite = 0;
+
+  function resetSessionActivity(){
+    if (typeof session === "undefined" || !session || !session.type) return;
+
+    const app = document.getElementById("app");
+    if (!app || app.classList.contains("hidden")) return;
+
+    const now = Date.now();
+    // Avoid excessive localStorage writes while still registering ongoing activity.
+    if (now - lastActivityWrite < 1000) return;
+    lastActivityWrite = now;
+
+    session.lastActivityAt = now;
+    try {
+      localStorage.setItem("maharashtraSessionV1", JSON.stringify(session));
+    } catch (e) {
+      console.warn("Session activity could not be persisted:", e);
+    }
+
+    // Restart the 10-minute idle timer and refresh the visible countdown.
+    if (typeof startSessionTimeout === "function") startSessionTimeout();
+    if (typeof updateSessionCountdown === "function") updateSessionCountdown();
+  }
+
+  // Mouse, keyboard, touch, scrolling and form interactions count as activity.
+  ["pointerdown", "keydown", "click", "input", "change", "submit",
+   "scroll", "wheel", "touchstart"].forEach(function(eventName){
+    document.addEventListener(eventName, resetSessionActivity, {
+      capture: true,
+      passive: eventName === "scroll" || eventName === "wheel" || eventName === "touchstart"
+    });
+  });
+
+  // Moving the pointer also counts as activity, throttled by resetSessionActivity().
+  document.addEventListener("pointermove", resetSessionActivity, {passive:true});
+
+  // Re-check the idle deadline when the user returns to the browser tab.
+  document.addEventListener("visibilitychange", function(){
+    if (document.hidden || typeof session === "undefined" || !session || !session.type) return;
+    const last = Number(session.lastActivityAt) || Number(session.loginAt) || 0;
+    if (!last || Date.now() - last >= SESSION_TIMEOUT_MS) {
+      logout(true);
+    } else {
+      if (typeof startSessionTimeout === "function") startSessionTimeout();
+      if (typeof updateSessionCountdown === "function") updateSessionCountdown();
+    }
+  });
+})();
+</script>
 </body></html>
 <script>
 window.addEventListener("load", async function(){
@@ -3389,11 +3638,20 @@ window.addEventListener("load", async function(){
       return centralAuthUpsert(key,data);
     }
     const request = (async function(){
-      if(!authReady()){
-        window.CENTRAL_AUTH_LAST_ERROR = "Central Database connection is not ready.";
-        return false;
-      }
+      /* Wait for the initial connection check, then actively reconnect if the
+         connection is not ready. Do not fail merely because Save was clicked
+         while the first connection check was still running. */
       try{
+        if(!authReady() && window.CENTRAL_DB_CONNECTION_PROMISE){
+          try{ await window.CENTRAL_DB_CONNECTION_PROMISE; }catch(_){}
+        }
+        if(!authReady() && typeof window.retryCentralDatabaseConnection==="function"){
+          await window.retryCentralDatabaseConnection();
+        }
+        if(!authReady()){
+          const detail = window.CENTRAL_DB_LAST_ERROR ? " " + window.CENTRAL_DB_LAST_ERROR : "";
+          throw new Error("Central Database connection is not ready." + detail);
+        }
         const db = window.centralDb;
         const table = window.SUPABASE_CONFIG.table;
         let rowsToSave=[];
@@ -3492,6 +3750,16 @@ window.addEventListener("load", async function(){
         await centralAuthUpsert("districts",localDistrict);
       }
 
+      /* District-wise Registration Form availability. */
+      let localRegistrationFormDistricts={};
+      try{localRegistrationFormDistricts=JSON.parse(localStorage.getItem("maharashtraRegistrationFormDistrictStatusV1")||"{}")||{}}catch(e){}
+      if(remote.registrationFormDistricts && typeof remote.registrationFormDistricts==="object" && !Array.isArray(remote.registrationFormDistricts)){
+        localRegistrationFormDistricts=Object.assign({},remote.registrationFormDistricts);
+        localStorage.setItem("maharashtraRegistrationFormDistrictStatusV1",JSON.stringify(localRegistrationFormDistricts));
+      }else if(Object.keys(localRegistrationFormDistricts).length){
+        await centralAuthUpsert("registrationFormDistricts",localRegistrationFormDistricts);
+      }
+
       /* Election branch passwords. */
       let localBranch={};
       try{ localBranch=JSON.parse(localStorage.getItem(ELECTION_BRANCH_PASSWORD_KEY)||"{}")||{}; }catch(e){}
@@ -3533,6 +3801,17 @@ window.addEventListener("load", async function(){
       if(localOnlyOperatorAccounts.length){
         const safeLocalOnly=localOnlyOperatorAccounts.filter(x=>x && x.mobile && String(x.password||"")!="");
         if(safeLocalOnly.length) await centralAuthUpsert("operators",safeLocalOnly);
+      }
+
+      /* Forgot Password requests are shared with the Admin approval queue. */
+      const localPasswordRequests = (function(){
+        try{const v=JSON.parse(localStorage.getItem("maharashtraPasswordChangeRequestsV1")||"[]");return Array.isArray(v)?v:[];}
+        catch(e){return [];}
+      })();
+      if(Array.isArray(remote.passwordChangeRequests)){
+        localStorage.setItem("maharashtraPasswordChangeRequestsV1",JSON.stringify(remote.passwordChangeRequests));
+      }else if(localPasswordRequests.length){
+        await centralAuthUpsert("passwordChangeRequests",localPasswordRequests);
       }
 
       /* Refresh visible password/admin lists if the dashboard is already open. */
