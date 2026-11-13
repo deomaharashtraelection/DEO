@@ -1981,14 +1981,14 @@ function populateRegisteredDistrictOptions(){
 }
 
 async function login(){
-  /* Load the single canonical Admin password before checking credentials. */
+  const t=$("loginType").value,u=$("username").value.trim(),p=$("password").value;
+  /* Only Admin authentication depends on the central canonical Admin password.
+     Operator and District credentials continue using their existing account records. */
   let canonicalAdminPassword=null;
   let centralPasswordLoadSucceeded=false;
   try{
-    // Run central credential lookup and forms refresh concurrently to reduce login wait,
-    // while still ensuring operator/district data is refreshed before credential checks.
     const tasks=[];
-    if(window.centralAuthLoadPublic){
+    if(t==="admin" && window.centralAuthLoadPublic){
       tasks.push(window.centralAuthLoadPublic().then(value=>{
         canonicalAdminPassword=value;
         centralPasswordLoadSucceeded=typeof value==="string";
@@ -1999,19 +1999,10 @@ async function login(){
     }
     await Promise.all(tasks);
   }catch(e){ console.warn("Central login refresh failed.",e); }
-  const t=$("loginType").value,u=$("username").value.trim(),p=$("password").value;
   setRegisteredLoginError(t,"");
   const loginError=(message)=>setRegisteredLoginError(t,message);
-  /* All login entry points must validate against the same central credential store.
-     Never fall back to device-local credentials when the central store is unavailable. */
-  if(!centralPasswordLoadSucceeded){
-    loginError("Login साठी Central Database मधील Password तपासता आला नाही. Internet/Database connection तपासून पुन्हा प्रयत्न करा.");
-    return;
-  }
   if(t==="admin"){
-    /* Do not accept a device-specific cached password when the central
-       canonical password could not be loaded; this prevents two Admin
-       login entry points/devices from accepting different passwords. */
+    /* Admin login must still verify the canonical password from Central Database. */
     if(!centralPasswordLoadSucceeded){
       loginError("Admin Login साठी Central Database मधील एकच Password तपासता आला नाही. Internet/Database connection तपासून पुन्हा प्रयत्न करा.");
       return;
