@@ -1981,14 +1981,14 @@ function populateRegisteredDistrictOptions(){
 }
 
 async function login(){
-  const t=$("loginType").value,u=$("username").value.trim(),p=$("password").value;
-  /* Only Admin authentication depends on the central canonical Admin password.
-     Operator and District credentials continue using their existing account records. */
+  /* Load the single canonical Admin password before checking credentials. */
   let canonicalAdminPassword=null;
   let centralPasswordLoadSucceeded=false;
   try{
+    // Run central credential lookup and forms refresh concurrently to reduce login wait,
+    // while still ensuring operator/district data is refreshed before credential checks.
     const tasks=[];
-    if(t==="admin" && window.centralAuthLoadPublic){
+    if(window.centralAuthLoadPublic){
       tasks.push(window.centralAuthLoadPublic().then(value=>{
         canonicalAdminPassword=value;
         centralPasswordLoadSucceeded=typeof value==="string";
@@ -1999,16 +1999,22 @@ async function login(){
     }
     await Promise.all(tasks);
   }catch(e){ console.warn("Central login refresh failed.",e); }
+  const t=$("loginType").value,u=$("username").value.trim(),p=$("password").value;
   setRegisteredLoginError(t,"");
   const loginError=(message)=>setRegisteredLoginError(t,message);
+
+  /* Central password synchronization is an enhancement, not a global login
+     switch. A temporary auth-table/network failure must not block District
+     and Operator users whose credentials are already available locally. */
   if(t==="admin"){
-    /* Admin login must still verify the canonical password from Central Database. */
-    if(!centralPasswordLoadSucceeded){
-      loginError("Admin Login साठी Central Database मधील एकच Password तपासता आला नाही. Internet/Database connection तपासून पुन्हा प्रयत्न करा.");
-      return;
-    }
-    if(u===ADMIN.username&&p===canonicalAdminPassword){session={type:"admin",district:"ALL",username:u};enter()}
-    else loginError("Admin Username किंवा Password चुकीचे आहे.");
+    /* Prefer the latest central Admin password. If the central auth lookup is
+       unavailable, use the existing locally cached Admin password so the
+       portal remains accessible; do not overwrite or reset any credentials. */
+    const passwordToCheck = centralPasswordLoadSucceeded
+      ? canonicalAdminPassword
+      : getAdminPassword();
+    if(u===ADMIN.username&&p===passwordToCheck){session={type:"admin",district:"ALL",username:u};enter()}
+    else loginError("Admin Username किंवा Password चुकीचे आहे. Central Database उपलब्ध नसल्यास या संगणकावरील सेव्ह केलेला Password तपासला जातो.");
     return;
   }
   if(t==="operator"){
